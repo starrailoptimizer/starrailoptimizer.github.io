@@ -17,8 +17,8 @@ jobs:
         with:
           node-version: '16.x'
           cache: 'npm'
-      - run: git config --global user.email "starrailoptimizer@gmail.com"
+      - run: git config --global user.email "fribbelsgithub@gmail.com"
       - run: git config --global user.name "GH Actions"
-      - run: git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/starrailoptimizer/starrailoptimizer.github.io
+      - run: git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/fribbels/dreary-quibbles
       - run: npm install
       - run: npm run deploy
