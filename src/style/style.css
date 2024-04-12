@@ -1,0 +1,380 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+html,
+body,
+#root,
+#app,
+#app > div {
+  margin: 0;
+  height: 100vh !important;
+  min-width: fit-content !important;
+}
+
+.test {
+  background-color: #fff;
+}
+
+.ant-form-item {
+  margin-bottom: 0px !important;
+}
+
+.ag-body-horizontal-scroll {
+  min-height: 5px !important;
+  max-height: 5px !important;
+  height: 5px !important;
+}
+
+.ag-body-horizontal-scroll-viewport {
+  min-height: 5px !important;
+  max-height: 5px !important;
+  height: 5px !important;
+}
+
+.ag-body-horizontal-scroll-container {
+  min-height: 5px !important;
+  max-height: 5px !important;
+  height: 5px !important;
+}
+
+.ag-cell {
+  display: flex;
+  justify-content: center;
+  /* align horizontal */
+  align-items: center;
+}
+
+.ag-theme-balham .ag-header-cell,
+.ag-theme-balham .ag-header-group-cell {
+  padding-left: 2px;
+  padding-right: 2px;
+  font-family: Calibri, Candara, Segoe, Segoe UI, Optima, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.ag-header-cell {
+  padding-top: 2px !important;
+}
+
+.ag-header-cell:after {
+  top: 5% !important;
+}
+
+.ag-header-cell-label {
+  padding-top: 2px !important;
+}
+
+.ag-icon {
+  line-height: 14px !important;
+  font-weight: 400 !important;
+}
+
+.ag-header-row .ag-header-row-column {
+  height: 24px !important;
+}
+
+.ag-header {
+  height: 24px !important;
+  min-height: 24px !important;
+}
+
+#relicGrid .ag-header {
+  height: 36px !important;
+  min-height: 36px !important;
+}
+.ag-header-cell-label .ag-header-cell-text {
+  white-space: pre-wrap !important;
+}
+.ag-sort-indicator-container {
+  position: absolute;
+  right: -4px;
+}
+.ag-icon {
+  font-size: 14px !important;
+}
+.ag-header-row {
+  height: 100% !important
+}
+
+.ag-theme-balham .ag-paging-panel {
+  height: 24px !important;
+}
+
+.ag-header-label-icon {
+  margin-left: -3px !important;
+}
+
+.ag-paging-button {
+  opacity: 1 !important;
+  position: unset !important;
+}
+
+.ag-header-cell-text {
+  overflow: initial;
+  text-overflow: initial;
+  min-width: unset !important;
+}
+
+.ag-header-cell-label,
+.ag-header-group-cell-label {
+  justify-content: space-around;
+  text-overflow: clip;
+  width: 40px;
+}
+
+.ag-theme-balham .ag-icon {
+  font-weight: 800;
+}
+
+.ag-cell-value {
+  font-weight: 400;
+  text-align: center;
+  font-family: Segoe UI, Frutiger, Frutiger Linotype, Dejavu Sans, Helvetica Neue, Arial, sans-serif;
+  font-size: 1em;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0px !important;
+}
+
+.ag-theme-balham .ag-overlay-loading-wrapper {
+  background-color: var(--ag-modal-overlay-background-color, hsla(0, 0%, 100%, 0.05));
+}
+
+.ag-floating-top {
+  box-shadow: 0 2px 4px #141414 !important;
+  z-index: 2 !important;
+}
+
+.ag-watermark {
+  display: none !important;
+}
+
+.ag-theme-balham .ag-row:not(.ag-row-first) {
+  border: none;
+}
+
+.ag-theme-balham .ag-row-odd {
+  background-color: #960303;
+}
+
+.ag-theme-balham .ag-row-hover {
+  background-color: #daf1ff;
+}
+
+.ag-theme-balham .ag-row-selected {
+  background-color: #b7e4ff;
+}
+
+.ag-cell-label-container {
+  padding: 0 !important;
+}
+
+.ant-form-item-control-input {
+  min-height: 24px !important;
+}
+
+.ant-cascader-menu-item {
+  padding: 5px 8px;
+}
+
+.ant-cascader-menu-item-content {
+  overflow: hidden !important;
+  width: 250px;
+  text-overflow: ellipsis;
+}
+
+.ant-cascader-menus ul:first-child {
+  width: 170px;
+}
+
+.rc-virtual-list-scrollbar-show {
+  display: block !important;
+}
+
+.ag-cell-value {
+  font-size: 14px;
+  font-weight: 400;
+  display: flex !important;
+  text-align: center;
+}
+
+.ag-header-cell-label {
+  text-align: center;
+}
+
+.ag-header-cell-label {
+  justify-content: center;
+}
+
+.ag-header-cell-text {
+  overflow: hidden;
+  text-overflow: clip !important;
+  margin-top: -6px;
+}
+
+.ag-icon-desc {
+  margin-top: -6px !important;
+}
+
+.ag-icon-asc {
+  margin-top: -6px !important;
+}
+
+.ag-header-cell {
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+}
+
+.ant-layout {
+  min-width: inherit;
+}
+
+.ant-menu-title-content {
+  color: white;
+}
+
+.ag-paging-panel {
+  height: 22px !important;
+}
+
+.ag-drag-handle {
+  margin-right: 5px !important;
+}
+
+.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #4290ff !important;
+}
+
+.ag-cell {
+  /* border-right-width: 0px !important */
+}
+
+.ant-popover-content p {
+  margin: 0;
+}
+
+/*
+a {
+  color: #54aeff !important;
+} */
+
+#relicGrid .ag-header-cell {
+  font-size: 10px !important;
+  font-weight: 400;
+}
+
+#characterGrid .ag-body-vertical-scroll {
+  display: none;
+}
+
+.ag-header-cell-menu-button {
+  opacity: 1 !important;
+  margin-bottom: 3px !important;
+}
+
+.relicsTableHeader {
+  font-size: 10px !important;
+  font-weight: 400 !important;
+}
+
+.ag-row {
+  border-bottom-style: unset !important;
+}
+
+.ant-select-selection-item {
+  padding-inline-end: 6px !important;
+}
+
+.ant-slider:hover .ant-slider-handle::after {
+  box-shadow: 0 0 0 4px #1668dc;
+}
+
+.ant-slider-handle::after {
+  background-color: #1668dc !important;
+}
+
+.ant-input-number-group-addon {
+  padding: 0 3px !important;
+}
+
+.ant-menu-submenu-title {
+  padding-left: 10px !important;
+}
+
+.ant-menu-item-only-child {
+  padding-left: 34px !important;
+}
+
+.ant-tag-checkable {
+  margin-inline-end: 0px;
+  border-radius: 0px;
+}
+
+.ant-progress-text {
+  text-align: right !important;
+  padding-right: 2px !important;
+}
+
+.form-row .ant-collapse-header {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  font-size: 20px;
+  align-items: baseline !important;
+}
+
+.form-row .ant-collapse-content-box {
+  padding-block: 0 !important;
+}
+
+.form-row .ant-collapse-expand-icon {
+  padding-inline-start: 12px !important;
+}
+
+.teammate-set-select .ant-select-selector {
+  padding-left: 7px !important;
+}
+
+.ant-segmented {
+  padding: 0 !important;
+}
+.ag-cell-focus,
+.ag-cell {
+  border: none !important;
+}
+
+.ag-row-selected {
+  box-shadow: 0px 1px 5px 0px #5e5e5e !important;
+  z-index: 1 !important;
+  background: #0000002e !important;
+}
+.ag-row-selected:before {
+  background: none !important;
+  z-index: 1;
+  box-shadow: inset 0px 3px 11px -4px #000, inset 0px -7px 19px -8px #1a1a1a;
+}
+
+.character-build-portrait:hover .character-build-portrait-button {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: opacity 0.3s ease;
+}
+
+.ant-card-small > .ant-card-body {
+  padding-left: 11px !important;
+  padding-right: 11px !important;
+}
+.ag-header-cell-comp-wrapper {
+  height: 100% !important;
+}
