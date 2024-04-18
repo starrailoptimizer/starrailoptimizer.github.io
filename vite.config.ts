@@ -6,7 +6,7 @@ import legacy from '@vitejs/plugin-legacy'
 const pathPlugin = viteTsconfigPaths()
 
 export default defineConfig({
-  base: '/',
+  base: '',
   plugins: [
     react(),
     pathPlugin,
