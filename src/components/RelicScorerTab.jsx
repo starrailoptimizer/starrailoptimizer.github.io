@@ -65,17 +65,16 @@ export default function RelicScorerTab() {
 
     fetch(`${API_ENDPOINT}/profile/${id}`, { method: 'GET' })
       .then((response) => {
-        if (!response.ok) {
+        if (!response.ok && !response.source) {
           throw new Error(`HTTP error! Status: ${response.status}`)
         }
         return response.json()
       })
       .then((data) => {
         console.log(data)
-        const useBackup = false
 
         let characters
-        if (useBackup) {
+        if (data.source == 'mana') {
           // Backup
           data = Utils.recursiveToCamel(data)
           characters = [
