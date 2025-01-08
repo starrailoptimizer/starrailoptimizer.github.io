@@ -44,7 +44,7 @@ export function LayoutHeader() {
                 style={{ fontWeight: 600, fontSize: 22 }}
                 color='inherit'
               >
-                Fribbels Honkai Star Rail Optimizer
+                Fribbels Honkai Star Rail Optimizer (No leaks)
               </Typography>
             </Flex>
           </a>
