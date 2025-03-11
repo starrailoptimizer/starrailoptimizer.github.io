@@ -37,13 +37,12 @@ export default (e: Eidolon, withContent: boolean): CharacterConditionalsControll
   const defaults = {
     skillHits: 4,
     exposedNature: true,
-    skillTargets: 3,
     eruditionTeammateBuffs: true,
     enemyWeaknessTypes: 7,
     e1DefPen: true,
     e2ResPen: true,
-    e4AtkBuffStacks: 3,
-    e6FinalDmgStacks: 5,
+    e4AtkBuffStacks: 2,
+    e6FinalDmgStacks: 3,
   }
 
   const teammateDefaults = {
@@ -80,14 +79,6 @@ export default (e: Eidolon, withContent: boolean): CharacterConditionalsControll
       content: i18next.t('BetaMessage', { ns: 'conditionals', Version: CURRENT_DATA_VERSION }),
       min: 0,
       max: 7,
-    },
-    skillTargets: {
-      id: 'skillTargets',
-      formItem: 'slider',
-      text: 'Skill targets',
-      content: i18next.t('BetaMessage', { ns: 'conditionals', Version: CURRENT_DATA_VERSION }),
-      min: 1,
-      max: 5,
     },
     e1DefPen: {
       id: 'e1DefPen',
@@ -145,7 +136,7 @@ export default (e: Eidolon, withContent: boolean): CharacterConditionalsControll
       x.SKILL_ATK_SCALING.buff(skillScaling * (1 + r.skillHits), SOURCE_SKILL)
       x.ULT_ATK_SCALING.buff(ultScaling, SOURCE_ULT)
 
-      x.SKILL_DMG_BOOST.buff((r.skillTargets) * skillDmgBoost, SOURCE_SKILL)
+      x.SKILL_DMG_BOOST.buff(context.enemyCount * skillDmgBoost, SOURCE_SKILL)
 
       x.DEF_PEN.buff(r.enemyWeaknessTypes * 0.03, SOURCE_TRACE)
       x.ELEMENTAL_DMG.buff((r.exposedNature) ? talentDmgScaling : 0, SOURCE_TALENT)
@@ -156,9 +147,9 @@ export default (e: Eidolon, withContent: boolean): CharacterConditionalsControll
       const eruditionMembers = countTeamPath(context, PathNames.Erudition)
       x.CD.buff((r.eruditionTeammateBuffs && eruditionMembers == 1) ? 1.40 : 0, SOURCE_TRACE)
 
-      x.BASIC_TOUGHNESS_DMG.buff(0, SOURCE_BASIC)
-      x.SKILL_TOUGHNESS_DMG.buff(0, SOURCE_SKILL)
-      x.ULT_TOUGHNESS_DMG.buff(0, SOURCE_ULT)
+      x.BASIC_TOUGHNESS_DMG.buff(10, SOURCE_BASIC)
+      x.SKILL_TOUGHNESS_DMG.buff(10 + (r.skillHits) * 10, SOURCE_SKILL)
+      x.ULT_TOUGHNESS_DMG.buff(20, SOURCE_ULT)
     },
     precomputeMutualEffects: (x: ComputedStatsArray, action: OptimizerAction, context: OptimizerContext) => {
       const m = action.characterConditionals as Conditionals<typeof teammateContent>
