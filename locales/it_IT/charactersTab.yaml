@@ -27,10 +27,8 @@ CharacterMenu:
       SortByScore: Ordina tutti i personaggi per punteggio
       MoveToTop: Muovi il personaggio in cima
 SearchPlaceholder: Cerca
-GridHeaders:
-  Icon: Icona
-  Priority: Priorità
-  Character: Personaggio
+GridDensityOptions:
+  default: Predefinito
 Messages:
   RemoveSuccess: Personaggio rimosso con successo
   UnequipSuccess: Personaggio disequipaggiato con successo
@@ -89,7 +87,6 @@ CharacterPreview:
     TitleBenchmark: '{{spd}} VEL Benchmark'
     Score: 'Punteggio DPS {{score}}% {{grade}}'
   AlgorithmSlider:
-    Title: 'Algoritmo del punteggio:'
     Labels:
       CombatScore: Punteggio Combat
       CombatScoreTBD: Combat (TBD)
@@ -129,16 +126,10 @@ CharacterPreview:
       FUA: FUA
       MEMO_SKILL: ABILITÀᴹ
       MEMO_TALENT: TALENTOᴹ
-      DOTS: 'DOT:'
       BREAKS: 'BREAK:'
     CombatResults:
-      Header: Risultato dei danni in combattimento
-      Primary: 'Abilità primaria:'
-      Character: 'Danni del Personaggio:'
-      Benchmark: 'Danni del Benchmark:'
-      Baseline: 'Danni in linea di base:'
-      Maximum: 'Danni massimi:'
-      Score: 'Punteggio DPS %:'
+      Character: Personaggio
+      Benchmark: Benchmark
       Abilities:
         BASIC: DANNO ATT. BASE
         SKILL: DANNO ABILITÀ
@@ -155,21 +146,18 @@ CharacterPreview:
   ScoringColumn:
     Character:
       Header: 'Build personaggio ({{score}}%)'
-      BasicStats: Statistiche base del personaggio
       CombatStats: <1>Statistiche in combattimento</1> del personaggio
       Substats: Statistiche secondarie del personaggio (roll minimi)
       Mainstats: Statistiche principali del personaggio
       Abilities: Danni abilità del personaggio
     Benchmark:
       Header: 'Build benchmark ({{score}}%)'
-      BasicStats: Statistiche base del benchmark 100%
       CombatStats: <1>Statistiche in combattimento</1> del benchmark 100%
       Substats: Statistiche secondarie del benchmark 100% (roll minimi)
       Mainstats: Statistiche principali del benchmark 100%
       Abilities: Danni abilità del benchmark 100%
     Perfect:
       Header: 'Build perfetta ({{score}}%)'
-      BasicStats: Statistiche base perfette 200%
       CombatStats: <1>Statistiche in combattimento</1> perfette 200%
       Substats: Statistiche secondarie 200% (roll massimi)
       Mainstats: Statistiche principali perfette 200%

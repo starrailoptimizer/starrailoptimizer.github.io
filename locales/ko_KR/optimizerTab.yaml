@@ -246,7 +246,7 @@ Sidebar:
     Header: 빌드
     Save: 저장
 TeammateRow:
-  Header: '팀 {{teammateCount}}'
+  Header: '팀'
 FormRowLabels:
   Character options: 캐릭터 설정
   Relic & stat filters: 유물 & 스텟 필터
@@ -461,14 +461,8 @@ ComboFilter:
     Simple: 심플
     Advanced: 고급
   RowControls:
-    Header: 조작
-    Add: +
-    Remove: '-'
     ResetConfirm:
       Description: 모든 심플 / 고급 사이클 셋팅을 기본 값으로 변경할까요?
-    PresetsHeader: 사전 설정
-  CounterLabels:
-    Dot: 지속 피해
   ComboOptions:
     None: '없음'
     Basic: 기본 공격
@@ -597,16 +591,23 @@ ExpandedDataPanel:
       HEAL_VALUE_P: Δ% 힐
       SHIELD_VALUE: Δ 실드
       SHIELD_VALUE_P: Δ% 실드
+  DamageTags:
+    BASIC: 일반 공격
+    SKILL: 전투 스킬
+    ULT: 필살기
+    FUA: 추가 공격
+    DOT: 지속 피해
+    BREAK: 격파 피해
   DamageSplits:
+    Mode:
+      Default: 기본
     Legend:
-      abilityDmg: 능력
-      breakDmg: 격파
-      superBreakDmg: 슈퍼 격파
-      additionalDmg: 추가
-      trueDmg: '확정'
-      jointDmg: 연계
-      dotDmg: 지속피해
-      memoDmg: 기억정령
+      Basic: 기본 공격
+      Skill: 전투 스킬
+      Ult: 필살기
+      Fua: 추가 공격
+      Break: 격파
+      Memo: 기억정령
     YAxisLabel:
       BASIC_DMG: 기본 공격
       SKILL_DMG: 전투 스킬
@@ -644,6 +645,8 @@ ExpandedDataPanel:
       LightCone: 광추
       Set: 세트
     DefaultAction: 기본
+    DamageFunctions:
+      Break: 격파
     Stats:
       CompositeLabels:
         Label: '{{prefix}}{{suffix}}'
@@ -664,7 +667,7 @@ ExpandedDataPanel:
           'ATK % boost': 공격력 % 증가
           Crit Rate boost: 치명타 확률 증가
           Crit DMG boost: 치명타 데미지 증가
-          DMG boost: 데미지 버프
+          DMG Boost: 가하는 피해
           Vulnerability: 취약
           RES PEN: 속성 저항 관통
           DEF PEN: 방어력 무시
@@ -732,5 +735,4 @@ ExpandedDataPanel:
         MemoTalent: 기억정령 특성 데미지 타입
         Additional: 추가 피해 타입
         SuperBreak: 슈퍼 격파 데미지 타입
-      ResPen: '$t(common:Elements.{{element}}) 저항 관통'
       Unconvertible: '변환 불가능한 $t(common:Stats.{{stat}})'

@@ -27,10 +27,9 @@ CharacterMenu:
       SortByScore: Sort all characters by score
       MoveToTop: Move character to top
 SearchPlaceholder: Search
-GridHeaders:
-  Icon: Icon
-  Priority: Priority
-  Character: Character
+GridDensityOptions:
+  default: Default
+  compact: Compact
 Messages:
   RemoveSuccess: Successfully removed character
   UnequipSuccess: Successfully unequipped character
@@ -50,6 +49,7 @@ CharacterPreview:
     Stats:
       Header: Stats
       ButtonText: Traces
+      WeightsButton: Weights
     SpdPrecision:
       Header: SPD precision
       Low: '.0'
@@ -91,7 +91,6 @@ CharacterPreview:
     TitleBenchmark: '{{spd}} SPD Benchmark'
     Score: 'DPS Score {{score}}% {{grade}}'
   AlgorithmSlider:
-    Title: 'Scoring algorithm:'
     Labels:
       CombatScore: Combat Score
       CombatScoreTBD: Combat (TBD)
@@ -131,16 +130,15 @@ CharacterPreview:
       FUA: FUA
       MEMO_SKILL: SKILLᴹ
       MEMO_TALENT: TALENTᴹ
-      DOTS: 'DOTS:'
       BREAKS: 'BREAKS:'
     CombatResults:
-      Header: Combat damage results
-      Primary: 'Primary ability:'
-      Character: 'Character DMG:'
-      Benchmark: 'Benchmark DMG:'
-      Baseline: 'Baseline DMG:'
-      Maximum: 'Maximum DMG:'
-      Score: 'DPS score %:'
+      Header: Benchmark Results
+      Primary: Primary Ability
+      Character: Character
+      Benchmark: Benchmark
+      Baseline: Baseline
+      Maximum: Maximum
+      Score: DPS Score
       Abilities:
         BASIC: BASIC DMG
         SKILL: SKILL DMG
@@ -158,22 +156,23 @@ CharacterPreview:
       SubDpsHeader: Combat buffs (Sub DPS)
   ScoringColumn:
     Character:
+      LoadingHeader: Character build
       Header: 'Character build ({{score}}%)'
-      BasicStats: Character basic stats
+      BasicStats: Character <1>basic stats</1>
       CombatStats: Character <1>combat stats</1>
       Substats: Character subs (min rolls)
       Mainstats: Character main stats
       Abilities: Character ability damage
     Benchmark:
       Header: 'Benchmark build ({{score}}%)'
-      BasicStats: 100% benchmark basic stats
+      BasicStats: 100% benchmark <1>basic stats</1>
       CombatStats: 100% benchmark <1>combat stats</1>
       Substats: 100% benchmark subs (min rolls)
       Mainstats: 100% benchmark main stats
       Abilities: 100% benchmark ability damage
     Perfect:
       Header: 'Perfect build ({{score}}%)'
-      BasicStats: 200% perfect basic stats
+      BasicStats: 200% perfect <1>basic stats</1>
       CombatStats: 200% perfect <1>combat stats</1>
       Substats: 200% perfect subs (max rolls)
       Mainstats: 200% perfect main stats
