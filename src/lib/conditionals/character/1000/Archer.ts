@@ -3,8 +3,8 @@ import { Cipher } from 'lib/conditionals/character/1400/Cipher'
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -23,7 +23,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -39,17 +39,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const ArcherEntities = createEnum('Archer')
@@ -62,7 +63,7 @@ export const ArcherAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Archer.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Archer.Content')
   const { basic, skill, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -107,7 +108,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillEnhances',
       formItem: 'slider',
       text: t('skillEnhances.text'),
-      content: t('skillEnhances.content', { SkillDmgBuff: TsUtils.precisionRound(100 * skillEnhancedExtraScaling) }),
+      content: t('skillEnhances.content', { SkillDmgBuff: precisionRound(100 * skillEnhancedExtraScaling) }),
       min: 0,
       max: e >= 6 ? 3 : 2,
     },
@@ -262,7 +263,6 @@ const simulation = (): SimulationMetadata => ({
     END_SKILL,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.WavestriderCaptain, Sets.WavestriderCaptain],
@@ -344,11 +344,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1100,
-    y: 1050,
-    z: 1,
+    x: 1131,
+    y: 1027,
+    z: 1.15,
   },
-  showcaseColor: '#ff999a',
+  showcaseColor: '#a8231d',
 }
 
 export const Archer: CharacterConfig = {

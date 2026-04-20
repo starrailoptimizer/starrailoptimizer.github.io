@@ -1,25 +1,32 @@
 import {
   ConditionalDataType,
   Sets,
+  Stats,
 } from 'lib/constants/constants'
-import { BasicStatsArray, WgslStatName } from 'lib/optimization/basicStatsArray'
-import { Source } from 'lib/optimization/buffSource'
 import { basicP2 } from 'lib/gpu/injection/generateBasicSetEffects'
-import { AKey, StatKey } from 'lib/optimization/engine/config/keys'
-import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { wgslFalse } from 'lib/gpu/injection/wgslUtils'
 import {
-  OptimizerAction,
-  OptimizerContext,
-  SetConditional,
+  type BasicStatsArray,
+  WgslStatName,
+} from 'lib/optimization/basicStatsArray'
+import { Source } from 'lib/optimization/buffSource'
+import {
+  AKey,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import { TargetTag } from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+  type SetConditional,
 } from 'types/optimizer'
 import {
-  SetConditionals,
-  SetConfig,
-  SetDisplay,
-  SetInfo,
+  type SetConditionals,
+  type SetConfig,
+  type SetDisplay,
+  type SetInfo,
   SetType,
 } from 'types/setConfig'
 
@@ -27,6 +34,7 @@ const info = {
   index: 24,
   setType: SetType.RELIC,
   ingameId: '125',
+  twoPieceStatTag: Stats.SPD_P,
 } as const satisfies SetInfo
 
 const display = {
@@ -56,9 +64,9 @@ const conditionals: SetConditionals = {
       relic4p(*p_sets, SET_WarriorGoddessOfSunAndThunder) >= 1
       && setConditionals.enabledWarriorGoddessOfSunAndThunder == true
     ) {
-      ${buff.action(AKey.SPD_P, 0.06).wgsl(action, 4)}
+      ${buff.action(AKey.SPD_P, 0.06).wgsl(action, 2)}
       if (${wgslFalse(action.config.teammateSetEffects[Sets.WarriorGoddessOfSunAndThunder])}) {
-        ${buff.action(AKey.CD, 0.15).targets(TargetTag.FullTeam).wgsl(action, 2)}
+        ${buff.action(AKey.CD, 0.15).targets(TargetTag.FullTeam).wgsl(action, 3)}
       }
     }
   `,

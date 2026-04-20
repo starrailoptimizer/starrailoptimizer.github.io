@@ -7,7 +7,7 @@ import {
   NONE_WARP_INCOME_OPTION,
   StarlightRefund,
   SuperimpositionLevel,
-  WarpRequest,
+  type WarpRequest,
   WarpStrategy,
 } from 'lib/tabs/tabWarp/warpCalculatorController'
 import {
@@ -193,10 +193,6 @@ test('expected current eidolon and lightcone values', () => {
   expectWithin1Percent(m.E6S4.wins, 0.00056)
   expectWithin1Percent(m.E6S5.wins, 0.00007)
 })
-
-function expectedTotalWarps(actual: number, expected: number) {
-  expect(actual).toEqual(expected)
-}
 
 function expectWithin3(actual: number, expected: number) {
   expect(actual).toBeGreaterThanOrEqual(expected - 3)

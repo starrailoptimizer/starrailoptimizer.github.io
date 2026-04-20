@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -31,19 +31,20 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const BronyaEntities = createEnum('Bronya')
@@ -54,7 +55,7 @@ export const BronyaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Bronya')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Bronya')
   const { basic, skill, ult } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -106,16 +107,16 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillBuff',
       formItem: 'switch',
       text: t('Content.skillBuff.text'),
-      content: t('Content.skillBuff.content', { skillDmgBoostValue: TsUtils.precisionRound(100 * skillDmgBoostValue) }),
+      content: t('Content.skillBuff.content', { skillDmgBoostValue: precisionRound(100 * skillDmgBoostValue) }),
     },
     ultBuff: {
       id: 'ultBuff',
       formItem: 'switch',
       text: t('Content.ultBuff.text'),
       content: t('Content.ultBuff.content', {
-        ultAtkBoostValue: TsUtils.precisionRound(100 * ultAtkBoostValue),
-        ultCdBoostValue: TsUtils.precisionRound(100 * ultCdBoostValue),
-        ultCdBoostBaseValue: TsUtils.precisionRound(100 * ultCdBoostBaseValue),
+        ultAtkBoostValue: precisionRound(100 * ultAtkBoostValue),
+        ultCdBoostValue: precisionRound(100 * ultCdBoostValue),
+        ultCdBoostBaseValue: precisionRound(100 * ultCdBoostBaseValue),
       }),
     },
     battleStartDefBuff: {
@@ -150,9 +151,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('TeammateContent.teammateCDValue.text'),
       content: t('TeammateContent.teammateCDValue.content', {
-        ultAtkBoostValue: TsUtils.precisionRound(100 * ultAtkBoostValue),
-        ultCdBoostValue: TsUtils.precisionRound(100 * ultCdBoostValue),
-        ultCdBoostBaseValue: TsUtils.precisionRound(100 * ultCdBoostBaseValue),
+        ultAtkBoostValue: precisionRound(100 * ultAtkBoostValue),
+        ultCdBoostValue: precisionRound(100 * ultCdBoostValue),
+        ultCdBoostBaseValue: precisionRound(100 * ultCdBoostBaseValue),
       }),
       min: 0,
       max: 4.00,
@@ -312,7 +313,8 @@ const display = {
     y: 1200,
     z: 1.1,
   },
-  showcaseColor: '#375ee1',
+  disableSpine: true,
+  showcaseColor: '#749ad4',
 }
 
 export const Bronya: CharacterConfig = {

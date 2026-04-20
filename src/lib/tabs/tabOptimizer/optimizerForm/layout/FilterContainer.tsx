@@ -1,24 +1,11 @@
-import { Flex } from 'antd'
-import { cardShadowNonInset } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
-import { ReactElement } from 'react'
+import { Flex } from '@mantine/core'
+import type { ReactElement } from 'react'
+import classes from './FilterContainer.module.css'
 
-export default function FilterContainer(props: { children: ReactElement | ReactElement[] }) {
+export function FilterContainer({ children }: { children: ReactElement | ReactElement[] }) {
   return (
-    <Flex
-      vertical
-      style={{
-        overflow: 'hidden',
-        borderRadius: 5,
-        paddingBottom: 10,
-        background: 'rgb(29 42 81 / 73%)',
-        boxShadow: cardShadowNonInset,
-        backdropFilter: 'blur(5px)',
-        border: '1px solid rgba(255, 255, 255, 0.10)',
-        WebkitBackdropFilter: 'blur(5px)',
-        width: 1227,
-      }}
-    >
-      {props.children}
+    <Flex direction='column' className={classes.container}>
+      {children}
     </Flex>
   )
 }

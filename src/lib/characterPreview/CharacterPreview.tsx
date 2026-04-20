@@ -1,95 +1,106 @@
-import {
-  ConfigProvider,
-  Flex,
-  theme,
-} from 'antd'
-import getDesignToken from 'antd/lib/theme/getDesignToken'
-import {
-  showcaseShadow,
-  showcaseShadowInsetAddition,
-  ShowcaseSource,
-} from 'lib/characterPreview/CharacterPreviewComponents'
-import {
-  getArtistName,
-  getPreviewRelics,
-  getShowcaseDisplayDimensions,
-  getShowcaseMetadata,
-  getShowcaseStats,
-  handleTeamSelection,
-  resolveScoringType,
-  ShowcaseDisplayDimensions,
-  showcaseOnAddOk,
-  showcaseOnEditOk,
-  showcaseOnEditPortraitOk,
-} from 'lib/characterPreview/characterPreviewController'
-import { CharacterStatSummary } from 'lib/characterPreview/CharacterStatSummary'
-import { ShowcaseBuildAnalysis } from 'lib/characterPreview/ShowcaseBuildAnalysis'
-import { ShowcaseCharacterHeader } from 'lib/characterPreview/ShowcaseCharacterHeader'
-import { DEFAULT_SHOWCASE_COLOR } from 'lib/characterPreview/showcaseCustomizationController'
-import ShowcaseCustomizationSidebar, {
-  defaultShowcasePreferences,
-  getDefaultColor,
-  getOverrideColorMode,
-  ShowcaseCustomizationSidebarRef,
-  standardShowcasePreferences,
-  urlToColorCache,
-} from 'lib/characterPreview/ShowcaseCustomizationSidebar'
-import {
-  ShowcaseCombatScoreDetailsFooter,
-  ShowcaseDpsScoreHeader,
-  ShowcaseDpsScorePanel,
-} from 'lib/characterPreview/ShowcaseDpsScore'
+import { CharacterStatSummary } from 'lib/characterPreview/card/CharacterStatSummary'
+import { ShowcaseCharacterHeader } from 'lib/characterPreview/card/ShowcaseCharacterHeader'
 import {
   ShowcaseLightConeLarge,
   ShowcaseLightConeLargeName,
   ShowcaseLightConeSmall,
-} from 'lib/characterPreview/ShowcaseLightCone'
-import { ShowcasePortrait } from 'lib/characterPreview/ShowcasePortrait'
-import { ShowcaseRelicsPanel } from 'lib/characterPreview/ShowcaseRelicsPanel'
-import { ShowcaseStatScore } from 'lib/characterPreview/ShowcaseStatScore'
+} from 'lib/characterPreview/card/ShowcaseLightCone'
+import { ShowcasePortrait } from 'lib/characterPreview/card/ShowcasePortrait'
+import { ShowcaseRelicsPanel } from 'lib/characterPreview/card/ShowcaseRelicsPanel'
 import {
-  Parts,
-  ShowcaseColorMode,
-} from 'lib/constants/constants'
-import { SavedSessionKeys } from 'lib/constants/constantsSession'
+  showcaseShadow,
+  showcaseShadowInsetAddition,
+  ShowcaseSource,
+  showcaseTransition,
+} from 'lib/characterPreview/CharacterPreviewComponents'
 import {
+  showcaseOnEditPortraitOk,
+} from 'lib/characterPreview/characterPreviewController'
+import { extractPaletteInWorker } from 'lib/characterPreview/color/colorExtractionService'
+import { DEFAULT_CONFIG } from 'lib/characterPreview/color/colorPipelineConfig'
+import type { ColorPipelineConfig } from 'lib/characterPreview/color/colorPipelineConfig'
+import { withAlpha } from 'lib/characterPreview/color/colorUtils'
+import {
+  modifyCustomColor,
+  organizeColors,
+  pickBestSeed,
+} from 'lib/characterPreview/color/colorUtils'
+import {
+  buildCardBgPipelineConfig,
+  resolveShowcaseColor,
+  resolveShowcaseTheme,
+} from 'lib/characterPreview/color/showcaseColorService'
+import { ShowcaseCustomizationSidebar } from 'lib/characterPreview/customization/ShowcaseCustomizationSidebar'
+import { useDebugPanelConfig } from 'lib/characterPreview/debugPanelConfig'
+import { DebugSliderPanel } from 'lib/characterPreview/DebugSliderPanel'
+import {
+  CARD_BG_ALPHA_DEFAULT,
+  type DebugVisualConfig,
+  INSET_BLUR,
+  INSET_OPACITY,
+  PORTRAIT_BLUR,
+  PORTRAIT_BRIGHTNESS,
+  PORTRAIT_CONTRAST,
+  PORTRAIT_SATURATE,
+  SHADOW_BLUR,
+  SHADOW_OPACITY,
+  SHADOW_X,
+  SHADOW_Y,
+  TEXT_SHADOW_DEFAULT,
+  getShowcasePreset,
+  useDebugVisualConfigStore,
+} from 'lib/characterPreview/debugVisualConfigStore'
+import { ShowcaseBuildAnalysis } from 'lib/characterPreview/scoring/ShowcaseBuildAnalysis'
+import {
+  ShowcaseCombatScoreDetailsFooter,
+  ShowcaseDpsScoreHeader,
+  ShowcaseDpsScorePanel,
+} from 'lib/characterPreview/scoring/ShowcaseDpsScore'
+import { ShowcaseStatScore } from 'lib/characterPreview/scoring/ShowcaseStatScore'
+import { resolveShowcaseLayout } from 'lib/characterPreview/showcaseDerivedData'
+import { useCharacterPreviewState } from 'lib/characterPreview/useCharacterPreviewState'
+import { type BasicStatsObject } from 'lib/conditionals/conditionalConstants'
+import {
+  cardTotalW,
   defaultGap,
   middleColumnWidth,
   parentH,
 } from 'lib/constants/constantsUi'
 import { CharacterAnnouncement } from 'lib/interactions/CharacterAnnouncement'
-import RelicModal from 'lib/overlays/modals/RelicModal'
+import type { RelicScoringResult } from 'lib/relics/scoring/types'
 import { Assets } from 'lib/rendering/assets'
-
-import { useScoringMetadata } from 'lib/hooks/useScoringMetadata'
-import { getShowcaseSimScoringExecution } from 'lib/scoring/dpsScore'
 import { ScoringType } from 'lib/scoring/simScoringUtils'
 import { injectBenchmarkDebuggers } from 'lib/simulations/tests/simDebuggers'
-import DB, { AppPages } from 'lib/state/db'
-import { ShowcaseTheme } from 'lib/tabs/tabRelics/RelicPreview'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import type { ShowcaseTabCharacter } from 'lib/tabs/tabShowcase/showcaseTabTypes'
+import { useShowcaseTabStore } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
+import { DeferReveal } from 'lib/ui/DeferredRender'
 import {
-  colorTransparent,
-  showcaseBackgroundColor,
-  showcaseCardBackgroundColor,
-  showcaseCardBorderColor,
-  showcaseSegmentedColor,
-  showcaseTransition,
-} from 'lib/utils/colorUtils'
-import {
-  useRef,
-  useState,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
 } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
-  Character,
-  SavedBuild,
+  type Character,
+  type CharacterId,
+  type SavedBuild,
 } from 'types/character'
-import {
+import type {
   CustomImageConfig,
   CustomImagePayload,
 } from 'types/customImage'
-import { Relic } from 'types/relic'
+import type { ShowcaseDisplayDimensionsOverride, ShowcaseTemporaryOptions } from 'types/metadata'
+import {
+  ScoringSelector,
+  SimScoringContextProvider,
+  useSimScoringContext,
+} from './SimScoringContext'
 
-const { useToken } = theme
+const EMPTY_SWATCHES: string[] = []
+const EMPTY_OPTIONS: ShowcaseTemporaryOptions = {}
+const EMPTY_SCORED: RelicScoringResult[] = []
 
 interface InteractiveCharacterPreviewProps {
   setOriginalCharacterModalOpen: (open: boolean) => void
@@ -107,249 +118,399 @@ interface SavedBuildPreviewProps {
 
 interface CharacterPreviewPropsBase {
   id: string
-  character: Character | null
+  character: Character | ShowcaseTabCharacter | null
+  /** Debug mode: disables L2D, forces stat score, hides analysis footer */
+  forceDebug?: boolean
+  /** Override debug visual config (for shared debug panel across multiple cards) */
+  debugVisualConfig?: DebugVisualConfig
+  /** Editor mode overrides for live preview of display dimensions */
+  editorOverrides?: ShowcaseDisplayDimensionsOverride
 }
 
 type CharacterPreviewProps = CharacterPreviewPropsBase & (SavedBuildPreviewProps | InteractiveCharacterPreviewProps)
 
-export function CharacterPreview(props: CharacterPreviewProps) {
-  const {
-    source,
-    character,
-    setOriginalCharacterModalOpen,
-    setOriginalCharacterModalInitialCharacter,
-    savedBuildOverride,
-  } = props
+globalThis.CARD_DEBUG = false
 
-  const { token } = useToken()
-  const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null)
-  const [selectedPart, setSelectedPart] = useState<Parts | null>(null)
-  const [relicModalOpen, setRelicModalOpen] = useState(false)
-  const setEditModalOpen = (open: boolean) => setRelicModalOpen(open)
-  const setAddModalOpen = (open: boolean, part: Parts) => {
-    setSelectedPart(part)
-    setSelectedRelic(null)
-    setRelicModalOpen(open)
-  }
-  const [editPortraitModalOpen, setEditPortraitModalOpen] = useState(false)
-  const [customPortrait, setCustomPortrait] = useState<CustomImageConfig>()
+function buildPortraitFilter(blur: number, brightness: number, saturate: number, contrast: number) {
+  return `blur(${blur}px) brightness(${brightness.toFixed(2)}) saturate(${saturate.toFixed(2)}) contrast(${contrast.toFixed(2)})`
+}
 
-  const teamSelectionByCharacter = window.store((s) => s.showcaseTeamPreferenceById)
+function buildShadow(x: number, y: number, blur: number, opacity: number) {
+  return `rgba(0, 0, 0, ${opacity.toFixed(2)}) ${x}px ${y}px ${blur}px`
+}
 
-  const [storedScoringType, setScoringType] = useState(window.store.getState().savedSession.scoringType)
-  const prevCharId = useRef<string>()
-  const prevSeedColor = useRef<string>(DEFAULT_SHOWCASE_COLOR)
-  const relicsById = window.store((s) => s.relicsById)
-  const [_redrawTeammates, setRedrawTeammates] = useState<number>(0)
-  const globalShowcasePreferences = window.store((s) => s.showcasePreferences)
+function buildInsetShadow(blur: number, opacity: number) {
+  return `, inset rgba(255, 255, 255, ${opacity.toFixed(2)}) 0px 0px ${blur}px`
+}
 
-  const sidebarRef = useRef<ShowcaseCustomizationSidebarRef>(null)
-  const [seedColor, setSeedColor] = useState<string>(DEFAULT_SHOWCASE_COLOR)
-  const [colorMode, setColorMode] = useState<ShowcaseColorMode>(
-    window.store.getState().savedSession[SavedSessionKeys.showcaseStandardMode] ? ShowcaseColorMode.STANDARD : ShowcaseColorMode.AUTO,
-  )
-  const activeKey = window.store((s) => s.activeKey)
-  const darkMode = window.store((s) => s.savedSession.showcaseDarkMode)
+/** Blurred portrait background fill behind the card */
+function ShowcaseBackgroundBlur({
+  portraitUrl,
+  portraitToUse,
+  displayDimensions,
+  portraitFilter,
+  blendMode,
+}: {
+  portraitUrl: string,
+  portraitToUse: CustomImageConfig | undefined,
+  displayDimensions: { charCenter: { x: number, y: number, z: number }, backgroundCenterOffset: { x: number, y: number, z: number } },
+  portraitFilter: string,
+  blendMode: 'screen' | 'normal',
+}) {
+  let bgSize: string
+  let bgPos: string
 
-  // Using this to trigger updates on scoring metadata changes
-  const scoringMetadata = useScoringMetadata(character?.id)
-  const showcaseTemporaryOptionsByCharacter = window.store((s) => s.showcaseTemporaryOptionsByCharacter)
-
-  const onRelicModalOk = (relic: Relic) => {
-    if (selectedRelic) {
-      showcaseOnEditOk(relic, selectedRelic, setSelectedRelic)
+  if (portraitToUse) {
+    // Custom portrait: CSS cover guarantees no visible edges,
+    // percentage position centers on the crop focal point
+    const crop = portraitToUse.customImageParams.croppedAreaPixels
+    const origW = portraitToUse.originalDimensions.width
+    const origH = portraitToUse.originalDimensions.height
+    bgSize = 'cover'
+    if (origW > 0 && origH > 0) {
+      const pctX = (crop.x + crop.width / 2) / origW * 100
+      const pctY = (crop.y + crop.height / 2) / origH * 100
+      bgPos = `${pctX}% ${pctY}%`
     } else {
-      showcaseOnAddOk(relic, setSelectedRelic)
+      bgPos = 'center'
     }
+  } else {
+    // Default portrait: pixel positioning using curated charCenter values + per-character offset
+    const bgZoom = Math.max(0.1, displayDimensions.charCenter.z * 1.75 + displayDimensions.backgroundCenterOffset.z)
+    const bgScale = bgZoom / 2 * cardTotalW / 1024
+    const offsetX = displayDimensions.backgroundCenterOffset.x
+    const offsetY = displayDimensions.backgroundCenterOffset.y
+    bgSize = `${cardTotalW * bgZoom}px auto`
+    bgPos = `${-displayDimensions.charCenter.x * bgScale + cardTotalW / 2 + offsetX}px ${-displayDimensions.charCenter.y * bgScale + parentH / 2 + offsetY}px`
   }
 
-  if (!character
-    || (activeKey != AppPages.CHARACTERS && activeKey != AppPages.SHOWCASE && activeKey != AppPages.OPTIMIZER)
-    || (source === ShowcaseSource.CHARACTER_TAB && activeKey === AppPages.OPTIMIZER)) {
+  return (
+    <div
+      data-portrait-bg
+      style={{
+        backgroundImage: `url(${portraitUrl})`,
+        backgroundPosition: bgPos,
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: bgSize,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 0,
+        filter: portraitFilter,
+        WebkitFilter: portraitFilter,
+        mixBlendMode: blendMode,
+      }}
+    />
+  )
+}
+
+/** Resolve debug visual config with defaults - single source of truth for fallback values */
+function resolveDebugVisualConfig(
+  config: DebugVisualConfig | undefined,
+  presetFallback?: DebugVisualConfig,
+) {
+  return {
+    portraitBlur: config?.portraitBlur ?? presetFallback?.portraitBlur ?? PORTRAIT_BLUR,
+    portraitBrightness: config?.portraitBrightness ?? presetFallback?.portraitBrightness ?? PORTRAIT_BRIGHTNESS,
+    portraitSaturate: config?.portraitSaturate ?? presetFallback?.portraitSaturate ?? PORTRAIT_SATURATE,
+    portraitContrast: config?.portraitContrast ?? presetFallback?.portraitContrast ?? PORTRAIT_CONTRAST,
+    cardBgAlpha: config?.cardBgAlpha ?? presetFallback?.cardBgAlpha ?? CARD_BG_ALPHA_DEFAULT,
+    debugMaxC: config?.debugMaxC ?? presetFallback?.debugMaxC ?? DEFAULT_CONFIG.cardBg.maxC,
+    debugMinC: config?.debugMinC ?? presetFallback?.debugMinC ?? DEFAULT_CONFIG.cardBg.minC,
+    debugChromaScale: config?.debugChromaScale ?? presetFallback?.debugChromaScale ?? DEFAULT_CONFIG.cardBg.chromaScale,
+    debugTargetL: config?.debugTargetL ?? presetFallback?.debugTargetL ?? DEFAULT_CONFIG.cardBg.targetL,
+    debugMinL: config?.debugMinL ?? presetFallback?.debugMinL ?? DEFAULT_CONFIG.cardBg.minL,
+    debugMaxL: config?.debugMaxL ?? presetFallback?.debugMaxL ?? DEFAULT_CONFIG.cardBg.maxL,
+    blendMode: config?.blendMode ?? presetFallback?.blendMode ?? 'normal' as const,
+    shadowX: config?.shadowX ?? presetFallback?.shadowX ?? SHADOW_X,
+    shadowY: config?.shadowY ?? presetFallback?.shadowY ?? SHADOW_Y,
+    shadowBlur: config?.shadowBlur ?? presetFallback?.shadowBlur ?? SHADOW_BLUR,
+    shadowOpacity: config?.shadowOpacity ?? presetFallback?.shadowOpacity ?? SHADOW_OPACITY,
+    insetBlur: config?.insetBlur ?? presetFallback?.insetBlur ?? INSET_BLUR,
+    insetOpacity: config?.insetOpacity ?? presetFallback?.insetOpacity ?? INSET_OPACITY,
+    textShadow: config?.textShadow ?? presetFallback?.textShadow ?? TEXT_SHADOW_DEFAULT,
+  }
+}
+
+export function CharacterPreview({
+  character,
+  forceDebug,
+  debugVisualConfig,
+  editorOverrides,
+  ...rest
+}: CharacterPreviewProps) {
+  if (!character) {
     return (
       <div
         style={{
           height: parentH,
-          width: 1068,
-          borderRadius: 8,
-          backgroundColor: token.colorBgLayout,
-          border: `1px solid ${token.colorBgContainer}`,
+          width: cardTotalW,
+          borderRadius: 6,
+          backgroundColor: 'var(--layer-0)',
+          border: '1px solid var(--layer-0)',
         }}
       />
     )
   }
 
-  console.log('======================================================================= RENDER CharacterPreview', source)
-
-  // ===== Relics =====
-
-  const { scoringResults, displayRelics } = getPreviewRelics(source, character, relicsById, savedBuildOverride)
-  const scoredRelics = scoringResults.relics || []
-
-  const showcaseMetadata = getShowcaseMetadata(character)
-
-  // ===== Simulation =====
-
-  const currentSelection = handleTeamSelection(character, prevCharId, teamSelectionByCharacter)
-  const showcaseTemporaryOptions = showcaseTemporaryOptionsByCharacter[character.id]
-  const asyncSimScoringExecution = getShowcaseSimScoringExecution(
-    character,
-    displayRelics,
-    currentSelection,
-    showcaseTemporaryOptions,
-    savedBuildOverride,
-  )
-  const scoringType = resolveScoringType(storedScoringType, asyncSimScoringExecution)
-
-  // ===== Portrait =====
-
-  const portraitToUse = DB.getCharacterById(character?.id)?.portrait ?? undefined
-  const portraitUrl = portraitToUse?.imageUrl ?? Assets.getCharacterPortraitById(character.id)
-
-  // ===== Color =====
-
-  const defaultColor = getDefaultColor(character.id, portraitUrl, colorMode)
-
-  const characterShowcasePreferences = colorMode == ShowcaseColorMode.STANDARD
-    ? standardShowcasePreferences()
-    : globalShowcasePreferences[character.id] ?? defaultShowcasePreferences(defaultColor)
-
-  const overrideColorMode = getOverrideColorMode(colorMode, globalShowcasePreferences, character)
-
-  const overrideSeedColor = portraitToUse
-    ? (
-      urlToColorCache[portraitUrl]
-        ? (overrideColorMode == ShowcaseColorMode.AUTO)
-          ? defaultColor
-          : (characterShowcasePreferences.color ?? defaultColor)
-        : prevSeedColor.current
-    )
-    : (
-      (overrideColorMode == ShowcaseColorMode.AUTO)
-        ? defaultColor
-        : (characterShowcasePreferences.color ?? defaultColor)
-    )
-
-  prevSeedColor.current = overrideSeedColor
-
-  // ===== Theme =====
-
-  const seedTheme = {
-    algorithm: theme.darkAlgorithm,
-    token: {
-      colorBgLayout: overrideSeedColor,
-      colorPrimary: overrideSeedColor,
-    },
-    components: {
-      Segmented: {
-        trackBg: colorTransparent(),
-        itemSelectedBg: showcaseSegmentedColor(overrideSeedColor, darkMode),
-      },
-    },
+  // Development debug mode: subscribe to store and show panel
+  // Only when CARD_DEBUG is on AND no external config is provided AND not in forceDebug mode
+  if (globalThis.CARD_DEBUG && !debugVisualConfig && !forceDebug) {
+    return <CharacterPreviewWithDebug character={character} forceDebug={forceDebug} {...rest} />
   }
 
-  const seedToken = getDesignToken(seedTheme)
-  const derivedShowcaseTheme: ShowcaseTheme = {
-    cardBackgroundColor: showcaseCardBackgroundColor(seedToken.colorPrimaryActive, darkMode),
-    cardBorderColor: showcaseCardBorderColor(seedToken.colorPrimaryActive, darkMode),
-  }
+  return <CharacterPreviewInner character={character} forceDebug={forceDebug} debugVisualConfig={debugVisualConfig} editorOverrides={editorOverrides} {...rest} />
+}
 
-  // ===== Display =====
-
-  const displayDimensions: ShowcaseDisplayDimensions = getShowcaseDisplayDimensions(character, scoringType == ScoringType.COMBAT_SCORE)
-  const artistName = getArtistName(character)
-  const finalStats = getShowcaseStats(character, displayRelics, showcaseMetadata)
-
-  const yOffset = 0
-  const zoom = 150
+/** Wrapper that subscribes to debug store and renders panel - only used when CARD_DEBUG */
+function CharacterPreviewWithDebug(props: Omit<CharacterPreviewProps, 'debugVisualConfig'> & { character: Character | ShowcaseTabCharacter }) {
+  const debugConfig = useDebugVisualConfigStore()
+  const { savedPresetGroups, pillGroups, groups } = useDebugPanelConfig()
 
   return (
-    <Flex vertical style={{ width: source == ShowcaseSource.BUILDS_MODAL ? 1076 : 1068, minHeight: source == ShowcaseSource.BUILDS_MODAL ? 850 : 2000 }}>
-      {source !== ShowcaseSource.BUILDS_MODAL && (
-        <RelicModal
-          selectedRelic={selectedRelic}
-          selectedPart={selectedPart}
-          onOk={onRelicModalOk}
-          setOpen={setRelicModalOpen}
-          open={relicModalOpen}
-          defaultWearer={character.id}
-        />
-      )}
-
-      {
-        /*
-        Will only render (<></>) if source == ShowcaseSource.BUILDS_MODAL
-        It still needs to be mounted in order to provide colour to the build modals opened from the optimizer tab
-      */
-      }
-      <ShowcaseCustomizationSidebar
-        ref={sidebarRef}
-        source={source}
-        id={props.id}
-        characterId={character.id}
-        asyncSimScoringExecution={asyncSimScoringExecution}
-        token={seedToken}
-        showcasePreferences={characterShowcasePreferences}
-        scoringType={scoringType}
-        seedColor={overrideSeedColor}
-        setSeedColor={setSeedColor}
-        colorMode={overrideColorMode}
-        setColorMode={setColorMode}
+    <>
+      <DebugSliderPanel
+        savedPresetGroups={savedPresetGroups}
+        pillGroups={pillGroups}
+        groups={groups}
       />
+      <CharacterPreviewInner {...props} debugVisualConfig={debugConfig} />
+    </>
+  )
+}
 
-      <ConfigProvider theme={seedTheme}>
-        {/* Showcase full card */}
-        <Flex
-          id={props.id}
+type CharacterPreviewInnerProps = Omit<CharacterPreviewProps, 'character'> & { character: Character | ShowcaseTabCharacter }
+
+const CharacterPreviewInner = memo(function CharacterPreviewInner({
+  source,
+  character: rawCharacter,
+  setOriginalCharacterModalOpen,
+  setOriginalCharacterModalInitialCharacter,
+  savedBuildOverride,
+  id,
+  forceDebug,
+  debugVisualConfig,
+  editorOverrides,
+}: CharacterPreviewInnerProps) {
+  // Safe narrowing: ShowcaseTabCharacter is structurally compatible with Character for all
+  // downstream usage. The source-aware branching in useCharacterPreviewState and getPreviewRelics
+  // handles the equipped field difference (Relic objects vs string IDs).
+  const character = rawCharacter as Character
+
+  // Debug visual config with defaults — preset-aware (Satin/Gloss)
+  const { t } = useTranslation('gameData')
+  const showcasePreset = useGlobalStore((s) => s.savedSession.showcasePreset)
+  const presetFallback = getShowcasePreset(showcasePreset)
+  const visual = resolveDebugVisualConfig(debugVisualConfig, presetFallback)
+
+  const colorPipelineConfig = useMemo<ColorPipelineConfig>(
+    () => buildCardBgPipelineConfig(visual),
+    [visual.debugMaxC, visual.debugMinC, visual.debugChromaScale, visual.debugTargetL, visual.debugMinL, visual.debugMaxL],
+  )
+
+  const state = useCharacterPreviewState(source, rawCharacter, savedBuildOverride)
+
+  // Portrait filter with dark mode brightness offset
+  const effectiveBrightness = visual.portraitBrightness + (state.darkMode ? DEFAULT_CONFIG.darkMode.brightnessOffset : 0)
+  const portraitFilter = buildPortraitFilter(visual.portraitBlur, effectiveBrightness, visual.portraitSaturate, visual.portraitContrast)
+
+  const { displayRelics, scoringResults } = state.previewRelics
+
+  // Layout: forceDebug disables L2D, forces SUBSTAT_SCORE, hides analysis footer
+  // editorOverrides.forceSimScoreLayout overrides to COMBAT_SCORE layout for preview
+  const effectiveScoringType = editorOverrides?.forceSimScoreLayout
+    ? ScoringType.COMBAT_SCORE
+    : (forceDebug ? ScoringType.SUBSTAT_SCORE : state.storedScoringType)
+  // Cache-buster: state.scoringMetadata invalidates when scoring overrides change (SPD weight, buff priority)
+  const _scoringMetadataCacheBuster = state.scoringMetadata
+  const layout = useMemo(
+    () => {
+      void _scoringMetadataCacheBuster // explicit cache invalidation dependency
+      const baseLayout = resolveShowcaseLayout({
+        character,
+        teamSelection: state.teamSelection,
+        storedScoringType: effectiveScoringType,
+        savedBuildOverride,
+        t,
+      })
+      if (forceDebug && !editorOverrides?.forceSimScoreLayout) {
+        return { ...baseLayout, displayDimensions: { ...baseLayout.displayDimensions, disableSpine: true } }
+      }
+      return baseLayout
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [character, state.teamSelection, effectiveScoringType, savedBuildOverride, _scoringMetadataCacheBuster, t, forceDebug, editorOverrides?.forceSimScoreLayout],
+  )
+
+  // ===== Color + Theme (color-dependent, cheap) =====
+  const portraitImageUrl = character.portrait?.imageUrl
+  const { effectiveColorMode, seedColor } = useMemo(
+    () =>
+      resolveShowcaseColor(
+        character.id,
+        state.globalColorMode,
+        state.showcasePreferences,
+        state.portraitColor,
+        !!portraitImageUrl,
+      ),
+    [character.id, state.globalColorMode, state.showcasePreferences, state.portraitColor, portraitImageUrl],
+  )
+
+  const derivedShowcaseTheme = useMemo(
+    () => resolveShowcaseTheme(seedColor, state.darkMode, colorPipelineConfig),
+    [seedColor, state.darkMode, colorPipelineConfig],
+  )
+
+  useEffect(() => {
+    const imgSrc = portraitImageUrl ?? Assets.getCharacterPortraitById(character.id)
+    let aborted = false
+
+    void (async () => {
+      const palette = await extractPaletteInWorker(imgSrc)
+      if (aborted || !palette) return
+      const swatches = organizeColors(palette)
+      const color = portraitImageUrl
+        ? modifyCustomColor(pickBestSeed(palette))
+        : undefined
+      useShowcaseTabStore.getState().setPortraitPalette(character.id, color, swatches)
+    })()
+
+    return () => {
+      aborted = true
+    }
+  }, [character.id, portraitImageUrl])
+
+  // ===== Stable callback refs for child components =====
+  const handleEditPortraitOk = useCallback(
+    (payload: CustomImagePayload) => showcaseOnEditPortraitOk(character, payload, state.setCustomPortrait, state.setEditPortraitModalOpen),
+    [character, state.setCustomPortrait, state.setEditPortraitModalOpen],
+  )
+
+  const handleSetOriginalCharacterModalInitialCharacter = useCallback(
+    (character: Character) => setOriginalCharacterModalInitialCharacter?.(character),
+    [setOriginalCharacterModalInitialCharacter],
+  )
+
+  const handleSetOriginalCharacterModalOpen = useCallback(
+    (open: boolean) => setOriginalCharacterModalOpen?.(open),
+    [setOriginalCharacterModalOpen],
+  )
+
+  // --- Scoring (useSyncExternalStore for cache reads, effect for cache misses) ---
+  const tempOptions = state.showcaseTemporaryOptions ?? EMPTY_OPTIONS
+
+  // ===== Early return after all hooks =====
+  if (!state.previewRelics || !state.finalStats) {
+    return null
+  }
+
+  const {
+    showcaseMetadata,
+    scoringType,
+    portraitUrl,
+    portraitToUse,
+    displayDimensions: baseDisplayDimensions,
+    artistName,
+  } = layout
+
+  // Apply editor overrides for live preview editing
+  const displayDimensions = editorOverrides
+    ? {
+        ...baseDisplayDimensions,
+        charCenter: editorOverrides.charCenter ?? baseDisplayDimensions.charCenter,
+        backgroundCenterOffset: editorOverrides.backgroundCenterOffset ?? baseDisplayDimensions.backgroundCenterOffset,
+      }
+    : baseDisplayDimensions
+
+  const scoredRelics = scoringResults.relics ?? EMPTY_SCORED
+
+  return (
+    <SimScoringContextProvider
+      character={character}
+      simulationMetadata={layout.simulationMetadata}
+      showcaseTemporaryOptions={tempOptions}
+      singleRelicByPart={displayRelics}
+    >
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: cardTotalW,
+          minHeight: forceDebug ? 'auto' : (source === ShowcaseSource.BUILDS_MODAL ? 900 : 2000),
+        }}
+      >
+        {
+          /*
+        Will only render (<></>) if source == ShowcaseSource.BUILDS_MODAL
+        It still needs to be mounted in order to provide colour to the build modals opened from the optimizer tab.
+        Hidden in forceDebug mode.
+      */
+        }
+        {!forceDebug && (
+          <ShowcaseCustomizationSidebar
+            source={source}
+            id={id}
+            characterId={character.id}
+            scoringType={scoringType}
+            seedColor={seedColor}
+            effectiveColorMode={effectiveColorMode}
+            portraitSwatches={state.portraitSwatches ?? EMPTY_SWATCHES}
+            cardBgAlpha={visual.cardBgAlpha}
+          />
+        )}
+
+        {
+          /* Showcase full card — CSS custom properties for card theme allow imperative
+          color updates during drag without React re-renders */
+        }
+        <div
+          id={id}
           className='characterPreview'
           style={{
-            position: 'relative',
-            display: character ? 'flex' : 'none',
-            height: parentH,
-            background: showcaseBackgroundColor(token.colorBgLayout, darkMode),
-            backgroundBlendMode: 'screen',
-            overflow: 'hidden',
-            borderRadius: 7,
-            transition: showcaseTransition(),
-          }}
-          gap={defaultGap}
+            '--showcase-card-bg': withAlpha(derivedShowcaseTheme.cardBackgroundColor, visual.cardBgAlpha),
+            '--showcase-card-border': derivedShowcaseTheme.cardBorderColor,
+            '--showcase-shadow': buildShadow(visual.shadowX, visual.shadowY, visual.shadowBlur, visual.shadowOpacity),
+            '--showcase-shadow-inset': buildInsetShadow(visual.insetBlur, visual.insetOpacity),
+            'color': 'rgba(225, 225, 225, 1)',
+            'textShadow': visual.textShadow,
+            'position': 'relative',
+            'display': 'flex',
+            'height': parentH,
+            'background': 'var(--layer-inset)',
+            'backgroundBlendMode': visual.blendMode,
+            'overflow': 'hidden',
+            'borderRadius': 6,
+            'transition': showcaseTransition,
+            'gap': defaultGap,
+          } as React.CSSProperties}
         >
-          {/* Background */}
-          <div
-            style={{
-              backgroundImage: `url(${portraitUrl})`,
-              backgroundPosition: 'center',
-              backgroundRepeat: 'no-repeat',
-              backgroundSize: `${zoom}%`,
-              position: 'absolute',
-              top: -yOffset,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 0,
-              filter: `blur(18px) brightness(${darkMode ? 0.50 : 0.70}) saturate(${darkMode ? 0.80 : 0.80})`,
-              WebkitFilter: `blur(18px) brightness(${darkMode ? 0.50 : 0.70}) saturate(${darkMode ? 0.80 : 0.80})`,
-            }}
+          <ShowcaseBackgroundBlur
+            portraitUrl={portraitUrl}
+            portraitToUse={portraitToUse}
+            displayDimensions={displayDimensions}
+            portraitFilter={portraitFilter}
+            blendMode={visual.blendMode}
           />
 
           {/* Portrait left panel */}
-          <Flex vertical gap={8} className='character-build-portrait'>
+          <div className='character-build-portrait' style={{ display: 'flex', flexDirection: 'column', gap: 8, zIndex: 1 }}>
             <ShowcasePortrait
               source={source}
               character={character}
               scoringType={scoringType}
               displayDimensions={displayDimensions}
               customPortrait={portraitToUse}
-              editPortraitModalOpen={editPortraitModalOpen}
-              setEditPortraitModalOpen={setEditPortraitModalOpen}
-              onEditPortraitOk={(payload: CustomImagePayload) => showcaseOnEditPortraitOk(character, payload, setCustomPortrait, setEditPortraitModalOpen)}
+              editPortraitModalOpen={state.editPortraitModalOpen}
+              setEditPortraitModalOpen={state.setEditPortraitModalOpen}
+              onEditPortraitOk={handleEditPortraitOk}
               artistName={artistName}
-              setOriginalCharacterModalInitialCharacter={(character) => setOriginalCharacterModalInitialCharacter?.(character)}
-              setOriginalCharacterModalOpen={(open) => setOriginalCharacterModalOpen?.(open)}
-              onPortraitLoad={(img: string) => sidebarRef.current?.onPortraitLoad!(img, character.id)}
+              setOriginalCharacterModalInitialCharacter={handleSetOriginalCharacterModalInitialCharacter}
+              setOriginalCharacterModalOpen={handleSetOriginalCharacterModalOpen}
             />
 
-            {scoringType == ScoringType.COMBAT_SCORE && (
+            {scoringType === ScoringType.COMBAT_SCORE && (
               <ShowcaseLightConeSmall
                 character={character}
                 showcaseMetadata={showcaseMetadata}
@@ -358,62 +519,60 @@ export function CharacterPreview(props: CharacterPreviewProps) {
                 setOriginalCharacterModalOpen={setOriginalCharacterModalOpen}
               />
             )}
-          </Flex>
+          </div>
 
           {/* Character details middle panel */}
-          <Flex vertical justify='space-between' gap={8} style={{}}>
-            <Flex
-              vertical
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 8 }}>
+            <div
               style={{
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
                 width: middleColumnWidth,
                 height: '100%',
-                borderRadius: 8,
+                borderRadius: 6,
                 zIndex: 10,
-                backgroundColor: derivedShowcaseTheme.cardBackgroundColor,
-                transition: showcaseTransition(),
+                backgroundColor: 'var(--showcase-card-bg)',
+                transition: showcaseTransition,
                 flex: 1,
                 paddingRight: 2,
                 paddingLeft: 2,
                 paddingBottom: 3,
                 boxShadow: showcaseShadow + showcaseShadowInsetAddition,
-                border: `1px solid ${derivedShowcaseTheme.cardBorderColor}`,
+                border: '1px solid var(--showcase-card-border)',
               }}
-              justify='space-between'
             >
               <ShowcaseCharacterHeader
                 showcaseMetadata={showcaseMetadata}
                 scoringType={scoringType}
               />
 
-              <CharacterStatSummary
+              <WrappedCharacterStatSummary
                 characterId={character.id}
-                finalStats={finalStats}
+                finalStats={state.finalStats}
                 elementalDmgValue={showcaseMetadata.elementalDmgType}
                 scoringType={scoringType}
-                asyncSimScoringExecution={asyncSimScoringExecution}
+                hasScoring={layout.simulationMetadata !== null}
               />
 
-              {scoringType == ScoringType.COMBAT_SCORE && (
+              {scoringType === ScoringType.COMBAT_SCORE && (
                 <>
-                  <ShowcaseDpsScoreHeader asyncSimScoringExecution={asyncSimScoringExecution} relics={displayRelics} />
+                  <ShowcaseDpsScoreHeader relics={displayRelics} tempOptions={tempOptions} />
 
                   <ShowcaseDpsScorePanel
                     characterId={showcaseMetadata.characterId}
-                    token={seedToken}
-                    asyncSimScoringExecution={asyncSimScoringExecution}
-                    teamSelection={currentSelection}
-                    displayRelics={displayRelics}
-                    setRedrawTeammates={setRedrawTeammates}
+                    simulationMetadata={layout.simulationMetadata!}
+                    teamSelection={layout.currentSelection}
                     source={source}
                   />
 
-                  <ShowcaseCombatScoreDetailsFooter asyncSimScoringExecution={asyncSimScoringExecution} />
+                  <ShowcaseCombatScoreDetailsFooter />
                 </>
               )}
 
-              {scoringType != ScoringType.COMBAT_SCORE && (
+              {scoringType !== ScoringType.COMBAT_SCORE && (
                 <>
-                  {scoringType != ScoringType.NONE && (
+                  {scoringType !== ScoringType.NONE && (
                     <ShowcaseStatScore
                       scoringResults={scoringResults}
                     />
@@ -424,9 +583,9 @@ export function CharacterPreview(props: CharacterPreviewProps) {
                   />
                 </>
               )}
-            </Flex>
+            </div>
 
-            {scoringType != ScoringType.COMBAT_SCORE && (
+            {scoringType !== ScoringType.COMBAT_SCORE && (
               <ShowcaseLightConeLarge
                 character={character}
                 showcaseMetadata={showcaseMetadata}
@@ -435,41 +594,65 @@ export function CharacterPreview(props: CharacterPreviewProps) {
                 setOriginalCharacterModalOpen={setOriginalCharacterModalOpen}
               />
             )}
-          </Flex>
+          </div>
 
           {/* Relics right panel */}
           <ShowcaseRelicsPanel
-            setSelectedRelic={setSelectedRelic}
-            setEditModalOpen={setEditModalOpen}
-            setAddModalOpen={setAddModalOpen}
+            setSelectedRelic={state.setSelectedRelic}
+            setEditModalOpen={state.setEditModalOpen}
+            setAddModalOpen={state.setAddModalOpen}
             displayRelics={displayRelics}
             source={source}
             scoringType={scoringType}
             characterId={showcaseMetadata.characterId}
             scoredRelics={scoredRelics}
-            showcaseColors={derivedShowcaseTheme}
           />
-        </Flex>
-      </ConfigProvider>
+        </div>
 
-      <CharacterAnnouncement
-        characterId={showcaseMetadata.characterId}
-        asyncSimScoringExecution={asyncSimScoringExecution}
-      />
-
-      {/* Showcase analysis footer */}
-      {source != ShowcaseSource.BUILDS_MODAL && (
-        <ShowcaseBuildAnalysis
-          token={token}
-          asyncSimScoringExecution={asyncSimScoringExecution}
-          showcaseMetadata={showcaseMetadata}
-          scoringType={storedScoringType}
-          displayRelics={displayRelics}
-          setScoringType={setScoringType}
+        <CharacterAnnouncement
+          characterId={showcaseMetadata.characterId}
+          simulationMetadata={layout.simulationMetadata}
         />
-      )}
-    </Flex>
+
+        {
+          /* Showcase analysis footer — uses storedScoringType (user's preference) not resolved scoringType,
+          so the SegmentedControl reflects their selection even when combat score is unavailable.
+          Hidden in forceDebug mode. */
+        }
+        {source !== ShowcaseSource.BUILDS_MODAL && !forceDebug && (
+          <DeferReveal>
+            <ShowcaseBuildAnalysis
+              showcaseMetadata={showcaseMetadata}
+              scoringType={state.storedScoringType}
+              displayRelics={displayRelics}
+              source={source}
+            />
+          </DeferReveal>
+        )}
+      </div>
+    </SimScoringContextProvider>
   )
-}
+})
+
+const WrappedCharacterStatSummary = memo(function({ characterId, finalStats, elementalDmgValue, scoringType, hasScoring }: {
+  characterId: CharacterId,
+  finalStats: BasicStatsObject,
+  elementalDmgValue: string,
+  scoringType: ScoringType,
+  hasScoring: boolean,
+}) {
+  const preview = useSimScoringContext(ScoringSelector.Preview)
+  const simScore = preview?.originalSimResult.simScore ?? 0
+  return (
+    <CharacterStatSummary
+      characterId={characterId}
+      finalStats={finalStats}
+      elementalDmgValue={elementalDmgValue}
+      scoringType={scoringType}
+      hasScoring={hasScoring}
+      simScore={simScore}
+    />
+  )
+})
 
 injectBenchmarkDebuggers()

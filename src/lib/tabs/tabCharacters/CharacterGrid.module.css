@@ -1,0 +1,414 @@
+/* ============================================================
+ * CharacterGrid.module.css — Character priority list
+ * ============================================================ */
+
+/* --- Container --- */
+
+.gridContainer {
+  width: var(--cr-list-width, 320px);
+  height: 100%;
+  outline: none;
+}
+
+/* OverlayScrollbars injects wrapper divs; target the content container for flex layout */
+.gridContainer :global([data-overlayscrollbars-contents]) {
+  display: flex !important;
+  flex-direction: column;
+  gap: var(--cr-row-gap, 1px);
+}
+
+.gridContainer[data-container-border='true'] {
+  border: 1px solid var(--layer-2);
+  border-radius: var(--mantine-radius-sm);
+}
+
+/* Suppress row transitions for one frame after drop to prevent stale-position animation */
+.gridContainer[data-suppress-transition] .root,
+.gridContainer[data-suppress-transition] .frame {
+  transition: none !important;
+}
+
+/* Kill all hover effects and transitions during active drag for smooth animation */
+.gridContainer[data-dragging-active] .frame {
+  transition: none;
+  will-change: transform;
+}
+
+.gridContainer[data-dragging-active] .root:hover .frame {
+  transform: none;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.gridContainer[data-dragging-active] .portraitBg {
+  transition: none;
+}
+
+.gridContainer[data-dragging-active] .root:hover .portraitBg {
+  filter: brightness(var(--cr-hover-rest-brightness, 1)) saturate(var(--cr-hover-rest-saturate, 1));
+}
+
+.gridContainer[data-dragging-active] .scrim {
+  transition: none;
+}
+
+.gridContainer[data-dragging-active] .actions {
+  transition: none;
+  opacity: 0;
+}
+
+.gridContainer[data-dragging-active] .rankGripSlot .rank,
+.gridContainer[data-dragging-active] .rankGripSlot .dragGrip {
+  transition: none;
+}
+
+/* --- Row container + design tokens --- */
+
+.root {
+  /* Overridable design tokens (scoped to row) */
+  --cr-primary: var(--mantine-primary-color-filled);
+  --cr-primary-tint: color-mix(in srgb, var(--cr-primary) 10%, transparent);
+  --cr-primary-border: color-mix(in srgb, var(--cr-primary) 15%, transparent);
+  --cr-radius: 0;
+
+  /* Hit area + flex slot. Stays put on hover so the cursor doesn't bounce off
+     when .frame lifts (which would oscillate hover on/off). */
+  position: relative;
+  height: var(--cr-row-height, 73px);
+  flex-shrink: 0;
+  cursor: grab;
+  user-select: none;
+}
+
+/* Visual frame — clips children and does the hover lift while .root stays
+   put. Decoupling visual from hit area is what eliminates the oscillation. */
+.frame {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--cr-radius);
+  overflow: hidden;
+  contain: content;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: inset 0 0 0 1px transparent;
+}
+
+.root:hover .frame {
+  transform: translateY(var(--cr-hover-lift, -2px));
+  box-shadow: var(--cr-hover-shadow, 0 4px 12px rgba(0, 0, 0, 0.4));
+}
+
+.root[data-dragging='true'] {
+  z-index: 10;
+  cursor: grabbing;
+}
+
+.root[data-dragging='true'] .frame {
+  box-shadow: inset 0 0 0 1px var(--border-default), 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Portrait background --- */
+
+.portraitBg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  filter: brightness(var(--cr-hover-rest-brightness, 1)) saturate(var(--cr-hover-rest-saturate, 1));
+  transition: filter 0.2s ease;
+}
+
+.portraitBg img {
+  position: absolute;
+  width: var(--cr-portrait-scale, 70%);
+  height: auto;
+  left: calc(50% + 5px);
+  top: 50%;
+  transform: translate(
+    calc(-1 * var(--cr-portrait-x, 40%)),
+    calc(-1 * var(--cr-portrait-y, 31%))
+  );
+  display: block;
+}
+
+.root:hover .portraitBg {
+  filter: brightness(var(--cr-hover-brightness, 1.05)) saturate(var(--cr-hover-saturate, 1.05));
+}
+
+/* --- Scrim gradient --- */
+
+.scrim {
+  position: absolute;
+  inset: -1px;
+  z-index: 1;
+  transition: background 0.15s;
+}
+
+/* Frosted glass — mask fades out the blur toward the portrait face */
+.scrim[data-scrim-mode='frosted'] {
+  backdrop-filter:
+    blur(var(--cr-frost-blur, 16px))
+    brightness(var(--cr-frost-brightness, 0.8))
+    saturate(var(--cr-frost-saturate, 1.2));
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, var(--cr-frost-tint, 0.2)) 0%,
+    rgba(0, 0, 0, calc(var(--cr-frost-tint, 0.2) * 0.5)) 50%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    black var(--cr-frost-fade-start, 27%),
+    transparent var(--cr-frost-fade-end, 42%)
+  );
+  mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    black var(--cr-frost-fade-start, 27%),
+    transparent var(--cr-frost-fade-end, 42%)
+  );
+}
+
+/* --- Right-side frosted strip (LC area) --- */
+
+.lcStrip {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--cr-lc-strip-width, 52px);
+  z-index: 1;
+  backdrop-filter: blur(6px) brightness(0.7) saturate(1.2);
+}
+
+/* --- Inner content layout --- */
+
+.inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 0 0 var(--cr-padding);
+  gap: var(--cr-gap);
+}
+
+/* --- Rank / drag grip slot --- */
+
+.rankGripSlot {
+  position: relative;
+  width: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rankGripSlot .rank {
+  transition: opacity 0.12s;
+}
+
+.rankGripSlot .dragGrip {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.12s;
+  cursor: grab;
+}
+
+.root:hover .rankGripSlot .rank {
+  opacity: 0;
+}
+
+.root:hover .rankGripSlot .dragGrip {
+  opacity: 0.4;
+}
+
+.gripLine {
+  display: block;
+  width: 8px;
+  height: 1.5px;
+  background: var(--text-secondary);
+}
+
+/* --- Subtitle (E/S badges + path under name) --- */
+
+.subtitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--cr-subtitle-gap, 1px);
+}
+
+.subtitleBadge {
+  font-size: var(--cr-subtitle-font-size, 12px);
+  line-height: var(--cr-subtitle-line-height, 1.4);
+  font-weight: 500;
+  font-family: var(--cr-subtitle-font-family, var(--mantine-font-family-monospace, monospace));
+  color: var(--text-secondary);
+}
+
+/* --- Light cone icon --- */
+
+.lcWrap {
+  position: relative;
+  width: var(--cr-lc-size, 48px);
+  height: var(--cr-lc-size, 48px);
+  flex-shrink: 0;
+  border-radius: var(--radius-xs);
+  overflow: hidden;
+  margin-right: var(--cr-lc-right-pad, 1px);
+}
+
+.lcWrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+}
+
+/* LC style: dark pill backing */
+.lcWrap[data-lc-style='pill'] {
+  background: rgba(0, 0, 0, 0.55);
+  padding: 3px;
+  border-radius: var(--radius-md);
+}
+
+/* LC style: frosted glass backing */
+.lcWrap[data-lc-style='frosted'] {
+  backdrop-filter: blur(6px) brightness(0.5) saturate(1.2);
+  padding: 3px;
+  border-radius: var(--radius-md);
+}
+
+/* LC style: drop shadow */
+.lcWrap[data-lc-style='shadow'] {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)) drop-shadow(0 0 3px rgba(0, 0, 0, 0.3));
+}
+
+/* --- Rank number --- */
+
+.rank {
+  font-family: var(--mantine-font-family-monospace, monospace);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* --- Name + Path --- */
+
+.info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Name readability: text shadow */
+.info[data-name-shadow='true'] .name {
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.8),
+    0 0 6px rgba(0, 0, 0, 0.5);
+}
+
+.name {
+  font-size: var(--cr-font-size, calc(var(--mantine-font-size-sm) - 0.5px));
+  line-height: var(--cr-line-height, 1.4);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #e7e7e7;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+/* --- Hover action buttons --- */
+
+.actions {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%) scale(0.92);
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.root:hover .actions {
+  opacity: 1;
+  transform: translateY(-50%) scale(1);
+  pointer-events: auto;
+}
+
+.actionBtn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: var(--cr-radius);
+  background: var(--cr-action-bg, rgba(80, 80, 90, 0.45)) !important;
+  color: var(--cr-action-color, #fff) !important;
+  backdrop-filter: none !important;
+  border: var(--cr-action-border, 1px solid rgba(255, 255, 255, 0.08)) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: none;
+}
+
+/* ============================================================
+ * SELECTED STATE
+ * ============================================================ */
+
+.root[data-selected='true'] .frame {
+  box-shadow: inset 0 0 0 1px var(--cr-primary-border);
+}
+
+/* --- Selected frosted scrim --- */
+
+.root[data-selected='true'] .scrim[data-scrim-mode='frosted'] {
+  backdrop-filter:
+    blur(var(--cr-frost-blur, 16px))
+    brightness(calc(var(--cr-frost-brightness, 0.8) * 0.85))
+    saturate(calc(var(--cr-frost-saturate, 1.2) * 1.1));
+  background: linear-gradient(
+    90deg,
+    var(--cr-primary-tint) 0%,
+    rgba(0, 0, 0, var(--cr-frost-tint, 0.2)) 30%,
+    rgba(0, 0, 0, calc(var(--cr-frost-tint, 0.2) * 0.4)) 60%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    black var(--cr-frost-fade-start, 27%),
+    transparent var(--cr-frost-fade-end, 42%)
+  );
+  mask-image: linear-gradient(
+    90deg,
+    black 0%,
+    black var(--cr-frost-fade-start, 27%),
+    transparent var(--cr-frost-fade-end, 42%)
+  );
+}
+
+/* ============================================================
+ * EQUIP DOT INDICATOR
+ * ============================================================ */
+
+.equipDot {
+  display: inline-block;
+  border-radius: 50%;
+  flex-shrink: 0;
+  vertical-align: middle;
+  margin-left: 3px;
+}
+

@@ -1,25 +1,36 @@
 import {
   ConditionalDataType,
   Sets,
+  Stats,
 } from 'lib/constants/constants'
-import { BasicStatsArray, WgslStatName } from 'lib/optimization/basicStatsArray'
-import { Source } from 'lib/optimization/buffSource'
 import { basicP2 } from 'lib/gpu/injection/generateBasicSetEffects'
-import { AKey, HKey, StatKey } from 'lib/optimization/engine/config/keys'
-import { DamageTag, SELF_ENTITY_INDEX } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import { containerActionVal } from 'lib/gpu/injection/injectUtils'
 import {
-  OptimizerAction,
-  OptimizerContext,
-  SetConditional,
+  type BasicStatsArray,
+  WgslStatName,
+} from 'lib/optimization/basicStatsArray'
+import { Source } from 'lib/optimization/buffSource'
+import {
+  AKey,
+  HKey,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import {
+  DamageTag,
+  SELF_ENTITY_INDEX,
+} from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+  type SetConditional,
 } from 'types/optimizer'
 import {
-  SetConditionals,
-  SetConfig,
-  SetDisplay,
-  SetInfo,
+  type SetConditionals,
+  type SetConfig,
+  type SetDisplay,
+  type SetInfo,
   SetType,
 } from 'types/setConfig'
 
@@ -27,6 +38,7 @@ const info = {
   index: 18,
   setType: SetType.RELIC,
   ingameId: '119',
+  twoPieceStatTag: Stats.BE,
 } as const satisfies SetInfo
 
 const display = {
@@ -55,7 +67,10 @@ const conditionals: SetConditionals = {
     && ${containerActionVal(SELF_ENTITY_INDEX, AKey.BE, action.config)} >= 1.50
   ) {
     ${buff.hit(HKey.DEF_PEN, 0.10).damageType(DamageTag.BREAK).wgsl(action, 2)}
-    ${buff.hit(HKey.DEF_PEN, `select(0.0, 0.15, ${containerActionVal(SELF_ENTITY_INDEX, AKey.BE, action.config)} >= 2.50)`).damageType(DamageTag.SUPER_BREAK).wgsl(action, 2)}
+    ${
+    buff.hit(HKey.DEF_PEN, `select(0.0, 0.15, ${containerActionVal(SELF_ENTITY_INDEX, AKey.BE, action.config)} >= 2.50)`).damageType(DamageTag.SUPER_BREAK)
+      .wgsl(action, 2)
+  }
   }
 `,
 }

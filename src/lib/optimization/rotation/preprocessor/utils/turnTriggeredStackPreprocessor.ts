@@ -1,12 +1,12 @@
+import type { ComboState } from 'lib/optimization/combo/comboTypes'
 import { AbilityPreprocessorBase } from 'lib/optimization/rotation/preprocessor/utils/preprocessUtils'
 import {
-  AbilityKind,
-  TurnAbility,
+  type AbilityKind,
+  type TurnAbility,
   TurnMarker,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
 
-export type ActivationFunction =
+type ActivationFunction =
   | ((comboState: ComboState, key: string, index: number, value: boolean) => void)
   | ((comboState: ComboState, key: string, index: number, value: number) => void)
 

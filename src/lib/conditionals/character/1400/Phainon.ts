@@ -8,8 +8,8 @@ import {
 import { Hyacine } from 'lib/conditionals/character/1400/Hyacine'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   countTeamPath,
   createEnum,
   teammateMatchesId,
@@ -31,7 +31,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_BASIC,
@@ -45,17 +45,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export enum PhainonEnhancedSkillType {
@@ -73,7 +74,7 @@ export const PhainonAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Phainon.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Phainon.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -126,9 +127,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('transformedState.text'),
       content: t('transformedState.content', {
-        UltAtkBuff: TsUtils.precisionRound(100 * talentAtkBuffScaling),
-        UltCdBuff: TsUtils.precisionRound(100 * talentCdBuffScaling),
-        UltHPBuff: TsUtils.precisionRound(100 * talentHpBuffScaling),
+        UltAtkBuff: precisionRound(100 * talentAtkBuffScaling),
+        UltCdBuff: precisionRound(100 * talentCdBuffScaling),
+        UltHPBuff: precisionRound(100 * talentHpBuffScaling),
       }),
     },
     enhancedSkillType: {
@@ -162,7 +163,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'cdBuff',
       formItem: 'switch',
       text: t('cdBuff.text'),
-      content: t('cdBuff.content', { TalentCdBuff: TsUtils.precisionRound(100 * talentCdBuffScaling) }),
+      content: t('cdBuff.content', { TalentCdBuff: precisionRound(100 * talentCdBuffScaling) }),
     },
     sustainDmgBuff: {
       id: 'sustainDmgBuff',
@@ -439,7 +440,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_BASIC,
     END_ULT,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.WavestriderCaptain, Sets.WavestriderCaptain],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -516,7 +516,12 @@ const display = {
     y: 975,
     z: 1.05,
   },
-  showcaseColor: '#97c2fa',
+  spineCenter: {
+    x: 937,
+    y: 993,
+    z: 1.25,
+  },
+  showcaseColor: '#7790d4',
 }
 
 export const Phainon: CharacterConfig = {

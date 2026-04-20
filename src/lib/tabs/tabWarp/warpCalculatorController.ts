@@ -1,9 +1,7 @@
 import { SaveState } from 'lib/state/saveState'
 import { useWarpCalculatorStore } from 'lib/tabs/tabWarp/useWarpCalculatorStore'
 import {
-  characterCumulative,
   characterDistribution,
-  lightConeCumulative,
   lightConeDistribution,
 } from 'lib/tabs/tabWarp/warpRates'
 
@@ -52,19 +50,21 @@ export const WarpIncomeOptions: WarpIncomeDefinition[] = [
   // ...generateOptions('3.4', 92, 57, 116, 69, 124, 77),
   // ...generateOptions('3.5', 88, 66, 112, 77, 120, 86),
 
-  ...generateOptions('3.7', 107, 82, 130, 94, 138, 102),
-  ...[
-    generateOption('3.8', 1, WarpIncomeType.F2P, 66),
-    generateOption('3.8', 2, WarpIncomeType.F2P, 21),
-    generateOption('3.8', 3, WarpIncomeType.F2P, 22),
-    generateOption('3.8', 1, WarpIncomeType.EXPRESS, 78),
-    generateOption('3.8', 2, WarpIncomeType.EXPRESS, 32),
-    generateOption('3.8', 3, WarpIncomeType.EXPRESS, 31),
-    generateOption('3.8', 1, WarpIncomeType.BP_EXPRESS, 82),
-    generateOption('3.8', 2, WarpIncomeType.BP_EXPRESS, 36),
-    generateOption('3.8', 3, WarpIncomeType.BP_EXPRESS, 31),
-  ],
-  ...generateOptions('4.0', 115, 96, 138, 107, 146, 115),
+  // ...generateOptions('3.7', 107, 82, 130, 94, 138, 102),
+  // ...[
+  //   generateOption('3.8', 1, WarpIncomeType.F2P, 66),
+  //   generateOption('3.8', 2, WarpIncomeType.F2P, 21),
+  //   generateOption('3.8', 3, WarpIncomeType.F2P, 22),
+  //   generateOption('3.8', 1, WarpIncomeType.EXPRESS, 78),
+  //   generateOption('3.8', 2, WarpIncomeType.EXPRESS, 32),
+  //   generateOption('3.8', 3, WarpIncomeType.EXPRESS, 31),
+  //   generateOption('3.8', 1, WarpIncomeType.BP_EXPRESS, 82),
+  //   generateOption('3.8', 2, WarpIncomeType.BP_EXPRESS, 36),
+  //   generateOption('3.8', 3, WarpIncomeType.BP_EXPRESS, 31),
+  // ],
+  // ...generateOptions('4.0', 115, 96, 138, 107, 146, 115),
+  ...generateOptions('4.1', 98, 81, 114, 89, 122, 97),
+  ...generateOptions('4.2', 117, 91, 140, 103, 149, 112),
 ]
 
 export enum WarpStrategy {
@@ -357,10 +357,19 @@ export type EnrichedWarpRequest = {
   warps: number,
   totalStarlight: number,
   totalPasses: number,
+  additionalPasses: number,
   totalJade: number,
 } & WarpRequest
 
-function enrichWarpRequest(request: WarpRequest) {
+export function enrichWarpRequest(originalRequest: WarpRequest) {
+  const request: WarpRequest = {
+    ...originalRequest,
+    jades: Number(originalRequest.jades) || 0,
+    passes: Number(originalRequest.passes) || 0,
+    pityCharacter: Number(originalRequest.pityCharacter) || 0,
+    pityLightCone: Number(originalRequest.pityLightCone) || 0,
+  }
+
   const selectedIncome = request.income.map(
     (incomeId) => WarpIncomeOptions.find((option) => option.id == incomeId) ?? NONE_WARP_INCOME_OPTION,
   )
@@ -379,19 +388,12 @@ function enrichWarpRequest(request: WarpRequest) {
   const totalStarlight = refundedWarps * 20
   const totalWarps = initialWarps + refundedWarps
 
-  // Treat null form values as empty and use defaults
-  for (const [key, value] of Object.entries(request)) {
-    if (value == null) {
-      // @ts-ignore
-      request[key] = DEFAULT_WARP_REQUEST[key]
-    }
-  }
-
   const enrichedRequest: EnrichedWarpRequest = {
     ...request,
     warps: totalWarps,
     totalJade: totalJade,
     totalPasses: totalPasses,
+    additionalPasses: additionalPasses,
     totalStarlight: totalStarlight,
   }
 

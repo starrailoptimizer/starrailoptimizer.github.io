@@ -1,14 +1,14 @@
-import {
+import type {
   AKeyValue,
-  AToHKey,
-  GLOBAL_REGISTERS_LENGTH,
   HKeyValue,
 } from 'lib/optimization/engine/config/keys'
 import {
-  ComputedStatsContainerConfig,
-} from 'lib/optimization/engine/container/computedStatsContainer'
-import { Hit } from 'types/hitConditionalTypes'
-import {
+  AToHKey,
+  GLOBAL_REGISTERS_LENGTH,
+} from 'lib/optimization/engine/config/keys'
+import type { ComputedStatsContainerConfig } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { Hit } from 'types/hitConditionalTypes'
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -29,11 +29,11 @@ export function getHitIndex(entityIndex: number, hitIndex: number, hitKey: HKeyV
 // ============== Register Index Helpers ==============
 
 // Layout: [Action Registers][Hit Registers][Global Registers]
-export function getActionRegisterIndex(actionRegisterIndex: number, config: ComputedStatsContainerConfig): number {
+function getActionRegisterIndex(actionRegisterIndex: number, config: ComputedStatsContainerConfig): number {
   return config.arrayLength - config.totalRegistersLength + actionRegisterIndex
 }
 
-export function getHitRegisterIndex(hitRegisterIndex: number, config: ComputedStatsContainerConfig): number {
+function getHitRegisterIndex(hitRegisterIndex: number, config: ComputedStatsContainerConfig): number {
   return config.arrayLength - config.totalRegistersLength + config.actionRegistersLength + hitRegisterIndex
 }
 
@@ -101,4 +101,3 @@ export function p_containerActionVal(entityIndex: number, actionKey: AKeyValue, 
 export function containerHitRegister(hitRegisterIndex: number, config: ComputedStatsContainerConfig) {
   return `(*p_container)[${getHitRegisterIndex(hitRegisterIndex, config)}]`
 }
-

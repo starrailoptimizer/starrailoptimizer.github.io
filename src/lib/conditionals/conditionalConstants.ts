@@ -1,5 +1,5 @@
-import { SetKey, Sets } from 'lib/constants/constants'
-import { ComputedStatsObjectExternal } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { SetKey } from 'lib/constants/constants'
+import type { ComputedStatsObjectExternal } from 'lib/optimization/engine/container/computedStatsContainer'
 
 export const ASHBLAZING_ATK_STACK = 0.06
 
@@ -19,20 +19,6 @@ export enum DamageType {
   ELATION = 512,
 }
 
-export enum AbilityType {
-  BASIC = 1,
-  SKILL = 2,
-  ULT = 4,
-  FUA = 8,
-  DOT = 16,
-  BREAK = 32,
-  MEMO_SKILL = 64,
-  MEMO_TALENT = 128,
-  ELATION_SKILL = 256,
-  UNIQUE = 512,
-}
-
-export const NONE_DMG_TYPE: number = 0
 export const BASIC_DMG_TYPE: number = DamageType.BASIC
 export const SKILL_DMG_TYPE: number = DamageType.SKILL
 export const ULT_DMG_TYPE: number = DamageType.ULT

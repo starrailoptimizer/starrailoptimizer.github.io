@@ -1,14 +1,16 @@
-
-import { BenchmarkSimulationOrchestrator } from 'lib/simulations/orchestrator/benchmarkSimulationOrchestrator'
-import { SetConditionals } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { LightConeId } from 'types/lightCone'
-import { create } from 'zustand'
-import {
+import type { SetConditionals } from 'lib/optimization/combo/comboTypes'
+import { defaultSetConditionals } from 'lib/optimization/defaultForm'
+import type { CharacterModalForm } from 'lib/overlays/modals/characterModalStore'
+import type {
   SetsOrnaments,
   SetsRelics,
 } from 'lib/sets/setConfigRegistry'
+import type { BenchmarkSimulationOrchestrator } from 'lib/simulations/orchestrator/benchmarkSimulationOrchestrator'
+import { createTabAwareStore } from 'lib/stores/infrastructure/createTabAwareStore'
+import { computeSetSetConditional } from 'lib/stores/optimizerForm/optimizerFormStoreActions'
+import { clone } from 'lib/utils/objectUtils'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
 
 export type BenchmarkForm = {
   characterId: CharacterId,
@@ -53,12 +55,10 @@ type OrnamentSetSelection = {
 }
 
 type BenchmarksTabState = {
-  characterModalInitialCharacter: SimpleCharacter | undefined,
-  isCharacterModalOpen: boolean,
   selectedTeammateIndex: number | undefined,
-  teammate0: SimpleCharacter | undefined,
-  teammate1: SimpleCharacter | undefined,
-  teammate2: SimpleCharacter | undefined,
+  teammate0: SimpleCharacterSets | undefined,
+  teammate1: SimpleCharacterSets | undefined,
+  teammate2: SimpleCharacterSets | undefined,
 
   storedRelics: RelicSetSelection[],
   storedOrnaments: OrnamentSetSelection[],
@@ -66,11 +66,9 @@ type BenchmarksTabState = {
 
   orchestrators: BenchmarkSimulationOrchestrator[],
 
-  updateTeammate: (index: number, data?: SimpleCharacter) => void,
-  onCharacterModalOk: (character: Form) => void,
+  updateTeammate: (index: number, data?: SimpleCharacterSets) => void,
+  onCharacterModalOk: (character: CharacterModalForm) => void,
 
-  setCharacterModalOpen: (isOpen: boolean) => void,
-  setCharacterModalInitialCharacter: (character: SimpleCharacter | undefined) => void,
   setSelectedTeammateIndex: (index: number | undefined) => void,
   setResults: (
     orchestrators: BenchmarkSimulationOrchestrator[],
@@ -79,11 +77,13 @@ type BenchmarksTabState = {
   ) => void,
   resetCache: () => void,
   setLoading: (loading: boolean) => void,
+
+  setConditionals: SetConditionals,
+  setSetConditional: (key: string, value: boolean | number) => void,
+  setSetConditionals: (conditionals: SetConditionals) => void,
 }
 
-export const useBenchmarksTabStore = create<BenchmarksTabState>((set, get) => ({
-  characterModalInitialCharacter: undefined,
-  isCharacterModalOpen: false,
+export const useBenchmarksTabStore = createTabAwareStore<BenchmarksTabState>((set, get) => ({
   selectedTeammateIndex: undefined,
   teammate0: undefined,
   teammate1: undefined,
@@ -93,52 +93,45 @@ export const useBenchmarksTabStore = create<BenchmarksTabState>((set, get) => ({
   storedOrnaments: [],
   loading: false,
 
-  benchmarkForm: undefined,
   orchestrators: [],
+  setConditionals: clone(defaultSetConditionals),
 
-  updateTeammate: (index, data?: SimpleCharacter) =>
-    set((state) => {
-      return {
-        teammate0: index == 0 ? data : state.teammate0,
-        teammate1: index == 1 ? data : state.teammate1,
-        teammate2: index == 2 ? data : state.teammate2,
-      }
-    }),
+  updateTeammate: (index, data?: SimpleCharacterSets) =>
+    set((state) => ({
+      teammate0: index === 0 ? data : state.teammate0,
+      teammate1: index === 1 ? data : state.teammate1,
+      teammate2: index === 2 ? data : state.teammate2,
+    })),
 
-  onCharacterModalOk: (form: Form) => {
+  onCharacterModalOk: (form: CharacterModalForm) => {
+    if (!form.characterId || !form.lightCone) return
+
     const character: SimpleCharacterSets = {
       characterId: form.characterId,
       characterEidolon: form.characterEidolon,
       lightCone: form.lightCone,
       lightConeSuperimposition: form.lightConeSuperimposition,
-      // @ts-ignore
       teamRelicSet: form.teamRelicSet,
-      // @ts-ignore
       teamOrnamentSet: form.teamOrnamentSet,
     }
 
     const { selectedTeammateIndex, updateTeammate } = get()
 
-    if (selectedTeammateIndex != null && character) {
+    if (selectedTeammateIndex != null) {
       updateTeammate(selectedTeammateIndex, character)
     }
 
     set({
-      isCharacterModalOpen: false,
       selectedTeammateIndex: undefined,
     })
   },
 
-  setCharacterModalOpen: (isOpen) => set({ isCharacterModalOpen: isOpen }),
-  setCharacterModalInitialCharacter: (character?: SimpleCharacter) => set({ characterModalInitialCharacter: character }),
   setSelectedTeammateIndex: (index) => set({ selectedTeammateIndex: index }),
   setResults: (orchestrators, mergedStoredRelics, mergedStoredOrnaments) =>
-    set((state) => {
-      return {
-        orchestrators,
-        storedRelics: mergedStoredRelics,
-        storedOrnaments: mergedStoredOrnaments,
-      }
+    set({
+      orchestrators,
+      storedRelics: mergedStoredRelics,
+      storedOrnaments: mergedStoredOrnaments,
     }),
 
   resetCache: () =>
@@ -152,4 +145,8 @@ export const useBenchmarksTabStore = create<BenchmarksTabState>((set, get) => ({
     set({
       loading,
     }),
+
+  setSetConditional: (key, value) => set((state) => computeSetSetConditional(state, key, value)),
+
+  setSetConditionals: (conditionals: SetConditionals) => set({ setConditionals: conditionals }),
 }))

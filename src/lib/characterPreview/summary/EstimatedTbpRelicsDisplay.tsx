@@ -1,236 +1,187 @@
+import type {
+  PreviewRelics,
+  ShowcaseMetadata,
+} from 'lib/characterPreview/characterPreviewController'
 import {
-  Flex,
-  Spin,
-} from 'antd'
-import { ShowcaseMetadata } from 'lib/characterPreview/characterPreviewController'
-import {
-  EnrichedRelics,
-  enrichRelicAnalysis,
+  countRelicRolls,
   flatReduction,
-  hashEstTbpRun,
-  RelicAnalysis,
 } from 'lib/characterPreview/summary/statScoringSummaryController'
-import { SubStats } from 'lib/constants/constants'
-import { iconSize } from 'lib/constants/constantsUi'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import { type SubStats } from 'lib/constants/constants'
+import { relicCardH } from 'lib/constants/constantsUi'
+import type { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import { useScoringMetadata } from 'lib/hooks/useScoringMetadata'
+import {
+  type PotentialResult,
+  ScoringCache,
+} from 'lib/relics/scoring/relicScorer'
 import { Assets } from 'lib/rendering/assets'
-import { ScoringType } from 'lib/scoring/simScoringUtils'
-import DB from 'lib/state/db'
-import { cardShadowNonInset } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
 import { RelicPreview } from 'lib/tabs/tabRelics/RelicPreview'
+import { DeferCreate } from 'lib/ui/DeferredRender'
 import { HorizontalDivider } from 'lib/ui/Dividers'
+import { SuspenseNode } from 'lib/ui/SuspenseNode'
 import {
   localeNumber_0,
   localeNumber_00,
   localeNumberComma,
 } from 'lib/utils/i18nUtils'
+import type { EstTbpWorkerOutput } from 'lib/worker/estTbpWorkerRunner'
+import { handleWork } from 'lib/worker/estTbpWorkerRunner'
 import {
-  EstTbpRunnerInput,
-  EstTbpRunnerOutput,
-  runEstTbpWorker,
-} from 'lib/worker/estTbpWorkerRunner'
-import React, {
-  useEffect,
-  useState,
+  memo,
+  useCallback,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { ReactElement } from 'types/components'
-import { RelicSubstatMetadata } from 'types/relic'
+import iconClasses from 'style/icons.module.css'
+import { type CharacterId } from 'types/character'
+import { type Nullable } from 'types/common'
+import type { ReactElement } from 'types/components'
+import { type ScoringMetadata } from 'types/metadata'
+import type {
+  Relic,
+  RelicSubstatMetadata,
+} from 'types/relic'
+import styles from './EstimatedTbpRelicsDisplay.module.css'
 
-const cachedRelics: Record<string, EnrichedRelics> = {}
-const IN_PROGRESS = {} as EnrichedRelics
-let cachedId = ''
-
-export const EstimatedTbpRelicsDisplay = (props: {
-  scoringType: ScoringType,
-  displayRelics: SingleRelicByPart,
+export const EstimatedTbpRelicsDisplay = memo(function EstimatedTbpRelicsDisplay({
+  displayRelics,
+  showcaseMetadata,
+}: {
+  displayRelics: PreviewRelics,
   showcaseMetadata: ShowcaseMetadata,
-}) => {
-  const {
-    scoringType,
-    displayRelics,
-    showcaseMetadata,
-  } = props
-  const [enrichedRelics, setEnrichedRelics] = useState<EnrichedRelics | null>(null)
-  const [loading, setLoading] = useState(false)
+}) {
   const scoringMetadata = useScoringMetadata(showcaseMetadata.characterId)
 
-  useEffect(() => {
-    const characterId = showcaseMetadata.characterId
-
-    const input: EstTbpRunnerInput = {
-      displayRelics: displayRelics,
-      weights: scoringMetadata.stats,
-    }
-
-    cachedId = characterId
-    const cacheKey = hashEstTbpRun(displayRelics, characterId, scoringType, scoringMetadata)
-    const cached = cachedRelics[cacheKey]
-    if (cached) {
-      // Deduplicate any requests against the static IN_PROGRESS object
-      if (cached != IN_PROGRESS) {
-        setEnrichedRelics(cached)
-      }
-      return
-    }
-
-    setLoading(true)
-
-    cachedRelics[cacheKey] = IN_PROGRESS
-    void runEstTbpWorker(input, (output: EstTbpRunnerOutput) => {
-      const enrichedRelics = enrichRelicAnalysis(displayRelics, output, scoringMetadata, characterId)
-      cachedRelics[cacheKey] = enrichedRelics
-
-      if (cachedId != characterId) return
-
-      setEnrichedRelics(enrichedRelics)
-      setLoading(false)
-    })
-  }, [displayRelics, showcaseMetadata, scoringMetadata])
-
-  const gridStyle = {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)', // 2 columns
-    gridTemplateRows: 'repeat(3, auto)', // 3 rows
-    gap: '10px',
-    width: '100%',
-  }
-
-  const ready = !(loading || !enrichedRelics)
+  const scorer = new ScoringCache()
 
   return (
-    <Flex vertical align='center' style={{ width: '100%' }}>
-      <Flex vertical gap={35} style={gridStyle}>
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.Head} />
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.Hands} />
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.Body} />
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.Feet} />
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.PlanarSphere} />
-        <RelicContainer ready={ready} relicAnalysis={enrichedRelics?.LinkRope} />
-      </Flex>
-    </Flex>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }} className={styles.fullWidth}>
+      <div className={styles.grid}>
+        <DeferCreate>
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.Head}
+          />
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.Hands}
+          />
+        </DeferCreate>
+        <DeferCreate>
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.Body}
+          />
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.Feet}
+          />
+        </DeferCreate>
+        <DeferCreate>
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.PlanarSphere}
+          />
+          <RelicContainer
+            scorer={scorer}
+            weights={scoringMetadata.stats}
+            characterId={showcaseMetadata.characterId}
+            relic={displayRelics.LinkRope}
+          />
+        </DeferCreate>
+      </div>
+    </div>
   )
-}
+})
 
-function LoadingSpinner() {
-  return (
-    <Flex justify='center' align='center' style={{ height: '100px' }}>
-      <Spin size='large' />
-    </Flex>
-  )
-}
+export const RelicContainer = memo(function RelicContainer({ relic, weights, characterId, scorer, withoutPreview }: {
+  relic: Relic | null,
+  weights: Record<SubStats, number> | null,
+  characterId: CharacterId | null,
+  scorer?: ScoringCache,
+  withoutPreview?: boolean,
+}) {
+  // Showcase tab may pass undefined (not null) for missing relic slots
+  if (relic == null) return <div style={{ minHeight: relicCardH }} className={styles.card} />
+  scorer ??= new ScoringCache()
+  const score = characterId ? scorer.getCurrentRelicScore(relic, characterId) : undefined
+  const potential = characterId ? scorer.scoreRelicPotential(relic, characterId) : null
 
-export function RelicContainer(props: { ready: boolean, relicAnalysis?: RelicAnalysis, withoutPreview?: boolean }) {
-  const { ready, relicAnalysis, withoutPreview } = props
-
-  const cardStyle = {
-    width: '100%',
-    flex: 1,
-    borderRadius: 5,
-    overflow: 'hidden',
-    padding: 10,
-    background: 'rgb(29 42 81 / 73%)',
-    boxShadow: cardShadowNonInset,
-    backdropFilter: 'blur(5px)',
-    border: '1px solid rgba(255, 255, 255, 0.10)',
-    WebkitBackdropFilter: 'blur(5px)',
-    minHeight: withoutPreview ? undefined : 302,
-  }
-
-  if (!ready) {
+  if (withoutPreview) {
     return (
-      <div style={cardStyle}>
-        <Flex style={{ width: '100%', height: '100%' }} align='center' justify='space-around'>
-          <LoadingSpinner />
-        </Flex>
+      <div style={{ width: 320, minHeight: relicCardH }}>
+        <RelicAnalysisCard relic={relic} weights={weights} potential={potential} />
       </div>
     )
   }
 
-  if (!relicAnalysis) {
-    return <div style={cardStyle} />
-  }
-
-  if (withoutPreview) return <RelicAnalysisCard relicAnalysis={relicAnalysis} />
-
   return (
-    <Flex
-      style={cardStyle}
-      gap={10}
+    <div
+      className={styles.card}
+      style={{ minHeight: 302, display: 'flex', gap: 10 }}
     >
-      <RelicPreview relic={relicAnalysis.relic} unhoverable={true} score={relicAnalysis.scoringResult} />
-      <RelicAnalysisCard relicAnalysis={relicAnalysis} />
-    </Flex>
+      <RelicPreview relic={relic} unhoverable={true} score={score} />
+      <RelicAnalysisCard relic={relic} weights={weights} potential={potential} />
+    </div>
   )
-}
+})
 
-const cardStyle = {
-  flex: 1,
-  borderRadius: 6,
-  overflow: 'hidden',
-  padding: 10,
-  background: '#243356',
-  border: '1px solid #354b7d',
-}
-const textStyle = {
-  fontSize: 14,
-  color: 'rgb(159, 175, 207)',
-}
-
-function RelicAnalysisCard(props: { relicAnalysis?: RelicAnalysis }) {
-  const { relicAnalysis } = props
-
-  if (!relicAnalysis) {
-    return <div style={cardStyle} />
-  }
-
+function RelicAnalysisCard({ relic, weights, potential }: {
+  relic: Relic,
+  weights: Record<SubStats, number> | null,
+  potential: PotentialResult | null,
+}) {
   return (
-    <Flex vertical style={{ width: '100%' }} gap={10}>
-      <Flex style={{ height: 111 }} gap={10}>
-        <MetricCard relicAnalysis={relicAnalysis} index={0} />
-        <MetricCard relicAnalysis={relicAnalysis} index={1} />
-      </Flex>
-      <Flex style={{ ...cardStyle, padding: '12px 14px 0px 14px', paddingLeft: 15 }} gap={10}>
-        <RollsCard relicAnalysis={relicAnalysis} />
-      </Flex>
-    </Flex>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: relicCardH }} className={styles.fullWidth}>
+      <DeferCreate>
+        <div style={{ display: 'flex', gap: 10 }} className={styles.metricRow}>
+          <EstbpMetricCard relic={relic} weights={weights} />
+          <ScoringMetricCard potential={potential} relic={relic} weights={weights} />
+        </div>
+      </DeferCreate>
+      <DeferCreate>
+        <div className={styles.rollsCard}>
+          <RollsCard potential={potential} relic={relic} weights={weights} />
+        </div>
+      </DeferCreate>
+    </div>
   )
 }
 
-function RollsCard(props: { relicAnalysis: RelicAnalysis }) {
-  const { relicAnalysis } = props
-
+function RollsCard({ relic, potential, weights }: {
+  relic: Relic,
+  potential: PotentialResult | null,
+  weights: Record<SubStats, number> | null,
+}) {
   const { t } = useTranslation('charactersTab', { keyPrefix: 'CharacterPreview.EST-TBP.RollsCard' })
 
-  const percent = relicAnalysis?.currentPotential ?? 0
-  const percentDisplay = localeNumber_0(percent)
+  const percent = potential?.currentPct ?? 0
+  const percentDisplay = potential !== null ? localeNumber_0(percent) : '-'
 
   return (
-    <Flex vertical justify='space-between' style={{ width: '100%' }}>
-      <Flex vertical>
-        {relicAnalysis.relic.substats.concat(relicAnalysis.relic.previewSubstats).map((s, idx) => (
-          <RollLine key={idx} substat={s} weights={relicAnalysis.weights} />
-        ))}
-      </Flex>
-      <Flex vertical style={{ height: 46, paddingBottom: 10 }} justify='space-between' gap={4}>
-        <HorizontalDivider style={{ margin: 0, paddingBottom: 2 }} />
-        <Flex justify='space-between'>
-          <span style={textStyle}>{t('Perfection') /* Perfection */}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }} className={styles.fullWidth}>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        {relic.substats.concat(relic.previewSubstats).map((s, idx) => <RollLine key={idx} substat={s} weights={weights} />)}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: 4 }} className={styles.perfectionSection}>
+        <HorizontalDivider style={{ margin: 0, marginBlock: 0, marginTop: 13, marginBottom: 0, paddingBottom: 2 }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <span className={styles.label}>{t('Perfection') /* Perfection */}</span>
           <span>{percentDisplay}%</span>
-        </Flex>
-        <div
-          style={{
-            height: '100%',
-            width: '100%',
-            backgroundColor: '#304878',
-            borderRadius: '20px',
-            overflow: 'hidden',
-          }}
-        >
+        </div>
+        <div className={styles.progressBarOuter}>
           <div
+            className={styles.progressBarInner}
             style={{
-              height: '100%',
               width: `${percent}%`,
               background: `linear-gradient(
               to right,
@@ -239,108 +190,129 @@ function RollsCard(props: { relicAnalysis: RelicAnalysis }) {
               ${highRollColor} 80%
             )`,
               backgroundSize: `${100 / (percent || 1) * 100}% 100%`,
-              borderRadius: '4px 0 0 4px',
             }}
           >
           </div>
         </div>
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 }
 
-function MetricCard(props: { relicAnalysis: RelicAnalysis, index: number }) {
-  const { relicAnalysis, index } = props
-
+const ScoringMetricCard = memo(function ScoringMetric({ potential, relic, weights }: {
+  potential: PotentialResult | null,
+  relic: Relic,
+  weights: ScoringMetadata['stats'] | null,
+}) {
   const { t } = useTranslation('charactersTab', { keyPrefix: 'CharacterPreview.EST-TBP.MetricsCard' })
-
-  const textTop = index == 0 ? t('Days') : t('Rolls')
-  const textBottom = index == 0 ? t('TBP') : t('Potential')
-
-  const valueTop = index == 0
-    ? localeNumberComma(Math.ceil(relicAnalysis.estDays))
-    : localeNumber_0(relicAnalysis.weightedRolls)
-  const valueBottom = index == 0
-    ? localeNumberComma(Math.ceil(relicAnalysis.estTbp / 40) * 40)
-    : localeNumber_0(relicAnalysis.rerollPotential == 0 ? 0 : relicAnalysis.rerollDelta) + '%'
-
+  const rolls = weights ? countRelicRolls(relic, weights) : null
   return (
-    <Flex
-      style={{
-        ...cardStyle,
-        padding: '6px 10px',
-        backgroundColor: '#334f87',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.25)',
-        border: '1px solid rgb(73 98 153)',
-      }}
-      vertical
-      flex={1}
-      justify='space-between'
+    <div
+      className={styles.metricCard}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}
     >
-      <Flex vertical gap={2}>
-        <span style={{ fontSize: '13px', color: '#9FAFCF' }}>
-          {textTop}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span className={styles.metricLabel}>
+          {t('Rolls')}
         </span>
-        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#E0E6F2' }}>
-          {valueTop}
+        <span className={styles.metricValue}>
+          {rolls === null ? '-' : localeNumber_0(rolls)}
         </span>
-      </Flex>
-      <Flex vertical gap={2}>
-        <span style={{ fontSize: '13px', color: '#9FAFCF' }}>
-          {textBottom}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span className={styles.metricLabel}>
+          {t('Potential')}
         </span>
-        <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#E0E6F2' }}>
-          {valueBottom}
+        <span className={styles.metricValue}>
+          {potential !== null ? localeNumber_0(potential.rerollAvgPct === 0 ? 0 : potential.rerollAvgPct - potential.currentPct) + '%' : '-'}
         </span>
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
-}
+})
 
-const rollStyle = {
-  width: '16px',
-  height: '16px',
-  marginRight: '5px',
-  borderRadius: '2px',
-  marginBottom: 3,
-}
+const EstbpMetricCard = memo(function EstbpMetricCard({ relic, weights }: {
+  relic: Relic,
+  weights: ScoringMetadata['stats'] | null,
+}) {
+  const { t } = useTranslation('charactersTab', { keyPrefix: 'CharacterPreview.EST-TBP.MetricsCard' })
+  const estbpPromise = weights === null ? null : handleWork(relic, weights)
+  const daysSelector = useCallback((output: EstTbpWorkerOutput) => {
+    return localeNumberComma(Math.ceil(output.days))
+    // localeNumberComma has an implicit dependancy on selected language
+    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
+  }, [t])
+  const estbpSelector = useCallback((output: EstTbpWorkerOutput) => {
+    return localeNumberComma(Math.ceil(output.days * 240 / 40) * 40)
+    // localeNumberComma has an implicit dependancy on selected language
+    // oxlint-disable-next-line eslint-plugin-react-hooks/exhaustive-deps
+  }, [t])
+  return (
+    <div
+      className={styles.metricCard}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span className={styles.metricLabel}>
+          {t('Days')}
+        </span>
+        {estbpPromise !== null
+          ? (
+            <SuspenseNode
+              width={'60%'}
+              height={27.9}
+              textSpanClassName={styles.metricValue}
+              promise={estbpPromise}
+              selector={daysSelector}
+              keepPrevious
+            />
+          )
+          : '-'}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span className={styles.metricLabel}>
+          {t('TBP')}
+        </span>
+        {estbpPromise !== null
+          ? (
+            <SuspenseNode
+              width={'60%'}
+              height={27.9}
+              textSpanClassName={styles.metricValue}
+              promise={estbpPromise}
+              selector={estbpSelector}
+              keepPrevious
+            />
+          )
+          : '-'}
+      </div>
+    </div>
+  )
+})
 
 const highRollColor = '#0e7eff'
 const midRollColor = '#63a9ff'
 const lowRollColor = '#a5bcd9'
 
 function HighRoll() {
-  return (
-    <div
-      style={{ ...rollStyle, backgroundColor: highRollColor }}
-    />
-  )
+  return <div className={styles.rollHigh} />
 }
 
 function MidRoll() {
-  return (
-    <div
-      style={{ ...rollStyle, backgroundColor: midRollColor }}
-    />
-  )
+  return <div className={styles.rollMid} />
 }
 
 function LowRoll() {
-  return (
-    <div
-      style={{ ...rollStyle, backgroundColor: lowRollColor }}
-    />
-  )
+  return <div className={styles.rollLow} />
 }
 
-function RollLine(props: { substat: RelicSubstatMetadata | null, weights: RelicAnalysis['weights'] }) {
-  const { substat, weights } = props
+function RollLine({ substat, weights }: { substat: RelicSubstatMetadata | null, weights: ScoringMetadata['stats'] | null }) {
   if (substat == null) {
-    return <div style={{ height: 22, width: '100%' }} />
+    return <div className={styles.rollLinePlaceholder} />
   }
 
-  const weight = weights[substat.stat] ?? 0
-  const weightDisplay = localeNumber_00(weights[substat.stat] * flatReduction(substat.stat))
+  const weight = weights?.[substat.stat] ?? 0
+  const weightDisplay = `⨯ ${localeNumber_00(weight * flatReduction(substat.stat))}`
   const rolls = substat.rolls ?? { high: 0, mid: 0, low: 0 }
   const display: ReactElement[] = []
 
@@ -350,17 +322,17 @@ function RollLine(props: { substat: RelicSubstatMetadata | null, weights: RelicA
   for (let i = 0; i < rolls.low; i++) display.push(<LowRoll key={key++} />)
 
   return (
-    <Flex style={{ height: 22, width: '100%', opacity: (weight ? 1 : 0.05) }} justify='space-between'>
-      <Flex align='flex-end'>
+    <div className={styles.rollLine} style={(weight || weights === null) ? undefined : { opacity: 0.05 }}>
+      <div className={styles.rollLineInner}>
         <img
-          style={{ width: iconSize, height: iconSize, marginRight: 5, marginLeft: -3 }}
+          className={iconClasses.statIconWide}
           src={Assets.getStatIcon(substat.stat)}
         />
         {display}
-      </Flex>
-      <div>
-        ⨯ {weightDisplay}
       </div>
-    </Flex>
+      <div>
+        {weights === null ? '-' : weightDisplay}
+      </div>
+    </div>
   )
 }

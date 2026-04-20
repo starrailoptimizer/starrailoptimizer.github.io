@@ -22,11 +22,11 @@ import { ToEvernightsStars } from 'lib/conditionals/lightcone/5star/ToEvernights
 import { WhyDoesTheOceanSing } from 'lib/conditionals/lightcone/5star/WhyDoesTheOceanSing'
 import {
   generateTestRelics,
-  StatDeltaAnalysis,
   testWrapper,
 } from 'lib/gpu/tests/webgpuTestUtils'
+import type { StatDeltaAnalysis } from 'lib/gpu/tests/webgpuTestUtils'
 import { getWebgpuDevice } from 'lib/gpu/webgpuDevice'
-import { RelicsByPart } from 'lib/gpu/webgpuTypes'
+import type { RelicsByPart } from 'lib/gpu/webgpuTypes'
 import { SortOption } from 'lib/optimization/sortOptions'
 
 import i18next from 'i18next'
@@ -35,12 +35,12 @@ import {
   SetsRelicsNames,
 } from 'lib/sets/setConfigRegistry'
 import { generateFullDefaultForm } from 'lib/simulations/utils/benchmarkForm'
-import DB from 'lib/state/db'
-import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { LightConeId } from 'types/lightCone'
-import {
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { normalizeForm } from 'lib/stores/optimizerForm/optimizerFormConversions'
+import type { CharacterId } from 'types/character'
+import type { Form } from 'types/form'
+import type { LightConeId } from 'types/lightCone'
+import type {
   DBMetadata,
   DBMetadataLightCone,
 } from 'types/metadata'
@@ -153,7 +153,7 @@ export async function generateAllTests() {
   const device = await getWebgpuDevice()
   if (!device) return []
 
-  cache.metadata = DB.getMetadata()
+  cache.metadata = getGameMetadata()
 
   return [
     // ...generateSingleCharacterTest(device, { characterId: '1105', lightConeId: basicLc }),
@@ -177,13 +177,13 @@ export function generateSingleCharacterTest(
 }
 
 export function generateE0E1Tests(device: GPUDevice) {
-  return baseCharacterLightConeMappings.reverse().map((pair) => {
+  return [...baseCharacterLightConeMappings].reverse().map((pair) => {
     return generateE0S1CharacterTest(pair.characterId, pair.lightConeId, device)
   })
 }
 
 export function generateE6E5Tests(device: GPUDevice) {
-  return baseCharacterLightConeMappings.reverse().map((pair) => {
+  return [...baseCharacterLightConeMappings].reverse().map((pair) => {
     return generateE6S5CharacterTest(pair.characterId, pair.lightConeId, device)
   })
 }
@@ -192,7 +192,7 @@ export function generateStarLcTests(device: GPUDevice, star: number) {
   // Use Kafka since she has DOT and FUA
   const characterId = '1005'
   const metadataLightCones = Object.values(cache.metadata.lightCones)
-  const lightCones = metadataLightCones.filter((lc: DBMetadataLightCone) => lc.rarity == star)
+  const lightCones = metadataLightCones.filter((lc: DBMetadataLightCone) => lc.rarity === star)
   const tests: WebgpuTest[] = []
 
   for (const lc of lightCones) {
@@ -240,7 +240,7 @@ export function generateRelicSetTests(device: GPUDevice) {
 }
 
 export function generateE0S1CharacterTest(characterId: CharacterId, lightConeId: LightConeId, device: GPUDevice) {
-  const request = OptimizerTabController.displayToForm(generateFullDefaultForm(characterId, lightConeId, 0, 1))
+  const request = normalizeForm(generateFullDefaultForm(characterId, lightConeId, 0, 1))
   const relics = generateTestRelics()
   request.sortOption = SortOption.COMBO.key
 
@@ -254,7 +254,7 @@ export function generateE0S1CharacterTest(characterId: CharacterId, lightConeId:
 }
 
 export function generateE6S5CharacterTest(characterId: CharacterId, lightConeId: LightConeId, device: GPUDevice) {
-  const request = OptimizerTabController.displayToForm(generateFullDefaultForm(characterId, lightConeId, 6, 5))
+  const request = normalizeForm(generateFullDefaultForm(characterId, lightConeId, 6, 5))
   const relics = generateTestRelics()
   request.sortOption = SortOption.COMBO.key
 
@@ -280,7 +280,7 @@ export function addE6S5Teammate(request: Form, index: number, characterId: Chara
     true,
   )
 
-  if (index == 0) request.teammate0 = teammate
-  if (index == 1) request.teammate1 = teammate
-  if (index == 2) request.teammate2 = teammate
+  if (index === 0) request.teammate0 = teammate
+  if (index === 1) request.teammate1 = teammate
+  if (index === 2) request.teammate2 = teammate
 }

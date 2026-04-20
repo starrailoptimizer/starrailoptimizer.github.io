@@ -1,0 +1,67 @@
+.resultsCollector {
+}
+
+.setGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.gridColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  border-radius: var(--mantine-radius-default);
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.setRow:hover {
+  filter: brightness(1.15);
+}
+
+.setRowChecked {
+  border-color: var(--primary-light-alpha);
+  background: var(--primary-light-alpha);
+}
+
+.setRowDimmed {
+  opacity: 0.075;
+}
+
+.setImg {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.collectorImg {
+  width: 24px;
+  height: 24px;
+}
+
+.collectorBlank {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--mantine-radius-sm);
+  border: 1.5px dashed var(--text-secondary);
+  opacity: 0.5;
+}
+
+.collectorRow {
+  min-height: 32px;
+}
+
+.footer {
+  border-top: 1px solid var(--border-default);
+}

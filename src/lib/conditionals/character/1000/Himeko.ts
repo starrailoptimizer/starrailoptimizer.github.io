@@ -8,8 +8,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -27,7 +27,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -44,18 +44,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const HimekoEntities = createEnum('Himeko')
@@ -69,7 +69,7 @@ export const HimekoAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Himeko')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Himeko')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -270,7 +270,6 @@ const simulation = (): SimulationMetadata => ({
     END_BREAK,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.TheAshblazingGrandDuke, Sets.TheAshblazingGrandDuke],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -351,7 +350,8 @@ const display = {
     y: 1215,
     z: 1.05,
   },
-  showcaseColor: '#d6b5c2',
+  disableSpine: true,
+  showcaseColor: '#f0b6b6',
 }
 
 export const Himeko: CharacterConfig = {

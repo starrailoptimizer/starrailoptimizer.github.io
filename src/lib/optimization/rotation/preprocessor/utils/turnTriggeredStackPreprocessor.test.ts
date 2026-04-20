@@ -1,5 +1,12 @@
 // @vitest-environment jsdom
+import { Anaxa } from 'lib/conditionals/character/1400/Anaxa'
 import { Sets } from 'lib/constants/constants'
+import { initializeComboState } from 'lib/optimization/combo/comboInitializers'
+import type {
+  ComboBooleanConditional,
+  ComboNumberConditional,
+  ComboState,
+} from 'lib/optimization/combo/comboTypes'
 import { getDefaultForm } from 'lib/optimization/defaultForm'
 import {
   setComboBooleanCategorySetActivation,
@@ -19,19 +26,12 @@ import {
   START_BASIC,
   START_FUA,
   START_ULT,
-  TurnAbilityName,
+  type TurnAbilityName,
   WHOLE_BASIC,
   WHOLE_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { Anaxa } from 'lib/conditionals/character/1400/Anaxa'
 import { Metadata } from 'lib/state/metadataInitializer'
-import {
-  ComboBooleanConditional,
-  ComboNumberConditional,
-  ComboState,
-  initializeComboState,
-} from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
+import { normalizeForm } from 'lib/stores/optimizerForm/optimizerFormConversions'
 import {
   expect,
   test,
@@ -44,8 +44,7 @@ const processSequence = (
   abilityNames: TurnAbilityName[],
 ): ComboState => {
   const form = getDefaultForm({ id: Anaxa.id })
-  const displayFormValues = OptimizerTabController.formToDisplay(form)
-  const request = OptimizerTabController.displayToForm(displayFormValues)
+  const request = normalizeForm(form)
   const comboState = initializeComboState(request, true)
 
   comboState.comboTurnAbilities = [NULL_TURN_ABILITY_NAME, ...abilityNames]

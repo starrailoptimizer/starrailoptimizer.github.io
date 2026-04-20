@@ -27,10 +27,8 @@ CharacterMenu:
       SortByScore: スコア順に並べ替え
       MoveToTop: 選択キャラを先頭に移動
 SearchPlaceholder: 検索
-GridHeaders:
-  Icon: アイコン
-  Priority: 優先順位
-  Character: キャラクター
+GridDensityOptions:
+  default: デフォルト
 Messages:
   RemoveSuccess: キャラクターを削除しました
   UnequipSuccess: キャラクターの遺物を外しました
@@ -91,7 +89,6 @@ CharacterPreview:
     TitleBenchmark: '{{spd}} 基準速度'
     Score: 'DPSスコア {{score}}% {{grade}}'
   AlgorithmSlider:
-    Title: 'スコア計算方法'
     Labels:
       CombatScore: 戦闘スコア
       CombatScoreTBD: 戦闘 (TBD)
@@ -130,16 +127,10 @@ CharacterPreview:
       FUA: 追加攻撃
       MEMO_SKILL: 精霊スキル
       MEMO_TALENT: 精霊天賦
-      DOTS: '持続 '
       BREAKS: '撃破 '
     CombatResults:
-      Header: 結果
-      Primary: '主に使うアビリティ'
-      Character: '現在の与ダメージ'
-      Benchmark: '基準となる与ダメージ'
-      Baseline: '素の与ダメージ'
-      Maximum: '完璧な与ダメージ'
-      Score: 'スコア比率%'
+      Character: キャラクター
+      Benchmark: 基準
       Abilities:
         BASIC: 通常攻撃
         SKILL: 戦闘スキル
@@ -157,21 +148,18 @@ CharacterPreview:
   ScoringColumn:
     Character:
       Header: '選択キャラのビルド（{{score}}％）'
-      BasicStats: 非戦闘ステータス（選択キャラ）
       CombatStats: <1>戦闘</1>ステータス（選択キャラ）
       Substats: サブステータス（最小数）（選択キャラ）
       Mainstats: メインステータス（選択キャラ）
       Abilities: 与ダメージ（選択キャラ）
     Benchmark:
       Header: '基準ビルド（{{score}}%）'
-      BasicStats: 非戦闘ステータス（基準ビルド）
       CombatStats: <1>戦闘</1>ステータス（基準ビルド）
       Substats: サブステータス（最小数）（基準ビルド）
       Mainstats: メインステータス（基準ビルド）
       Abilities: 与ダメージ（基準ビルド）
     Perfect:
       Header: '完璧ビルド（{{score}}%）'
-      BasicStats: 非戦闘ステータス（完璧ビルド）
       CombatStats: <1>戦闘</1>ステータス（完璧ビルド）
       Substats: サブステータス（最大数）（完璧ビルド）
       Mainstats: メインステータス（完璧ビルド）

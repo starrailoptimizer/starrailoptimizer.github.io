@@ -1,0 +1,341 @@
+/* ═══════════════════════════════════════════
+   Theme Variables
+   ═══════════════════════════════════════════ */
+
+.ag-theme-balham-dark {
+    --ag-background-color: var(--layer-2);
+    --ag-odd-row-background-color: rgba(0, 0, 0, 0.15);
+    --ag-header-background-color: var(--layer-1);
+    --ag-border-color: var(--border-default);
+    --ag-row-hover-color: rgba(255, 255, 255, 0.03);
+}
+
+/* ═══════════════════════════════════════════
+   Scrollbar
+   ═══════════════════════════════════════════ */
+
+/* Override smooth scrolling — it causes jank with AG Grid's row virtualization
+   by splitting one scroll event into many small animated frames */
+.ag-body-viewport {
+    scroll-behavior: auto;
+}
+
+/* AG Grid overlay scrollbar — matches OverlayScrollbars style */
+[class^='ag-body-horizontal-scroll'] {
+    min-height: 10px !important;
+    max-height: 10px !important;
+    height: 10px !important;
+}
+
+[class^='ag-body-vertical-scroll'] {
+    min-width: 10px !important;
+    max-width: 10px !important;
+    width: 10px !important;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar {
+    height: 10px;
+    width: 10px;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-track,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb {
+    background: #95959552;
+    border-radius: 10px;
+    background-clip: padding-box;
+    border: 3px solid transparent;
+}
+
+.ag-body-horizontal-scroll-viewport::-webkit-scrollbar-thumb:hover,
+.ag-body-vertical-scroll-viewport::-webkit-scrollbar-thumb:hover {
+    background: rgba(149, 149, 149, 0.55);
+}
+
+/* Overlay hover-fade — float scrollbars over content, show on hover */
+.ag-body-horizontal-scroll {
+    margin-top: -10px;
+    position: relative;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.ag-body-vertical-scroll {
+    margin-left: -10px;
+    position: relative;
+    z-index: 3;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.ag-theme-balham-dark:hover .ag-body-horizontal-scroll,
+.ag-theme-balham-dark:hover .ag-body-vertical-scroll {
+    opacity: 1;
+}
+
+/* ═══════════════════════════════════════════
+   Header
+   ═══════════════════════════════════════════ */
+
+.ag-header-row {
+    height: 100% !important;
+}
+
+.ag-theme-balham .ag-header-group-cell {
+    padding-left: 2px;
+    padding-right: 2px;
+    font-family: Calibri, Candara, Segoe, Segoe UI, Optima, Arial, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.ag-header-cell {
+    padding-left: 0px !important;
+    padding-right: 0px !important;
+}
+
+.ag-header-cell:after {
+    top: 5% !important;
+}
+
+.ag-header-cell-label {
+    text-align: center;
+    justify-content: space-around;
+    align-items: center;
+    text-overflow: clip;
+    width: 40px;
+}
+
+.ag-header-group-cell-label {
+    justify-content: space-around;
+    text-overflow: clip;
+    width: 40px;
+}
+
+.ag-header-cell-label .ag-header-cell-text {
+    white-space: pre-wrap !important;
+}
+
+.ag-header-cell-text {
+    overflow: hidden;
+    text-overflow: clip !important;
+    min-width: unset !important;
+}
+
+.ag-header-cell-comp-wrapper {
+    height: 100% !important;
+}
+
+.ag-header-cell-menu-button {
+    opacity: 1 !important;
+    margin-bottom: 3px !important;
+}
+
+.ag-header-cell-filter-button {
+    display: none;
+}
+
+.ag-header-label-icon {
+    margin-left: -3px !important;
+}
+
+.ag-sort-indicator-container {
+    position: absolute;
+    right: -4px;
+}
+
+.ag-cell-label-container {
+    padding: 0 !important;
+}
+
+/* ═══════════════════════════════════════════
+   Cells
+   ═══════════════════════════════════════════ */
+
+/* Cell backgrounds driven by CSS custom property set via cellStyle.
+   This lets row-level selection/hover styles composite over gradient cells. */
+.ag-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: none !important;
+    contain: layout paint;
+    background: var(--cell-bg, transparent);
+}
+
+.ag-cell-focus {
+    border: none !important;
+}
+
+.ag-cell-value {
+    font-weight: 400;
+    text-align: center;
+    font-family: var(--font-ui);
+    font-size: 14px;
+    display: flex !important;
+    justify-content: center;
+    align-items: center;
+    padding: 0px !important;
+}
+
+.ag-cell-value > span {
+    display: flex;
+    align-items: center;
+}
+
+/* ═══════════════════════════════════════════
+   Rows
+   ═══════════════════════════════════════════ */
+
+.ag-row {
+    border-bottom-style: unset !important;
+}
+
+.ag-theme-balham .ag-row:not(.ag-row-first) {
+    border: none;
+}
+
+/* Hover — subtle white lift composited over gradient cells */
+.ag-row-hover .ag-cell {
+    background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)), var(--cell-bg, transparent);
+}
+
+/* Selection — left accent + blue tint */
+.ag-row-selected {
+    outline: none !important;
+    z-index: 1 !important;
+    background: transparent !important;
+    box-shadow: inset 3px 0 0 0 var(--primary-hover);
+}
+
+.ag-row-selected:before {
+    background: none !important;
+}
+
+.ag-row-selected .ag-cell {
+    background: linear-gradient(rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.10)), linear-gradient(color-mix(in srgb, var(--primary-hover) 10%, transparent), color-mix(in srgb, var(--primary-hover) 10%, transparent)), var(--cell-bg, transparent);
+}
+
+/* Selected + hovered — both tints stack */
+.ag-row-selected.ag-row-hover .ag-cell {
+    background: linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06)), linear-gradient(color-mix(in srgb, var(--primary-hover) 30%, transparent), color-mix(in srgb, var(--primary-hover) 30%, transparent)), var(--cell-bg, transparent);
+}
+
+/* ═══════════════════════════════════════════
+   Icons
+   ═══════════════════════════════════════════ */
+
+.ag-icon {
+    font-size: 14px !important;
+    font-weight: 400 !important;
+}
+
+.ag-icon-desc,
+.ag-icon-asc {
+    margin-top: -3px !important;
+    margin-right: 2px !important;
+    font-size: 12px !important;
+}
+
+.ag-icon-asc {
+    margin-top: -6px !important;
+}
+
+/* ═══════════════════════════════════════════
+   Pagination
+   ═══════════════════════════════════════════ */
+
+.ag-paging-panel {
+    height: 22px !important;
+}
+
+.ag-paging-button {
+    opacity: 1 !important;
+    position: unset !important;
+}
+
+/* ═══════════════════════════════════════════
+   Misc
+   ═══════════════════════════════════════════ */
+
+.ag-root-wrapper {
+    border-radius: var(--radius-md) !important;
+}
+
+.ag-drag-handle {
+    margin-right: 5px !important;
+}
+
+.ag-floating-top {
+    box-shadow: 0 3px 6px #141414 !important;
+    z-index: 2 !important;
+    border-bottom: none !important;
+}
+
+.ag-theme-balham .ag-overlay-loading-wrapper {
+    background-color: var(--ag-modal-overlay-background-color, hsla(0, 0%, 100%, 0.05));
+}
+
+/* ═══════════════════════════════════════════
+   #relicGrid
+   ═══════════════════════════════════════════ */
+
+#relicGrid .ag-horizontal-right-spacer {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+}
+
+#relicGrid .ag-header {
+    height: 48px !important;
+    min-height: 48px !important;
+}
+
+#relicGrid .ag-header-cell {
+    font-size: 10px !important;
+    font-weight: 400;
+}
+
+.relicsTableHeader {
+    font-size: 9px !important;
+    font-weight: 400 !important;
+}
+
+#relicGrid .ag-paging-page-summary-panel {
+    display: none !important;
+}
+
+#relicGrid .ag-paging-row-summary-panel {
+    padding-right: 10px !important;
+}
+
+/* ═══════════════════════════════════════════
+   #optimizerGridContainer
+   ═══════════════════════════════════════════ */
+
+#optimizerGridContainer .ag-header {
+    height: 36px !important;
+    min-height: 36px !important;
+}
+
+#optimizerGridContainer .ag-header-cell-text {
+    font-size: 11px !important;
+    font-weight: 400 !important;
+}
+
+#optimizerGridContainer .ag-header-cell-sorted-desc,
+#optimizerGridContainer .ag-header-cell-sorted-asc {
+    background-color: var(--layer-2) !important;
+    color: #fff !important;
+}
+
+#optimizerGridContainer .ag-floating-top {
+    overflow-y: hidden !important;
+}

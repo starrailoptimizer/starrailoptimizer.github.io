@@ -1,18 +1,22 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.OnTheFallOfAnAeon')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.OnTheFallOfAnAeon')
   const { SOURCE_LC } = Source.lightCone(OnTheFallOfAnAeon.id)
 
   const sValuesAtkStacks = [0.08, 0.10, 0.12, 0.14, 0.16]
@@ -29,7 +33,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'atkBoostStacks',
       formItem: 'slider',
       text: t('Content.atkBoostStacks.text'),
-      content: t('Content.atkBoostStacks.content', { AtkBuff: TsUtils.precisionRound(100 * sValuesAtkStacks[s]) }),
+      content: t('Content.atkBoostStacks.content', { AtkBuff: precisionRound(100 * sValuesAtkStacks[s]) }),
       min: 0,
       max: 4,
     },
@@ -38,7 +42,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'weaknessBreakDmgBuff',
       formItem: 'switch',
       text: t('Content.weaknessBreakDmgBuff.text'),
-      content: t('Content.weaknessBreakDmgBuff.content', { DmgBuff: TsUtils.precisionRound(100 * sValuesDmgBuff[s]) }),
+      content: t('Content.weaknessBreakDmgBuff.content', { DmgBuff: precisionRound(100 * sValuesDmgBuff[s]) }),
     },
   }
 

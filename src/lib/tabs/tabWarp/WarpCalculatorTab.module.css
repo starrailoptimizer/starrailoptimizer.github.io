@@ -1,0 +1,61 @@
+.warpTable {
+  background-color: var(--layer-2);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.warpTable thead {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.warpRow td,
+.warpRowDisabled td {
+  height: 45px;
+  padding: 0;
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 16px;
+}
+
+.warpRow:nth-child(even) td {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+.goalCell {
+  text-align: center;
+  position: relative;
+}
+
+.goalBarOverlay {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.goalBar {
+  display: block;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  position: absolute;
+  height: 100%;
+  z-index: 1;
+}
+
+.goalContent {
+  width: 100%;
+  z-index: 2;
+}
+
+.goalBadge {
+  opacity: 1;
+  border: 0;
+  padding: 2px 12px;
+  font-weight: normal;
+}
+
+.warpRowDisabled td {
+  opacity: 0.10;
+}

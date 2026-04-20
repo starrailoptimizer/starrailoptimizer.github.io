@@ -1,11 +1,3 @@
-import { Typography } from 'antd'
-import styled from 'styled-components'
+import type { HTMLAttributes } from 'react'
 
-const { Text } = Typography
-
-const FormStatTextStyled = styled(Text)`
-    display: block;
-    text-align: center;
-`
-
-export default FormStatTextStyled
+export const FormStatTextStyled = ({ style, ...props }: HTMLAttributes<HTMLDivElement>) => <div style={{ textAlign: 'center', ...style }} {...props} />

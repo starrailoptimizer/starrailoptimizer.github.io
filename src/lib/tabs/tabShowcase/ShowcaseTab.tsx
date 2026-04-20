@@ -1,512 +1,315 @@
 import {
-  CameraOutlined,
-  DownloadOutlined,
-  EditOutlined,
-  ExperimentOutlined,
-  EyeInvisibleOutlined,
-  ImportOutlined,
-  SettingOutlined,
-} from '@ant-design/icons'
-import {
   Button,
-  Collapse,
-  ConfigProvider,
-  Dropdown,
   Flex,
-  Form,
-  Input,
-  Segmented,
-  Typography,
-} from 'antd'
+  Loader,
+  Menu,
+  TextInput,
+} from '@mantine/core'
+import {
+  IconChevronDown,
+  IconSearch,
+} from '@tabler/icons-react'
 import { CharacterPreview } from 'lib/characterPreview/CharacterPreview'
 import { ShowcaseSource } from 'lib/characterPreview/CharacterPreviewComponents'
+import { DPSScoreDisclaimer } from 'lib/characterPreview/DPSScoreDisclaimer'
+import { AppPages } from 'lib/constants/appPages'
 import {
-  CURRENT_DATA_VERSION,
   DOWNTIME_VERSION,
-  officialOnly,
   SHOWCASE_DOWNTIME,
 } from 'lib/constants/constants'
-import {
-  OpenCloseIDs,
-  setOpen,
-} from 'lib/hooks/useOpenClose'
-import CharacterModal from 'lib/overlays/modals/CharacterModal'
-import { Assets } from 'lib/rendering/assets'
-import { AppPages } from 'lib/state/db'
+import { TabVisibilityContext } from 'lib/hooks/useTabVisibility'
+import { Hint } from 'lib/interactions/hint'
+import { useCharacterModalStore } from 'lib/overlays/modals/characterModalStore'
 import { SaveState } from 'lib/state/saveState'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { submitForm } from 'lib/tabs/tabShowcase/showcaseApi'
+import { ShowcasePortraitRow } from 'lib/tabs/tabShowcase/ShowcasePortraitRow'
 import {
-  CharacterPreset,
-  importClicked,
-  initialiseShowcaseTab,
-  onCharacterModalOk,
-  Preset,
-  presetCharacters,
-  ShowcaseTabForm,
-  submitForm,
+  handleCharacterModalOk,
+  importShowcaseCharacters,
+  initializeShowcaseOnMount,
+  parseShowcaseUrlId,
+  type Preset,
+  syncShowcaseUrl,
 } from 'lib/tabs/tabShowcase/showcaseTabController'
-import { useShowcaseTabStore } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
-import { Utils } from 'lib/utils/utils'
+import { ShowcaseScreen } from 'lib/tabs/tabShowcase/showcaseTabTypes'
+import { SimulationSidebar } from 'lib/tabs/tabShowcase/SimulationSidebar'
 import {
-  Dispatch,
-  SetStateAction,
+  getSelectedCharacter,
+  useShowcaseTabStore,
+} from 'lib/tabs/tabShowcase/useShowcaseTabStore'
+import { useDeferReveal } from 'lib/ui/DeferredRender'
+import { TooltipImage } from 'lib/ui/TooltipImage'
+import {
+  startTransition,
+  useCallback,
+  useContext,
   useEffect,
-  useMemo,
   useState,
 } from 'react'
-import {
-  Trans,
-  useTranslation,
-} from 'react-i18next'
-import { Character } from 'types/character'
-import { SettingOptions } from '../../overlays/drawers/SettingsDrawer'
+import { useTranslation } from 'react-i18next'
+import type { Character } from 'types/character'
+import { useShallow } from 'zustand/react/shallow'
+import styles from './ShowcaseTab.module.css'
 
-const RERUN_PRESET_SIZE = 45
-const PRESET_SIZE = 95
+const PRERENDER_HIDDEN: React.CSSProperties = {
+  visibility: 'hidden',
+  position: 'absolute',
+  pointerEvents: 'none',
+}
 
-const { Text } = Typography
+export function ShowcaseTab() {
+  const screen = useShowcaseTabStore((s) => s.screen)
+  const hasData = useShowcaseTabStore((s) => !!s.availableCharacters?.length)
 
-export default function ShowcaseTab() {
-  const [showcaseForm] = Form.useForm<ShowcaseTabForm>()
-  window.showcaseTabForm = showcaseForm
+  const { isActiveRef, addActivationListener } = useContext(TabVisibilityContext)
 
-  const loading = useShowcaseTabStore((s) => s.loading)
-  const scorerId = useShowcaseTabStore((s) => s.savedSession.scorerId)
-  const availableCharacters = useShowcaseTabStore((s) => s.availableCharacters)
+  useEffect(() => {
+    if (isActiveRef.current) {
+      // Tab is active on mount — initialize immediately
+      initializeShowcaseOnMount()
+    } else {
+      // Tab mounted in background — defer until first activation
+      let initialized = false
+      return addActivationListener(() => {
+        if (!initialized) {
+          initialized = true
+          initializeShowcaseOnMount()
+        }
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const activeKey = window.store((s) => s.activeKey)
-  const { t } = useTranslation(['relicScorerTab', 'common'])
+  useEffect(() => addActivationListener(() => syncShowcaseUrl()), [addActivationListener])
 
-  useEffect(() => initialiseShowcaseTab(activeKey), [activeKey])
-
-  if (activeKey != AppPages.SHOWCASE && !availableCharacters?.length) {
-    return <></>
-  }
-  console.log('======================================================================= RENDER RelicScorerTab')
+  const { t } = useTranslation('relicScorerTab')
 
   return (
-    <div>
-      <Flex vertical gap={0} align='center'>
-        {SHOWCASE_DOWNTIME && (
-          <Flex gap={10} vertical align='center'>
-            <Text>
-              <h3 style={{ color: '#ffaa4f' }}>{t('Header.DowntimeWarning', { game_version: DOWNTIME_VERSION })}</h3>
-            </Text>
-          </Flex>
-        )}
+    <Flex direction='column' align='center' style={{ flex: 1 }}>
+      {SHOWCASE_DOWNTIME && (
+        <h3 className={styles.downtimeWarning}>
+          {t('Header.DowntimeWarning', { game_version: DOWNTIME_VERSION })}
+        </h3>
+      )}
 
-        <Flex gap={10} vertical align='center'>
-          <Text>
-            {officialOnly
-              ? t('Header.WithoutVersion')
-              : t('Header.WithVersion', { beta_version: CURRENT_DATA_VERSION })}
-            {
-              // "WithoutVersion": "Enter your account UID to score your profile character at level 80 & maxed traces. Log out to refresh instantly."
-              // "WithVersion": "Enter your account UID to score your profile character at level 80 & maxed traces. Log out to refresh instantly. (Current version {{beta_version}} )",
-            }
-          </Text>
-        </Flex>
-        <Form
-          form={showcaseForm}
-          onFinish={submitForm}
-          initialValues={{ scorerId: scorerId }}
-        >
-          <Flex style={{ margin: 10, width: 1100 }} justify='center' align='center' gap={10}>
-            <Form.Item name='scorerId'>
-              <Input style={{ width: 150 }} placeholder={t('SubmissionBar.Placeholder') /* Account UID */} />
-            </Form.Item>
-            <Button
-              type='primary'
-              htmlType='submit'
-              loading={loading}
-              style={{ width: 150 }}
-            >
-              {t('common:Submit') /* Submit */}
-            </Button>
-            <Button
-              style={{ width: 'fit-content', minWidth: 175 }}
-              onClick={() => setOpen(OpenCloseIDs.SCORING_MODAL)}
-              icon={<SettingOutlined />}
-            >
-              {t('SubmissionBar.AlgorithmButton') /* Scoring algorithm */}
-            </Button>
-          </Flex>
-        </Form>
-        <CharacterPreviewSelection />
-      </Flex>
+      {screen === ShowcaseScreen.Landing && <RedirectToHome />}
+      {screen === ShowcaseScreen.Loading && <ShowcaseLoading />}
+
+      {/* Mount ShowcaseLoaded when data exists or screen is Loaded (e.g. after fetch failure) */}
+      {(hasData || screen === ShowcaseScreen.Loaded) && (
+        <div style={screen !== ShowcaseScreen.Loaded ? PRERENDER_HIDDEN : undefined}>
+          <ShowcaseLoaded />
+        </div>
+      )}
+    </Flex>
+  )
+}
+
+function RedirectToHome() {
+  const { isActiveRef, addActivationListener } = useContext(TabVisibilityContext)
+
+  useEffect(() => {
+    const doRedirect = () => {
+      // Don't redirect if there's a UID in the URL or a saved session —
+      // initializeShowcaseOnMount will handle transitioning to Loading
+      const urlId = parseShowcaseUrlId()
+      const savedScorerId = useShowcaseTabStore.getState().savedSession.scorerId
+      if (urlId || savedScorerId) return
+
+      useGlobalStore.getState().setActiveKey(AppPages.HOME)
+    }
+
+    // Re-run on every tab activation, not just first mount — this component
+    // stays mounted across tab switches (display:none), so dep-based re-fires
+    // would miss subsequent sidebar navigations back to Showcase.
+    if (isActiveRef.current) doRedirect()
+    return addActivationListener(doRedirect)
+  }, [addActivationListener, isActiveRef])
+  return null
+}
+
+function ShowcaseLoading() {
+  const scorerId = useShowcaseTabStore((s) => s.savedSession.scorerId)
+  const { t } = useTranslation('relicScorerTab')
+
+  return (
+    <div className={styles.loadingContainer}>
+      <Loader size='lg' />
+      <div className={styles.loadingText}>
+        {t('Loading.FetchingShowcase', { scorerId: scorerId ?? '' })}
+      </div>
     </div>
   )
 }
 
-function CharacterPreviewSelection() {
-  const setScoringAlgorithmFocusCharacter = window.store((s) => s.setScoringAlgorithmFocusCharacter)
+function ShowcaseLoaded() {
+  const containerRef = useDeferReveal()
+  const selectedCharacter = useShowcaseTabStore((s) => s.availableCharacters?.[s.selectedIndex] ?? null)
 
-  const selectedCharacter = useShowcaseTabStore((s) => s.selectedCharacter)
-  const availableCharacters = useShowcaseTabStore((s) => s.availableCharacters)
+  const { availableCharacters, selectedIndex, loading, sidebarOpen } = useShowcaseTabStore(
+    useShallow((s) => ({
+      availableCharacters: s.availableCharacters,
+      selectedIndex: s.selectedIndex,
+      loading: s.loading,
+      sidebarOpen: s.savedSession.sidebarOpen,
+    })),
+  )
+  const hasCharacters = !!availableCharacters?.length
 
-  const [isCharacterModalOpen, setCharacterModalOpen] = useState(false)
-  const [characterModalInitialCharacter, setCharacterModalInitialCharacter] = useState(selectedCharacter)
-  const [screenshotLoading, setScreenshotLoading] = useState(false)
-  const [downloadLoading, setDownloadLoading] = useState(false)
+  const setScoringAlgorithmFocusCharacter = useGlobalStore((s) => s.setScoringAlgorithmFocusCharacter)
 
-  const { t } = useTranslation('relicScorerTab')
-  const { t: tCharacter } = useTranslation('gameData', { keyPrefix: 'Characters' })
+  const { t } = useTranslation(['relicScorerTab', 'common'])
 
+  // Controlled UID input, synced from store
+  const scorerId = useShowcaseTabStore((s) => s.savedSession.scorerId)
+  const [uid, setUid] = useState(scorerId ?? '')
+  useEffect(() => {
+    if (scorerId != null) {
+      setUid(scorerId)
+    }
+  }, [scorerId])
+
+  // Sync scoring focus character
   useEffect(() => {
     setScoringAlgorithmFocusCharacter(selectedCharacter?.id)
   }, [selectedCharacter?.id, setScoringAlgorithmFocusCharacter])
 
-  function simulateClicked() {
-    console.log('Simulate', selectedCharacter)
-    setCharacterModalOpen(true)
-    setCharacterModalInitialCharacter(selectedCharacter)
-  }
+  // Stable callbacks
+  const setOriginalCharacterModalInitialCharacter = useCallback((character: Character | null) => {
+    useCharacterModalStore.getState().openOverlay({
+      initialCharacter: character,
+      onOk: handleCharacterModalOk,
+      showSetSelection: true,
+    })
+  }, [])
 
-  function clipboardClicked() {
-    setScreenshotLoading(true)
-    // Use a small timeout here so the spinner doesn't lag while the image is being generated
-    setTimeout(() => {
-      void Utils.screenshotElementById('relicScorerPreview', 'clipboard').finally(() => {
-        setScreenshotLoading(false)
+  const setOriginalCharacterModalOpen = useCallback((open: boolean) => {
+    if (!open) useCharacterModalStore.getState().closeOverlay()
+  }, [])
+
+  const onSelect = useCallback((index: number) => {
+    startTransition(() => useShowcaseTabStore.getState().selectCharacter(index))
+  }, [])
+
+  const presetClicked = useCallback((preset: Preset) => {
+    if (preset.custom) {
+      useCharacterModalStore.getState().openOverlay({
+        initialCharacter: getSelectedCharacter(),
+        onOk: handleCharacterModalOk,
+        showSetSelection: true,
       })
-    }, 100)
-  }
-
-  function downloadClicked() {
-    setDownloadLoading(true)
-    // Use a small timeout here so the spinner doesn't lag while the image is being generated
-    setTimeout(() => {
-      const name = selectedCharacter ? tCharacter(`${selectedCharacter.id}.Name`) : null
-      void Utils.screenshotElementById('relicScorerPreview', 'download', name).finally(() => {
-        setDownloadLoading(false)
-      })
-    }, 100)
-  }
-
-  function presetClicked(e: Preset) {
-    if (e.custom) {
-      return simulateClicked()
+      return
     }
 
-    onCharacterModalOk({
-      characterId: e.characterId,
-      lightCone: e.lightConeId,
-      characterEidolon: e.characterEidolon ?? 0,
-      lightConeSuperimposition: e.lightConeSuperimposition ?? 1,
+    handleCharacterModalOk({
+      characterId: preset.characterId,
+      lightCone: preset.lightConeId,
+      characterEidolon: preset.characterEidolon ?? 0,
+      lightConeSuperimposition: preset.lightConeSuperimposition ?? 1,
     })
+  }, [])
+
+  const onSidebarToggle = useCallback(() => {
+    const current = useShowcaseTabStore.getState().savedSession.sidebarOpen
+    useShowcaseTabStore.getState().setSidebarOpen(!current)
+    SaveState.delayedSave()
+  }, [])
+
+  const handleSubmit = () => {
+    if (uid.trim()) {
+      submitForm({ scorerId: uid.trim() })
+    }
   }
 
-  const items = [
+  const importMenuItems = [
     {
-      label: (
-        <Flex gap={10}>
-          <ImportOutlined />
-          {t('ImportLabels.AllCharacters') /* Import all characters & all relics into optimizer */}
-        </Flex>
-      ),
-      key: 'multiCharacter',
+      label: t('ImportLabels.Relics'),
+      key: 'relics' as const,
     },
     {
-      label: (
-        <Flex gap={10}>
-          <ImportOutlined />
-          {t('ImportLabels.SingleCharacter') /* Import selected character & all relics into optimizer */}
-        </Flex>
-      ),
-      key: 'singleCharacter',
+      label: t('ImportLabels.SingleCharacter'),
+      key: 'singleCharacter' as const,
+    },
+    {
+      label: t('ImportLabels.AllCharacters'),
+      key: 'multiCharacter' as const,
     },
   ]
 
-  const handleMenuClicked = (e: { key: string }) => {
-    importClicked(e.key as 'multiCharacter' | 'singleCharacter')
-  }
-
-  const menuProps = {
-    items,
-    onClick: handleMenuClicked,
-  }
-
-  const options = []
-  for (let i = 0; i < (availableCharacters?.length ?? 0); i++) {
-    const availableCharacter = availableCharacters![i]
-    options.push({
-      label: (
-        <Flex align='center' justify='space-around'>
-          <img
-            style={{
-              width: 100,
-              height: 100,
-              objectFit: 'contain',
-              borderRadius: 50,
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              background: 'rgba(255, 255, 255, 0.05)',
-            }}
-            src={Assets.getCharacterAvatarById(availableCharacter.id)}
-          />
-        </Flex>
-      ),
-      value: availableCharacter.id,
-      key: i,
-    })
-  }
-
   return (
-    <Flex style={{ width: 1375 }} justify='space-around'>
-      <Flex vertical align='center' gap={8} style={{ marginBottom: 100, width: 1068 }}>
-        <Flex
-          vertical
-          style={{
-            display: (availableCharacters?.length && availableCharacters.length > 0) ? 'flex' : 'none',
-            width: '100%',
-          }}
-        >
-          <Sidebar presetClicked={presetClicked} />
-
-          <Flex
-            style={{
-              display: (availableCharacters?.length && availableCharacters.length > 0) ? 'flex' : 'none',
+    <Flex ref={containerRef} className={styles.outerWrapper} justify='space-around'>
+      <Flex direction='column' align='center' gap={8} className={styles.loadedContainer}>
+        {/* UID input row */}
+        <Flex className={styles.formRow} justify='center' align='center' gap={10}>
+          <TextInput
+            className={styles.uidInput}
+            placeholder={t('SubmissionBar.Placeholder')}
+            value={uid}
+            onChange={(e) => setUid(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSubmit()
             }}
-            justify='space-between'
-            gap={10}
+          />
+          <Button
+            loading={loading}
+            className={styles.submitButton}
+            leftSection={<IconSearch size={16} />}
+            onClick={handleSubmit}
           >
-            <Button
-              style={{ flex: 1 }}
-              onClick={clipboardClicked}
-              icon={<CameraOutlined />}
-              loading={screenshotLoading}
-              type='primary'
-            >
-              {t('CopyScreenshot') /* Copy screenshot */}
-            </Button>
-            <Button
-              style={{ width: 50 }}
-              icon={<DownloadOutlined />}
-              onClick={downloadClicked}
-              loading={downloadLoading}
-            />
-            <Dropdown.Button
-              style={{ flex: 1 }}
-              className='dropdownButton'
-              onClick={() => importClicked('singleCharacter')}
-              menu={menuProps}
-            >
-              <ImportOutlined />
-              {t('ImportLabels.Relics') /* Import relics into optimizer */}
-            </Dropdown.Button>
-            <Button
-              style={{ flex: 1 }}
-              icon={<ExperimentOutlined />}
-              onClick={simulateClicked}
-            >
-              {t('SimulateRelics') /* Simulate relics on another character */}
-            </Button>
-          </Flex>
+            {t('common:Submit')}
+          </Button>
+          {hasCharacters && (
+            <Menu>
+              <Menu.Target>
+                <Button
+                  rightSection={<IconChevronDown size={14} />}
+                  variant='default'
+                >
+                  {t('relicScorerTab:Buttons.Import')}
+                </Button>
+              </Menu.Target>
+              <Menu.Dropdown>
+                {importMenuItems.map((item, i) => (
+                  <Menu.Item key={i} onClick={() => importShowcaseCharacters(item.key)}>
+                    {item.label}
+                  </Menu.Item>
+                ))}
+              </Menu.Dropdown>
+            </Menu>
+          )}
+          <TooltipImage type={Hint.showcaseUid()} />
         </Flex>
 
-        {(availableCharacters?.length != undefined && availableCharacters.length > 0)
-          && <DPSScoreDisclaimer />}
+        {/* DPS Score Disclaimer */}
+        {hasCharacters && <DPSScoreDisclaimer />}
 
-        <Segmented
-          style={{ width: '100%', overflow: 'hidden' }}
-          options={options}
-          block
-          onChange={useShowcaseTabStore.getState().onSelectionChanged}
-          value={selectedCharacter?.id}
-        />
+        {/* Portrait row */}
+        {hasCharacters && (
+          <ShowcasePortraitRow
+            characters={availableCharacters}
+            selectedIndex={selectedIndex}
+            onSelect={onSelect}
+          />
+        )}
 
-        <div id='previewWrapper' style={{ padding: '0 5 5 5' }}>
+        {/* Card area with simulation sidebar */}
+        <div className={styles.cardArea}>
+          {hasCharacters && (
+            <SimulationSidebar
+              open={sidebarOpen}
+              onToggle={onSidebarToggle}
+              onPresetClick={presetClicked}
+            />
+          )}
           <CharacterPreview
-            character={selectedCharacter as Character | null}
+            character={selectedCharacter}
             source={ShowcaseSource.SHOWCASE_TAB}
             id='relicScorerPreview'
-            setOriginalCharacterModalOpen={setCharacterModalOpen}
-            setOriginalCharacterModalInitialCharacter={setCharacterModalInitialCharacter as Dispatch<SetStateAction<Character | null>>}
+            setOriginalCharacterModalOpen={setOriginalCharacterModalOpen}
+            setOriginalCharacterModalInitialCharacter={setOriginalCharacterModalInitialCharacter}
           />
         </div>
-
-        <CharacterModal
-          onOk={onCharacterModalOk}
-          open={isCharacterModalOpen}
-          setOpen={setCharacterModalOpen}
-          initialCharacter={characterModalInitialCharacter as Character | null}
-        />
       </Flex>
     </Flex>
-  )
-}
-
-function Sidebar(props: { presetClicked: (preset: Preset) => void }) {
-  const [open, setOpen] = useState(useShowcaseTabStore.getState().savedSession.sidebarOpen)
-  const activeKey = window.store((s) => s.activeKey)
-
-  useEffect(() => {
-    useShowcaseTabStore.getState().setSidebarOpen(open)
-    SaveState.delayedSave()
-  }, [open])
-
-  const dropdownDisplay = useMemo(() => {
-    let key = 0
-    return (
-      <Flex
-        vertical
-        gap={3}
-        justify='center'
-        style={{
-          marginLeft: -8,
-          width: 110,
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-        }}
-      >
-        {presetCharacters().map((preset) => {
-          const icon = preset.custom ? <EditOutlined style={{ fontSize: 85 }} /> : <PresetButton preset={preset} />
-          return (
-            <Button
-              key={key++}
-              type='text'
-              style={{
-                width: preset.rerun ? RERUN_PRESET_SIZE + 2 : PRESET_SIZE + 8,
-                height: preset.rerun ? RERUN_PRESET_SIZE + 2 : PRESET_SIZE + 8,
-                paddingTop: 2,
-                display: activeKey === AppPages.SHOWCASE ? 'flex' : 'none',
-              }}
-              onClick={() => props.presetClicked(preset)}
-            >
-              {icon}
-            </Button>
-          )
-        })}
-      </Flex>
-    )
-  }, [props, activeKey])
-
-  return (
-    <Flex
-      vertical
-      style={{
-        position: 'relative',
-        left: -120,
-        // top: 40,
-        top: 95, // With announcement banner
-        width: 0,
-        height: 0,
-      }}
-    >
-      <Dropdown
-        dropdownRender={() => dropdownDisplay}
-        open={open}
-      >
-        <a
-          onClick={(e) => {
-            e.preventDefault()
-            setOpen(!open)
-          }}
-        >
-          <Button
-            type='primary'
-            shape='round'
-            style={{ height: PRESET_SIZE, width: PRESET_SIZE, borderRadius: PRESET_SIZE, marginBottom: 2 }}
-          >
-            <ExperimentOutlined style={{ fontSize: 55 }} />
-          </Button>
-        </a>
-      </Dropdown>
-    </Flex>
-  )
-}
-
-function PresetButton(props: { preset: CharacterPreset }) {
-  const { preset } = props
-  if (preset.rerun) {
-    return (
-      <img
-        src={Assets.getCharacterAvatarById(preset.characterId)}
-        style={{
-          height: RERUN_PRESET_SIZE,
-          width: RERUN_PRESET_SIZE,
-          borderRadius: RERUN_PRESET_SIZE,
-          outline: '1px solid rgba(255, 255, 255, 0.2)',
-          background: 'rgba(255, 255, 255, 0.05)',
-        }}
-      />
-    )
-  }
-
-  return (
-    <img
-      src={Assets.getCharacterAvatarById(preset.characterId)}
-      style={{
-        height: PRESET_SIZE,
-        width: PRESET_SIZE,
-        borderRadius: PRESET_SIZE,
-        outline: '1px solid rgba(255, 255, 255, 0.2)',
-        background: 'rgba(255, 255, 255, 0.05)',
-      }}
-    />
-  )
-}
-
-export function DPSScoreDisclaimer() {
-  const showComboDmgWarning = window.store((s) => s.settings.ShowComboDmgWarning)
-
-  const { t } = useTranslation('relicScorerTab')
-  const { t: tSettings } = useTranslation('settings')
-
-  if (showComboDmgWarning != SettingOptions.ShowComboDmgWarning.Show) return null
-
-  return (
-    <ConfigProvider
-      theme={{
-        components: {
-          Collapse: {
-            headerBg: '#8a1717',
-          },
-        },
-      }}
-    >
-      <Collapse
-        style={{ width: '100%' }}
-        items={[
-          {
-            key: '1',
-            label: (
-              <div style={{ fontSize: 14 }}>
-                <Trans t={t} i18nKey='Disclaimer'>
-                  Note: Combo DMG is meant to compare different relics relative to the selected team, and should <u>NOT</u>{' '}
-                  be used to compare different teams / LCs / eidolons!
-                </Trans>
-              </div>
-            ),
-            children: (
-              <Flex vertical style={{ padding: 12 }} gap={10}>
-                <Trans t={t} i18nKey='DisclaimerDescription'>
-                  Combo DMG is a tool to measure the damage of a single ability rotation within the context of a specific team.
-
-                  Changing the team / eidolons / light cones will change the duration of the rotation, how much energy is generated, uptime of buffs, etc.
-
-                  This means Combo DMG can NOT be used to determine which team is better, or which light cone is better, or measure the damage increase between
-                  eidolons. Combo DMG is only meant to compare different relics within a defined team and speed target.
-                </Trans>
-
-                <Button
-                  type='primary'
-                  size='large'
-                  block
-                  icon={<EyeInvisibleOutlined />}
-                  onClick={() => {
-                    window.store.getState().setSettings({
-                      ...window.store.getState().settings,
-                      ShowComboDmgWarning: SettingOptions.ShowComboDmgWarning.Hide,
-                    })
-                    SaveState.delayedSave()
-                  }}
-                >
-                  {tSettings('ShowComboDmgWarning.Hide')}
-                </Button>
-              </Flex>
-            ),
-          },
-        ]}
-      />
-    </ConfigProvider>
   )
 }

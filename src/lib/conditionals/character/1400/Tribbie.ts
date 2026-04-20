@@ -7,8 +7,8 @@ import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae
 import { TheHerta } from 'lib/conditionals/character/1400/TheHerta'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -28,7 +28,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -46,18 +46,19 @@ import {
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TribbieEntities = createEnum('Tribbie')
@@ -69,7 +70,7 @@ export const TribbieAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Tribbie.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Tribbie.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -119,16 +120,16 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'numinosity',
       formItem: 'switch',
       text: t('numinosity.text'),
-      content: t('numinosity.content', { ResPen: TsUtils.precisionRound(skillResPen * 100) }),
+      content: t('numinosity.content', { ResPen: precisionRound(skillResPen * 100) }),
     },
     ultZone: {
       id: 'ultZone',
       formItem: 'switch',
       text: t('ultZone.text'),
       content: t('ultZone.content', {
-        UltScaling: TsUtils.precisionRound(100 * ultScaling),
-        ZoneVulnerability: TsUtils.precisionRound(100 * ultVulnerability),
-        AdditionalDmgScaling: TsUtils.precisionRound(100 * ultAdditionalDmgScaling),
+        UltScaling: precisionRound(100 * ultScaling),
+        ZoneVulnerability: precisionRound(100 * ultVulnerability),
+        AdditionalDmgScaling: precisionRound(100 * ultAdditionalDmgScaling),
       }),
     },
     alliesMaxHp: {
@@ -362,8 +363,7 @@ const simulation = (): SimulationMetadata => ({
   ],
   comboTurnAbilities: [
     NULL_TURN_ABILITY_NAME,
-    START_SKILL,
-    END_ULT,
+    DEFAULT_ULT,
     DEFAULT_FUA,
     DEFAULT_FUA,
     WHOLE_BASIC,
@@ -374,7 +374,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_FUA,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   deprioritizeBuffs: true,
   relicSets: [
@@ -459,7 +458,7 @@ const display = {
     y: 1000,
     z: 1.075,
   },
-  showcaseColor: '#979af7',
+  showcaseColor: '#9390f8',
 }
 
 export const Tribbie: CharacterConfig = {

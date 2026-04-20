@@ -1,33 +1,42 @@
 import {
-  CameraOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  ExclamationCircleOutlined,
-} from '@ant-design/icons'
-import {
   Button,
   Flex,
   Modal,
-  theme,
-} from 'antd'
+} from '@mantine/core'
+import {
+  IconCamera,
+  IconDownload,
+  IconTrash,
+} from '@tabler/icons-react'
 import { CharacterPreview } from 'lib/characterPreview/CharacterPreview'
 import { ShowcaseSource } from 'lib/characterPreview/CharacterPreviewComponents'
-import { CUSTOM_TEAM } from 'lib/constants/constants'
-import { Message } from 'lib/interactions/message'
-import { defaultTeammate } from 'lib/optimization/defaultForm'
-import { Assets } from 'lib/rendering/assets'
-import { useScrollLock } from 'lib/rendering/scrollController'
-import DB, { AppPages } from 'lib/state/db'
-import { SaveState } from 'lib/state/saveState'
-import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
-import { HeaderText } from 'lib/ui/HeaderText'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Utils } from 'lib/utils/utils'
+import { AppPages } from 'lib/constants/appPages'
 import {
-  CSSProperties,
-  Fragment,
+  CUSTOM_TEAM,
+  PartsArray,
+} from 'lib/constants/constants'
+import { useConfirmAction } from 'lib/hooks/useConfirmAction'
+import { useScreenshotAction } from 'lib/hooks/useScreenshotAction'
+import { Message } from 'lib/interactions/message'
+import { useScrollLock } from 'lib/layout/scrollController'
+import styles from 'lib/overlays/modals/BuildsModal.module.css'
+import { useBuildsModalStore } from 'lib/overlays/modals/buildsModalStore'
+import { Assets } from 'lib/rendering/assets'
+import * as buildService from 'lib/services/buildService'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import {
+  getCharacterById,
+  useCharacterStore,
+} from 'lib/stores/character/characterStore'
+import { getRelicById } from 'lib/stores/relic/relicStore'
+import { useScoringStore } from 'lib/stores/scoring/scoringStore'
+import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
+import { useShowcaseTabStore } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
+import { HeaderText } from 'lib/ui/HeaderText'
+import {
+  type CSSProperties,
   memo,
-  ReactNode,
+  useCallback,
   useEffect,
   useState,
 } from 'react'
@@ -35,208 +44,161 @@ import { useTranslation } from 'react-i18next'
 import type {
   Character,
   CharacterId,
-  SavedBuild,
 } from 'types/character'
-import { Teammate } from 'types/form'
+import type {
+  SavedBuild,
+  SavedTeammate,
+} from 'types/savedBuild'
+import { useShallow } from 'zustand/react/shallow'
 
-const { useToken } = theme
-
-// FIXME LOW
-
-export function BuildsModal(props: { selectedCharacter: Character | null, isOpen: boolean, close: () => void }) {
-  const {
-    selectedCharacter,
-    isOpen,
-    close,
-  } = props
-  const { t } = useTranslation(['modals', 'gameData', 'common'])
-  const [confirmationModal, contextHolder] = Modal.useModal()
-  const [selectedBuild, setSelectedBuild] = useState<null | number>(null)
-
-  const [loading, setLoading] = useState(false)
-
-  useScrollLock(isOpen)
-
-  // When opening, pick the first build if there are any
-  useEffect(() => {
-    if (isOpen && selectedCharacter?.builds?.length) {
-      setSelectedBuild(0)
-    }
-  }, [isOpen, selectedCharacter])
-
-  if (!selectedCharacter?.builds?.length) {
-    return (
-      <Modal
-        open={isOpen}
-        width={300}
-        destroyOnClose
-        onOk={close}
-        onCancel={close}
-        centered
-        okText={t('common:Ok') /* Ok */}
-        cancelText={t('common:Cancel') /* Cancel */}
-      >
-        {t('Builds.NoBuilds.NoneSaved') /* No saved builds */}
-        {contextHolder}
-      </Modal>
-    )
-  }
-
-  async function confirm(content: ReactNode) {
-    return confirmationModal.confirm({
-      title: t('common:Confirm'), /* Confirm */
-      icon: <ExclamationCircleOutlined />,
-      content: content,
-      okText: t('common:Confirm'), /* Confirm */
-      cancelText: t('common:Cancel'), /* Cancel */
-      centered: true,
-    })
-  }
-
-  function onModalOk() {
-    close()
-  }
-
-  const handleCancel = () => {
-    setSelectedBuild(null)
-    close()
-  }
-
-  const handleDeleteAllBuilds = async () => {
-    const characterName = t(`gameData:Characters.${selectedCharacter.id}.Name`)
-    const result = await confirm(t('Builds.ConfirmDelete.DeleteAll') /* Are you sure you want to delete all builds? */)
-    if (result) {
-      setSelectedBuild(null)
-      DB.clearCharacterBuilds(selectedCharacter?.id)
-      SaveState.delayedSave()
-      Message.success(t('Builds.ConfirmDelete.SuccessMessageAll', { characterName: characterName }) /* Successfully deleted all builds for {{characterName}} */)
-      close()
-    }
-  }
-
-  const handleDeleteSingleBuild = async (name: string) => {
-    const result = await confirm(t('Builds.ConfirmDelete.DeleteSingle', { name: name }) /* Are you sure you want to delete {{name}}? */)
-    if (result) {
-      setSelectedBuild(null)
-      DB.deleteCharacterBuild(selectedCharacter?.id, name)
-      SaveState.delayedSave()
-      Message.success(t('Builds.ConfirmDelete.SuccessMessageSingle', { name: name }) /* Successfully deleted build: {{name}} */)
-
-      if (selectedCharacter?.builds?.length == 0) {
-        close()
-      }
-    }
-  }
-
-  const handleEquip = async (build: SavedBuild) => {
-    const result = await confirm(t('Builds.ConfirmEquip.Content') /* Equipping this will unequip characters that use the relics in this build */)
-    if (result) {
-      DB.equipRelicIdsToCharacter(
-        Object.values(build.equipped),
-        selectedCharacter?.id,
-      )
-      const simulation = TsUtils.clone(DB.getScoringMetadata(selectedCharacter.id).simulation)
-      if (simulation) {
-        simulation.deprioritizeBuffs = build.deprioritizeBuffs
-        for (let i = 0; i <= 2; i++) {
-          const teammate = build.team[i]
-          if (!teammate) {
-            simulation.teammates[i] = defaultTeammate() as Teammate
-          } else {
-            simulation.teammates[i] = {
-              characterId: teammate.characterId,
-              characterEidolon: teammate.eidolon,
-              lightCone: teammate.lightConeId,
-              lightConeSuperimposition: teammate.superimposition,
-              teamRelicSet: teammate.relicSet,
-              teamOrnamentSet: teammate.ornamentSet,
-            }
-          }
-        }
-        DB.updateSimulationScoreOverrides(selectedCharacter.id, simulation)
-        window.store.getState().setShowcaseTeamPreferenceById([selectedCharacter.id, CUSTOM_TEAM])
-      }
-      SaveState.delayedSave()
-      Message.success(t('Builds.ConfirmEquip.SuccessMessage', { buildName: build.name }) /* Successfully equipped build: {{buildName}} */)
-      handleCancel()
-      // equip can be triggered from the optimizer tab, move to character tab and focus on the appropriate character
-      useCharacterTabStore.getState().setFocusCharacter(build.characterId)
-      window.store.getState().setActiveKey(AppPages.CHARACTERS)
-    }
-  }
-
-  function clipboardClicked(action: string) {
-    if (selectedBuild === null || selectedCharacter === null || !selectedCharacter.builds) {
-      console.debug(selectedBuild, selectedCharacter)
-      return
-    }
-    setLoading(true)
-    const charId = selectedCharacter.id
-    const buildName = selectedCharacter.builds[selectedBuild].name
-    setTimeout(() => {
-      void Utils.screenshotElementById('buildPreview', action, `${t(`gameData:Characters.${charId}.LongName`)}_${buildName}`)
-        .finally(() => {
-          setLoading(false)
-        })
-    }, 100)
-  }
-
-  const build = selectedBuild !== null
-    ? selectedCharacter?.builds[selectedBuild] ?? null
-    : null
+export function BuildsModal() {
+  const { open, closeOverlay, characterId } = useBuildsModalStore(
+    useShallow((s) => ({ open: s.open, closeOverlay: s.closeOverlay, characterId: s.config?.characterId })),
+  )
+  const hasBuilds = useCharacterStore(
+    useCallback((s) => characterId ? !!(s.charactersById[characterId]?.builds?.length) : false, [characterId]),
+  )
 
   return (
     <Modal
-      open={isOpen}
-      width={1550}
-      destroyOnClose
+      opened={open}
+      size={open && hasBuilds ? 1550 : 300}
       centered
-      onOk={onModalOk}
-      onCancel={handleCancel}
-      footer={[
-        <Button
-          key='download'
-          icon={<DownloadOutlined style={{ fontSize: 30 }} />}
-          loading={loading}
-          onClick={() => {
-            console.log('download')
-            clipboardClicked('download')
-          }}
-          type='primary'
-          style={{ height: 50, width: 50, borderRadius: 8 }}
-        >
-        </Button>,
-        <Button
-          key='clipboard'
-          icon={<CameraOutlined style={{ fontSize: 30 }} />}
-          loading={loading}
-          onClick={() => clipboardClicked('clipboard')}
-          type='primary'
-          style={{ height: 50, width: 50, borderRadius: 8 }}
-        >
-        </Button>,
-        <Button key='delete' onClick={() => handleDeleteAllBuilds()}>
-          {t('Builds.DeleteAll') /* Delete All */}
-        </Button>,
-        <Button key='back' onClick={handleCancel}>
-          {t('common:Cancel') /* Cancel */}
-        </Button>,
-      ]}
+      onClose={closeOverlay}
     >
+      {open && <BuildsModalContent />}
+    </Modal>
+  )
+}
+
+function BuildsModalContent() {
+  const { config, closeOverlay } = useBuildsModalStore(
+    useShallow((s) => ({ config: s.config, closeOverlay: s.closeOverlay })),
+  )
+  const characterId = config?.characterId ?? null
+  const character = useCharacterStore(
+    useCallback((s) => characterId ? s.charactersById[characterId] ?? null : null, [characterId]),
+  )
+
+  const { t } = useTranslation(['modals', 'gameData', 'common'])
+  const [selectedBuild, setSelectedBuild] = useState<string | null>(null)
+  const confirm = useConfirmAction()
+  const { loading, trigger: screenshot } = useScreenshotAction('buildPreview')
+
+  useScrollLock(true)
+
+  // When opening, pick the first build if there are any
+  useEffect(() => {
+    if (character?.builds?.length) {
+      setSelectedBuild(character.builds[0].name)
+    }
+  }, [character?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!character?.builds?.length) {
+    return (
+      <>
+        {t('Builds.NoBuilds.NoneSaved')}
+      </>
+    )
+  }
+
+  const handleCancel = useCallback(() => {
+    setSelectedBuild(null)
+    closeOverlay()
+  }, [closeOverlay])
+
+  const handleDeleteAllBuilds = async () => {
+    const characterName = t(`gameData:Characters.${character.id}.Name`)
+    const result = await confirm(t('Builds.ConfirmDelete.DeleteAll'))
+    if (result) {
+      setSelectedBuild(null)
+      buildService.clearBuilds(character.id)
+      Message.success(t('Builds.ConfirmDelete.SuccessMessageAll', { characterName }))
+      closeOverlay()
+    }
+  }
+
+  const handleDeleteSingleBuild = useCallback(async (name: string) => {
+    const result = await confirm(t('Builds.ConfirmDelete.DeleteSingle', { name }))
+    if (result) {
+      setSelectedBuild(null)
+      buildService.deleteBuild(character.id, name)
+      Message.success(t('Builds.ConfirmDelete.SuccessMessageSingle', { name }))
+      const fresh = getCharacterById(character.id)
+      if (!fresh?.builds?.length) closeOverlay()
+    }
+  }, [character.id, closeOverlay, confirm, t])
+
+  const handleEquip = useCallback(async (build: SavedBuild) => {
+    const needsConfirm = stealsRelics(build)
+    const confirmed = needsConfirm ? await confirm(t('Builds.ConfirmEquip.Content')) : true
+    if (confirmed) {
+      buildService.equipBuildRelics(build.characterId, build.equipped)
+      Message.success(t('Builds.ConfirmEquip.SuccessMessage', { buildName: build.name }))
+
+      if (build.team.filter((x) => x !== null).length === 3) {
+        const update = { teammates: build.team as SavedTeammate[] }
+        useScoringStore.getState().updateSimulationOverrides(build.characterId, update)
+        useShowcaseTabStore.getState().setShowcaseTeamPreference(build.characterId, CUSTOM_TEAM)
+      }
+
+      handleCancel()
+      useCharacterTabStore.getState().setFocusCharacter(build.characterId)
+      useGlobalStore.getState().setActiveKey(AppPages.CHARACTERS)
+    }
+  }, [confirm, handleCancel, t])
+
+  function clipboardClicked(action: 'clipboard' | 'download') {
+    if (selectedBuild === null || character === null) {
+      return
+    }
+    const charId = character.id
+    screenshot(action, `${t(`gameData:Characters.${charId}.LongName`)}_${selectedBuild}`)
+  }
+
+  const build = selectedBuild !== null
+    ? character.builds.find((b) => b.name === selectedBuild) ?? null
+    : null
+
+  return (
+    <>
       <Flex gap={10}>
         <BuildList
-          character={selectedCharacter}
+          character={character}
           selectedBuild={selectedBuild}
           setSelectedBuild={setSelectedBuild}
           handleEquip={handleEquip}
           handleDelete={handleDeleteSingleBuild}
-          closeModal={close}
+          closeModal={closeOverlay}
         />
 
-        {contextHolder}
-        <BuildPreview character={selectedCharacter} build={build} />
+        <BuildPreview character={character} build={build} />
       </Flex>
-    </Modal>
+      <Flex justify='flex-end' gap={8} className={styles.footerActions}>
+        <Button
+          key='download'
+          loading={loading}
+          onClick={() => clipboardClicked('download')}
+          className={styles.actionButton}
+        >
+          <IconDownload size={16} />
+        </Button>
+        <Button
+          key='clipboard'
+          loading={loading}
+          onClick={() => clipboardClicked('clipboard')}
+          className={styles.actionButton}
+        >
+          <IconCamera size={16} />
+        </Button>
+        <Button key='delete' color='red' onClick={() => handleDeleteAllBuilds()}>
+          {t('Builds.DeleteAll')}
+        </Button>
+        <Button key='back' onClick={handleCancel}>
+          {t('common:Cancel')}
+        </Button>
+      </Flex>
+    </>
   )
 }
 
@@ -252,13 +214,13 @@ export const BuildPreview = memo(function BuildPreview(props: { character: Chara
     )
   }
 
-  return <div style={{ width: 656, height: 856, border: '1px solid #354b7d' }}></div>
+  return <div className={styles.emptyPreview}></div>
 })
 
 interface BuildListBaseProps {
   character: Character | null
-  selectedBuild: number | null
-  setSelectedBuild: (index: number | null) => void
+  selectedBuild: string | null
+  setSelectedBuild: (name: string | null) => void
   style?: CSSProperties
   closeModal?: () => void
 }
@@ -290,24 +252,17 @@ export function BuildList(props: BuildListProps) {
   } = props
   return (
     <Flex
-      vertical
-      style={{
-        overflowY: 'auto',
-        marginBottom: 20,
-        width: '100%',
-        minWidth: 400,
-        height: 840,
-        ...style,
-      }}
+      direction='column'
+      className={styles.buildList}
+      style={style}
       gap={8}
       onClick={() => setSelectedBuild(null)}
     >
-      {character?.builds?.map((build, index) => {
+      {character?.builds?.map((build) => {
         return preview
           ? (
             <BuildCard
-              key={index}
-              index={index}
+              key={build.name}
               build={build}
               characterId={character.id}
               selectedBuild={selectedBuild}
@@ -318,8 +273,7 @@ export function BuildList(props: BuildListProps) {
           )
           : (
             <BuildCard
-              key={index}
-              index={index}
+              key={build.name}
               build={build}
               characterId={character.id}
               selectedBuild={selectedBuild}
@@ -336,10 +290,9 @@ export function BuildList(props: BuildListProps) {
 
 interface BuildCardBaseProps {
   characterId: CharacterId
-  index: number
   build: SavedBuild
-  selectedBuild: number | null
-  setSelectedBuild: (index: number) => void
+  selectedBuild: string | null
+  setSelectedBuild: (name: string) => void
   closeModal?: () => void
 }
 
@@ -357,10 +310,8 @@ interface PreviewBuildCardProps extends BuildCardBaseProps {
 
 type BuildCardProps = InteractiveBuildCardProps | PreviewBuildCardProps
 
-function BuildCard(props: BuildCardProps) {
+const BuildCard = memo(function BuildCard(props: BuildCardProps) {
   const {
-    characterId,
-    index,
     build,
     selectedBuild,
     setSelectedBuild,
@@ -370,95 +321,95 @@ function BuildCard(props: BuildCardProps) {
     closeModal,
   } = props
   const { t } = useTranslation('modals', { keyPrefix: 'Builds' })
-  const selected = selectedBuild === index
-  const { token } = useToken()
+  const selected = selectedBuild === build.name
+
   return (
     <div
+      className={styles.buildCard}
       style={{
-        backgroundColor: selected ? '#001529' : token.colorBorderBg,
-        cursor: 'pointer',
-        padding: 24,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: token.colorBorderSecondary,
-        borderStyle: 'solid',
-        transition: 'all ease-in-out 0.2s',
+        backgroundColor: selected ? 'var(--layer-3)' : 'var(--layer-1)',
       }}
       onClick={(e) => {
-        setSelectedBuild(index)
+        setSelectedBuild(build.name)
         e.stopPropagation()
       }}
     >
-      <Flex vertical gap={8}>
-        <Flex justify='space-between' gap={8} align='center'>
-          <Flex vertical align='flex-start'>
-            <HeaderText
-              style={{
-                flex: 1,
-                fontSize: 16,
-                fontWeight: 600,
-                maxWidth: preview ? 350 : 85,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {build.name}
-            </HeaderText>
-          </Flex>
-          {!preview && (
+      <Flex direction='column' gap={6}>
+        <HeaderText className={styles.buildName}>{build.name}</HeaderText>
+        <TeammatePreview build={build} />
+        {!preview && (
+          <Flex gap={5} justify='space-between'>
             <Flex gap={5}>
               <Button
+                size='xs'
                 onClick={() => {
                   void handleEquip(build)
                 }}
               >
-                {t('Equip') /* Equip */}
+                {t('Equip')}
               </Button>
               <Button
+                size='xs'
                 onClick={() => {
-                  DB.loadCharacterBuildInOptimizer(characterId, index)
+                  buildService.loadBuildInOptimizer(build)
                   closeModal?.()
                 }}
               >
-                {t('Load') /* Load in Optimizer */}
+                {t('Load')}
               </Button>
-              <Button
-                style={{ width: 35 }}
-                type='primary'
-                icon={<DeleteOutlined />}
-                onClick={() => {
-                  handleDelete(build.name)
-                }}
-              />
             </Flex>
-          )}
-        </Flex>
-        <TeammatePreview build={build} display={true} />
+            <Button
+              size='xs'
+              className={styles.deleteButton}
+              onClick={() => {
+                handleDelete(build.name)
+              }}
+            >
+              <IconTrash size={16} />
+            </Button>
+          </Flex>
+        )}
       </Flex>
     </div>
   )
-}
+})
 
-function TeammatePreview(props: { build: SavedBuild, display: boolean }) {
-  const { build, display } = props
-  const imgStyle: CSSProperties = {
-    opacity: display ? 1 : 0,
-    position: 'relative',
-    height: display ? 50 : 0,
-    transition: 'height ease-in-out 0.4s, opacity ease-out 0.4s',
-  }
+const teammateImgStyle: CSSProperties = { height: 42 }
+const teammateRowStyle: CSSProperties = { marginBlock: 4 }
+
+const TeammatePreview = memo(function TeammatePreview(props: { build: SavedBuild }) {
+  const { build } = props
+  const hasTeammates = build.team.some(Boolean)
+  if (!hasTeammates) return null
+
   return (
     <Flex
-      justify='space-around'
-      gap={8}
+      justify='space-between'
+      style={teammateRowStyle}
     >
       {build.team.map((ally, idx) => (
-        <Fragment key={idx}>
-          <img src={Assets.getCharacterAvatarById(ally.characterId)} style={imgStyle} />
-          <img src={Assets.getLightConeIconById(ally.lightConeId)} style={{ ...imgStyle, visibility: ally.characterId ? 'visible' : 'hidden' }} />
-        </Fragment>
+        ally
+          ? (
+            <Flex key={idx} gap={10}>
+              <img src={Assets.getCharacterAvatarById(ally.characterId)} className={styles.teammateImg} style={teammateImgStyle} />
+              <img src={Assets.getLightConeIconById(ally.lightCone)} className={styles.teammateImg} style={teammateImgStyle} />
+            </Flex>
+          )
+          : null
       ))}
     </Flex>
   )
+})
+
+function stealsRelics(build: SavedBuild) {
+  const charId = build.characterId
+  let takes = false
+  for (const part of PartsArray) {
+    const relic = getRelicById(build.equipped[part])
+    if (relic?.equippedBy && relic.equippedBy !== charId) {
+      takes = true
+      break
+    }
+  }
+  return takes
 }

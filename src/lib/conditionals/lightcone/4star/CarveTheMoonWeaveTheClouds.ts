@@ -1,22 +1,23 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { SuperImpositionLevel } from 'types/lightCone'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.CarveTheMoonWeaveTheClouds')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.CarveTheMoonWeaveTheClouds')
   const { SOURCE_LC } = Source.lightCone(CarveTheMoonWeaveTheClouds.id)
 
   const sValuesAtk = [0.10, 0.125, 0.15, 0.175, 0.20]
@@ -42,9 +43,9 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.atkBuffActive.text'),
       content: t('Content.atkBuffActive.content', {
-        AtkBuff: TsUtils.precisionRound(100 * sValuesAtk[s]),
-        CritBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
-        RegenBuff: TsUtils.precisionRound(100 * sValuesErr[s]),
+        AtkBuff: precisionRound(100 * sValuesAtk[s]),
+        CritBuff: precisionRound(100 * sValuesCd[s]),
+        RegenBuff: precisionRound(100 * sValuesErr[s]),
       }),
     },
     cdBuffActive: {
@@ -53,9 +54,9 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.cdBuffActive.text'),
       content: t('Content.cdBuffActive.content', {
-        AtkBuff: TsUtils.precisionRound(100 * sValuesAtk[s]),
-        CritBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
-        RegenBuff: TsUtils.precisionRound(100 * sValuesErr[s]),
+        AtkBuff: precisionRound(100 * sValuesAtk[s]),
+        CritBuff: precisionRound(100 * sValuesCd[s]),
+        RegenBuff: precisionRound(100 * sValuesErr[s]),
       }),
     },
     errBuffActive: {
@@ -64,9 +65,9 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.errBuffActive.text'),
       content: t('Content.errBuffActive.content', {
-        AtkBuff: TsUtils.precisionRound(100 * sValuesAtk[s]),
-        CritBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
-        RegenBuff: TsUtils.precisionRound(100 * sValuesErr[s]),
+        AtkBuff: precisionRound(100 * sValuesAtk[s]),
+        CritBuff: precisionRound(100 * sValuesCd[s]),
+        RegenBuff: precisionRound(100 * sValuesErr[s]),
       }),
     },
   }

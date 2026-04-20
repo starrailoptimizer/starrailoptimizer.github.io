@@ -1,15 +1,13 @@
 // Represents the version of the latest info, which should be the beta leaks version at the time of the major update
 import gameData from 'data/game_data.json' with { type: 'json' }
-import {
-  StatKey,
-  StatKeyValue,
-} from 'lib/optimization/engine/config/keys'
+import { StatKey } from 'lib/optimization/engine/config/keys'
+import type { StatKeyValue } from 'lib/optimization/engine/config/keys'
 
 // Semver defined optimizer version
-export const CURRENT_OPTIMIZER_VERSION = 'v4.1.5'
+export const CURRENT_OPTIMIZER_VERSION = 'v4.2.5'
 
 // Represents the beta data content version, used for display but not for update notifications
-export const CURRENT_DATA_VERSION = '4.2v4'
+export const CURRENT_DATA_VERSION = '4.2v5'
 
 // Controls downtime messaging
 export const SHOWCASE_DOWNTIME = false
@@ -53,8 +51,20 @@ export const Stats = {
   Elation: 'Elation',
 } as const
 
-export type StatsKeys = keyof typeof Stats
+type StatsKeys = keyof typeof Stats
 export type StatsValues = (typeof Stats)[StatsKeys]
+
+export const TwoPieceStatTags = [
+  Stats.ATK_P,
+  Stats.HP_P,
+  Stats.DEF_P,
+  Stats.SPD_P,
+  Stats.CR,
+  Stats.CD,
+  Stats.OHB,
+  Stats.BE,
+] as const
+export type TwoPieceStatTag = (typeof TwoPieceStatTags)[number]
 
 export const MainStats = [
   Stats.HP_P,
@@ -221,12 +231,13 @@ export const MainStatsValues: Record<string, Record<number, { base: number, incr
   },
 }
 
+// order of array is relevant for SubStatRollsSummary.tsx
 export const SubStats = [
-  Stats.HP_P,
   Stats.ATK_P,
-  Stats.DEF_P,
-  Stats.HP,
   Stats.ATK,
+  Stats.HP_P,
+  Stats.HP,
+  Stats.DEF_P,
   Stats.DEF,
   Stats.SPD,
   Stats.CR,
@@ -253,13 +264,13 @@ export const SubStatValues = {
   [Stats.ATK]: {
     5: { high: 21.168754, mid: 19.051877, low: 16.935 },
     4: { high: 16.935, mid: 15.2415, low: 13.548 },
-    3: { high: 10.161, mid: 11.431126, low: 12.701252 },
+    3: { high: 12.701252, mid: 11.431126, low: 10.161 },
     2: { high: 8.4675, mid: 7.62075, low: 6.774 },
   },
   [Stats.DEF]: {
     5: { high: 21.168754, mid: 19.051877, low: 16.935 },
     4: { high: 16.935, mid: 15.2415, low: 13.548 },
-    3: { high: 10.161, mid: 11.431126, low: 12.701252 },
+    3: { high: 12.701252, mid: 11.431126, low: 10.161 },
     2: { high: 8.4675, mid: 7.62075, low: 6.774 },
   },
   [Stats.HP_P]: {
@@ -277,7 +288,7 @@ export const SubStatValues = {
   [Stats.DEF_P]: {
     5: { high: 5.4, mid: 4.86, low: 4.32 },
     4: { high: 4.32, mid: 3.888, low: 3.456 },
-    3: { high: 2.592, mid: 2.916, low: 3.24 },
+    3: { high: 3.24, mid: 2.916, low: 2.592 },
     2: { high: 2.16, mid: 1.944, low: 1.728 },
   },
   [Stats.BE]: {
@@ -301,7 +312,7 @@ export const SubStatValues = {
   [Stats.CR]: {
     5: { high: 3.24, mid: 2.916, low: 2.592 },
     4: { high: 2.592, mid: 2.3328, low: 2.0736 },
-    3: { high: 1.5552, mid: 1.7496, low: 1.944 },
+    3: { high: 1.944, mid: 1.7496, low: 1.5552 },
     2: { high: 1.296, mid: 1.1664, low: 1.0368 },
   },
   [Stats.CD]: {
@@ -311,32 +322,6 @@ export const SubStatValues = {
     2: { high: 2.592, mid: 2.3328, low: 2.0736 },
   },
 } as const
-
-export const StatsToReadable = {
-  [Stats.HP_P]: 'HP %',
-  [Stats.ATK_P]: 'ATK %',
-  [Stats.DEF_P]: 'DEF %',
-  [Stats.SPD_P]: 'SPD %',
-  [Stats.HP]: 'HP',
-  [Stats.ATK]: 'ATK',
-  [Stats.DEF]: 'DEF',
-  [Stats.SPD]: 'SPD',
-  [Stats.CR]: 'CRIT Rate',
-  [Stats.CD]: 'CRIT DMG',
-  [Stats.EHR]: 'Effect HIT',
-  [Stats.RES]: 'Effect RES',
-  [Stats.BE]: 'Break Effect',
-  [Stats.ERR]: 'Energy Regen',
-  [Stats.OHB]: 'Healing Boost',
-  [Stats.Physical_DMG]: 'Physical DMG',
-  [Stats.Fire_DMG]: 'Fire DMG',
-  [Stats.Ice_DMG]: 'Ice DMG',
-  [Stats.Lightning_DMG]: 'Lightning DMG',
-  [Stats.Wind_DMG]: 'Wind DMG',
-  [Stats.Quantum_DMG]: 'Quantum DMG',
-  [Stats.Imaginary_DMG]: 'Imaginary DMG',
-  [Stats.Elation]: 'Elation',
-}
 
 export const Parts = {
   Head: 'Head',
@@ -363,15 +348,7 @@ export const MainStatParts = {
   LinkRope: 'LinkRope',
 } as const
 export type MainStatParts = typeof MainStatParts[keyof typeof MainStatParts]
-
-export const PartsToReadable = {
-  [Parts.Head]: 'Head',
-  [Parts.Hands]: 'Hands',
-  [Parts.Body]: 'Body',
-  [Parts.Feet]: 'Feet',
-  [Parts.PlanarSphere]: 'Sphere',
-  [Parts.LinkRope]: 'Rope',
-} as const
+export const MainStatPartsArray = [Parts.Body, Parts.Feet, Parts.PlanarSphere, Parts.LinkRope] as const
 
 export const PartsMainStats = {
   [Parts.Head]: [Stats.HP],
@@ -540,10 +517,7 @@ export const Constants = {
   MainStats,
   MainStatsValues,
   SubStats,
-  StatsToReadable,
-  PartsToReadable,
   PartsMainStats,
-  // StatMaxes,
   MAX_INT: 2147483647,
   THREAD_BUFFER_LENGTH: 150000,
 } as const
@@ -552,6 +526,7 @@ export const RelicSetFilterOptions = {
   relic4Piece: '4 Piece',
   relic2Plus2Piece: '2 + 2 Piece',
   relic2PlusAny: '2 + Any',
+  relic2Plus2Any: '2 + 2 Any',
 }
 
 export const DEFAULT_STAT_DISPLAY = 'combat'

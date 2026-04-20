@@ -1,13 +1,13 @@
 import { Constants } from 'lib/constants/constants'
-import { uniformCompatible } from 'lib/gpu/webgpuDevice'
+import { generateBasicSetEffectsWgsl } from 'lib/gpu/injection/generateBasicSetEffects'
 import { injectComputedStats } from 'lib/gpu/injection/injectComputedStats'
 import { generateDynamicConditionals } from 'lib/gpu/injection/injectConditionals'
 import { injectSettings } from 'lib/gpu/injection/injectSettings'
 import { injectUnrolledActions } from 'lib/gpu/injection/injectUnrolledActions'
-import { generateBasicSetEffectsWgsl } from 'lib/gpu/injection/generateBasicSetEffects'
 import { generateSetBitConstants } from 'lib/gpu/injection/setIndexMap'
 import { indent } from 'lib/gpu/injection/wgslUtils'
-import {
+import { uniformCompatible } from 'lib/gpu/webgpuDevice'
+import type {
   GpuConstants,
   RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
@@ -19,13 +19,13 @@ import {
   generateSetConditionalsInitializer,
   generateSetConditionalsStruct,
 } from 'lib/sets/setConfigRegistry'
-import { Form } from 'types/form'
-import {
+import type { Form } from 'types/form'
+import type {
   OptimizerContext,
   ShaderVariables,
 } from 'types/optimizer'
 
-export function generateShaderVariables(context: OptimizerContext, request: Form, gpuParams: GpuConstants) {
+function generateShaderVariables(context: OptimizerContext, request: Form, gpuParams: GpuConstants) {
   // All sort options need all actions generated for proper stat computation
   const actionLength = context.defaultActions.length + context.rotationActions.length
 
@@ -52,9 +52,9 @@ export function generateWgsl(context: OptimizerContext, request: Form, relics: R
   wgsl = injectUnrolledActions(wgsl, request, context, gpuParams)
   wgsl = injectConditionalsNew(wgsl, request, context, gpuParams)
   wgsl = injectGpuParams(wgsl, request, context, gpuParams)
-  wgsl = injectBasicFilters(wgsl, request, context, gpuParams)
-  wgsl = injectSetFilters(wgsl, request, gpuParams)
-  wgsl = injectComputedStats(wgsl, gpuParams)
+  wgsl = injectBasicFilters(wgsl, request)
+  wgsl = injectSetFilters(wgsl, request)
+  wgsl = injectComputedStats(wgsl)
 
   return wgsl
 }
@@ -117,7 +117,6 @@ const action${i} = Action( // ${action.actionIndex} ${action.actionName}
   return wgsl
 }
 
-
 function injectComputeShader(wgsl: string) {
   wgsl += generateSetBitConstants()
   const basicSetEffects = generateBasicSetEffectsWgsl()
@@ -133,13 +132,14 @@ ${injectedStructs}
 
 function filterFn(request: Form) {
   return (text: string) => {
-    if (text.length == 0) return text
-    const [variable, stat, threshold] = text.split(/[><]/).flatMap((x) => x.split('.')).map((x) => x.trim())
+    if (text.length === 0) return text
+    const [, , threshold] = text.split(/[><]/).flatMap((x) => x.split('.')).map((x) => x.trim())
     const min = threshold.includes('min')
     const max = threshold.includes('max')
+    const value = request[threshold as keyof Form]
 
-    if (max && request[threshold as keyof Form] == Constants.MAX_INT) return ''
-    if (min && request[threshold as keyof Form] == 0) return ''
+    if (max && (value == null || value === Constants.MAX_INT)) return ''
+    if (min && (value == null || value === 0)) return ''
 
     return text
   }
@@ -149,7 +149,7 @@ function format(text: string, levels: number = 2) {
   return indent(text.length > 0 ? text : 'false', levels)
 }
 
-function injectSetFilters(wgsl: string, request: Form, gpuParams: GpuConstants) {
+function injectSetFilters(wgsl: string, request: Form) {
   const hasRelicFilter = (request.relicSets?.length ?? 0) > 0
   const hasOrnamentFilter = (request.ornamentSets?.length ?? 0) > 0
 
@@ -187,7 +187,7 @@ if (${conditions.join('\n || ')}) {
   )
 }
 
-export function injectBasicFilters(wgsl: string, request: Form, context: OptimizerContext, gpuParams: GpuConstants) {
+function injectBasicFilters(wgsl: string, request: Form) {
   const sortOption = SortOption[request.resultSort!]
   const sortKey: string = sortOption.key
   const sortOptionComputed = sortOption.isComputedRating

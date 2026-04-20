@@ -1,14 +1,10 @@
-// define some handy keycode constants
-
-import {
+import type {
   CellPosition,
   IRowNode,
   NavigateToNextCellParams,
 } from 'ag-grid-community'
-import { AgGridReact } from 'ag-grid-react'
-import { RefObject } from 'react'
-
-// FIXME LOW
+import type { AgGridReact } from 'ag-grid-react'
+import type { RefObject } from 'react'
 
 const KEY_LEFT = 'ArrowLeft'
 const KEY_UP = 'ArrowUp'
@@ -18,19 +14,19 @@ const KEY_DOWN = 'ArrowDown'
 // https://www.ag-grid.com/javascript-data-grid/keyboard-navigation/
 export const arrowKeyGridNavigation = <T>(
   params: NavigateToNextCellParams,
-  grid: RefObject<AgGridReact<T>>,
+  grid: RefObject<AgGridReact<T> | null>,
   callback: (x: IRowNode<T>) => void,
 ): CellPosition | null => {
   if (!grid.current) return null
   const previousCell = params.previousCellPosition
-  let nextRowIndex: number, renderedRowCount: number, newSelectedNode: IRowNode<T>
+  const renderedRowCount = params.api.getDisplayedRowCount()
 
   function selectCell(nextRowIndex: number) {
     if (nextRowIndex >= renderedRowCount || nextRowIndex <= -1) {
       return null
     }
 
-    newSelectedNode = grid.current!.api.getDisplayedRowAtIndex(nextRowIndex)!
+    const newSelectedNode = grid.current!.api.getDisplayedRowAtIndex(nextRowIndex)!
     grid.current!.api.setNodesSelected({ nodes: [newSelectedNode], newValue: true })
     callback(newSelectedNode)
 
@@ -43,12 +39,9 @@ export const arrowKeyGridNavigation = <T>(
 
   switch (params.key) {
     case KEY_UP:
-      nextRowIndex = previousCell.rowIndex - 1
-      return selectCell(nextRowIndex)
+      return selectCell(previousCell.rowIndex - 1)
     case KEY_DOWN:
-      nextRowIndex = previousCell.rowIndex + 1
-      renderedRowCount = params.api.getDisplayedRowCount()
-      return selectCell(nextRowIndex)
+      return selectCell(previousCell.rowIndex + 1)
     case KEY_LEFT:
     case KEY_RIGHT:
     default:

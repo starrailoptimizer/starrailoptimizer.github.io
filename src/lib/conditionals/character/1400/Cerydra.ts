@@ -4,8 +4,8 @@ import {
 } from 'lib/conditionals/character/1400/Cyrene'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -29,17 +29,21 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  floorSafe,
+  precisionRound,
+} from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const CerydraEntities = createEnum('Cerydra')
@@ -50,7 +54,7 @@ export const CerydraAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Cerydra')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Cerydra')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -138,7 +142,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'militaryMerit',
       formItem: 'switch',
       text: t('TeammateContent.militaryMerit.text'),
-      content: t('TeammateContent.militaryMerit.content', { TalentAtkConversion: TsUtils.precisionRound(talentAtkScaling * 100) }),
+      content: t('TeammateContent.militaryMerit.content', { TalentAtkConversion: precisionRound(talentAtkScaling * 100) }),
     },
     cyreneSpecialEffect: {
       id: 'cyreneSpecialEffect',
@@ -151,15 +155,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('TeammateContent.peerage.text'),
       content: t('TeammateContent.peerage.content', {
-        SkillCdBuff: TsUtils.precisionRound(100 * skillCdScaling),
-        SkillResPenBuff: TsUtils.precisionRound(100 * skillResPenScaling),
+        SkillCdBuff: precisionRound(100 * skillCdScaling),
+        SkillResPenBuff: precisionRound(100 * skillResPenScaling),
       }),
     },
     teammateATKValue: {
       id: 'teammateATKValue',
       formItem: 'slider',
       text: t('TeammateContent.teammateATKValue.text'),
-      content: t('TeammateContent.teammateATKValue.content', { TalentAtkConversion: TsUtils.precisionRound(talentAtkScaling * 100) }),
+      content: t('TeammateContent.teammateATKValue.content', { TalentAtkConversion: precisionRound(talentAtkScaling * 100) }),
       min: 0,
       max: 10000,
     },
@@ -320,7 +324,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
             action,
             context,
             SOURCE_TRACE,
-            (convertibleValue) => Math.min(3.60, 0.18 * Math.floor((convertibleValue - 2000) / 100)),
+            (convertibleValue) => Math.min(3.60, 0.18 * floorSafe((convertibleValue - 2000) / 100)),
           )
         },
         gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -333,7 +337,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
             this,
             action,
             context,
-            `min(3.60, 0.18 * floor((convertibleValue - 2000) / 100))`,
+            `min(3.60, 0.18 * floorSafe((convertibleValue - 2000) / 100))`,
             `${wgslTrue(r.atkToCd)} && ${containerActionVal(SELF_ENTITY_INDEX, StatKey.ATK, config)} > 2000`,
           )
         },
@@ -381,11 +385,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1050,
-    y: 950,
-    z: 1.05,
+    x: 1039,
+    y: 933,
+    z: 1.1,
   },
-  showcaseColor: '#7d83d7',
+  showcaseColor: '#5050ab',
 }
 
 export const Cerydra: CharacterConfig = {

@@ -1,69 +1,57 @@
-import {
-  Flex,
-  theme,
-} from 'antd'
-import {
-  defaultPadding,
-  panelWidth,
-} from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
-import {
+import { Flex } from '@mantine/core'
+import { defaultPadding } from 'lib/constants/constantsUi'
+import { panelWidth } from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
+import type {
   CSSProperties,
-  ReactElement,
+  ReactNode,
 } from 'react'
-
-const { useToken } = theme
-export const cardShadow = 'rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em, rgba(255, 255, 255, 0.15) 0px 0px 0px 1px inset'
-export const cardShadowNonInset = 'rgba(0, 0, 0, 0.25) 0px 0.0625em 0.0625em, rgba(0, 0, 0, 0.25) 0px 0.125em 0.5em'
 
 const defaultGap = 5
 
 const smallWidth = panelWidth
-const narrowWidth = 233
-const mediumWidth = 373
-const largeWidth = 1183
+const mediumWidth = 398
+const largeWidth = 1258
 
 const dimsBySize: Record<string, number> = {
   small: smallWidth,
-  narrow: 233,
+  narrow: 248,
   medium: mediumWidth,
   large: largeWidth,
 }
 
-export default function FormCard(props: {
+export function FormCard({ size: sizeProp, children, height, style, justify }: {
   size?: string,
-  children?: ReactElement | ReactElement[],
+  children?: ReactNode,
   height?: number,
   style?: CSSProperties,
   justify?: string,
 }) {
-  const { token } = useToken()
-
-  const size = props.size ?? 'small'
+  const size = sizeProp ?? 'small'
   const width = dimsBySize[size]
 
   return (
     <Flex
       style={{
-        borderRadius: 5,
-        backgroundColor: token.colorBgContainer,
-        height: props.height ?? 415,
-        padding: props.style?.padding ?? defaultPadding,
-        boxShadow: cardShadow,
-        overflow: props.style?.overflow,
+        borderRadius: 6,
+        backgroundColor: 'var(--layer-2)',
+        height: height ?? 415,
+        padding: style?.padding ?? defaultPadding,
+        boxShadow: 'var(--shadow-card)',
+        overflow: style?.overflow,
       }}
       className='hide-scrollbar'
     >
       <Flex
         style={{ width: width }}
-        justify={props.justify ?? undefined}
+        justify={justify}
       >
         <Flex
-          vertical
+          direction='column'
           style={{ width: width }}
           gap={defaultGap}
-          justify={props.justify ?? undefined}
+          justify={justify}
         >
-          {props.children}
+          {children}
         </Flex>
       </Flex>
     </Flex>

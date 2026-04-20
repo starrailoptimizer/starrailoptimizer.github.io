@@ -1,21 +1,31 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  TrailblazerRemembranceCaelus,
+  TrailblazerRemembranceStelle,
+} from 'lib/conditionals/character/8000/TrailblazerRemembrance'
+import {
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { DamageTag, TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TrailblazerRemembranceCaelus, TrailblazerRemembranceStelle } from 'lib/conditionals/character/8000/TrailblazerRemembrance'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import {
+  DamageTag,
+  TargetTag,
+} from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterId } from 'types/character'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean, { characterId }: { characterId: CharacterId }): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.FlyIntoAPinkTomorrow')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.FlyIntoAPinkTomorrow')
   const { SOURCE_LC } = Source.lightCone(FlyIntoAPinkTomorrow.id)
 
   const sValuesDmg = [0.08, 0.10, 0.12, 0.14, 0.16]
@@ -38,7 +48,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean, { character
       id: 'dmgBoost',
       formItem: 'switch',
       text: t('Content.dmgBoost.text'),
-      content: t('Content.dmgBoost.content', { DmgBuff: TsUtils.precisionRound(100 * sValuesDmg[s]) }),
+      content: t('Content.dmgBoost.content', { DmgBuff: precisionRound(100 * sValuesDmg[s]) }),
       disabled: !isValidWearer,
     },
     enhancedBasicBoost: {
@@ -46,7 +56,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean, { character
       id: 'enhancedBasicBoost',
       formItem: 'switch',
       text: t('Content.enhancedBasicBoost.text'),
-      content: t('Content.enhancedBasicBoost.content', { DmgBoost: TsUtils.precisionRound(100 * sValuesEnhancedBasicDmg[s]) }),
+      content: t('Content.enhancedBasicBoost.content', { DmgBoost: precisionRound(100 * sValuesEnhancedBasicDmg[s]) }),
     },
   }
 

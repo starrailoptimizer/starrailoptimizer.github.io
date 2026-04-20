@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -23,7 +23,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
@@ -31,7 +31,7 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
 import { SparkleB1 } from 'lib/conditionals/character/1300/SparkleB1'
 import { Cipher } from 'lib/conditionals/character/1400/Cipher'
@@ -47,17 +47,18 @@ import {
   NULL_TURN_ABILITY_NAME,
   START_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const QingqueEntities = createEnum('Qingque')
@@ -69,7 +70,7 @@ export const QingqueAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Qingque')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Qingque')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -118,7 +119,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'basicEnhanced',
       formItem: 'switch',
       text: t('Content.basicEnhanced.text'),
-      content: t('Content.basicEnhanced.content', { talentAtkBuff: TsUtils.precisionRound(100 * talentAtkBuff) }),
+      content: t('Content.basicEnhanced.content', { talentAtkBuff: precisionRound(100 * talentAtkBuff) }),
     },
     basicEnhancedSpdBuff: {
       id: 'basicEnhancedSpdBuff',
@@ -130,7 +131,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillDmgIncreaseStacks',
       formItem: 'slider',
       text: t('Content.skillDmgIncreaseStacks.text'),
-      content: t('Content.skillDmgIncreaseStacks.content', { skillStackDmg: TsUtils.precisionRound(100 * skillStackDmg) }),
+      content: t('Content.skillDmgIncreaseStacks.content', { skillStackDmg: precisionRound(100 * skillStackDmg) }),
       min: 0,
       max: 4,
     },
@@ -253,7 +254,6 @@ const simulation = (): SimulationMetadata => ({
     END_BASIC,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     [Sets.GeniusOfBrilliantStars, Sets.GeniusOfBrilliantStars],
@@ -338,7 +338,8 @@ const display = {
     y: 1024,
     z: 1,
   },
-  showcaseColor: '#87d2da',
+  disableSpine: true,
+  showcaseColor: '#b7e5eb',
 }
 
 export const Qingque: CharacterConfig = {

@@ -1,9 +1,9 @@
-import {
+import type {
   CharacterId,
   Eidolon,
 } from 'types/character'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import type { CharacterConditionalsController } from 'types/conditionals'
+import type { ScoringMetadata } from 'types/metadata'
 
 export type CharacterDisplay = {
   imageCenter?: {
@@ -11,7 +11,19 @@ export type CharacterDisplay = {
     y: number,
     z: number,
   },
+  spineCenter?: {
+    x: number,
+    y: number,
+    z: number,
+  },
+  backgroundCenterOffset?: {
+    x: number,
+    y: number,
+    z: number,
+  },
+  disableSpine?: boolean,
   showcaseColor?: string,
+  gridPortraitOffset?: number,
 }
 
 export type CharacterConfig = {

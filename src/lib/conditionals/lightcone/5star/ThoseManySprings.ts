@@ -1,22 +1,23 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ThoseManySprings')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ThoseManySprings')
   const { SOURCE_LC } = Source.lightCone(ThoseManySprings.id)
 
   const sValuesVulnerability = [0.10, 0.12, 0.14, 0.16, 0.18]
@@ -39,8 +40,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.unarmoredVulnerability.text'),
       content: t('Content.unarmoredVulnerability.content', {
-        UnarmoredVulnerability: TsUtils.precisionRound(sValuesVulnerability[s] * 100),
-        CorneredVulnerability: TsUtils.precisionRound(sValuesVulnerabilityEnhanced[s] * 100),
+        UnarmoredVulnerability: precisionRound(sValuesVulnerability[s] * 100),
+        CorneredVulnerability: precisionRound(sValuesVulnerabilityEnhanced[s] * 100),
       }),
     },
     corneredVulnerability: {
@@ -49,8 +50,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.corneredVulnerability.text'),
       content: t('Content.corneredVulnerability.content', {
-        UnarmoredVulnerability: TsUtils.precisionRound(sValuesVulnerability[s] * 100),
-        CorneredVulnerability: TsUtils.precisionRound(sValuesVulnerabilityEnhanced[s] * 100),
+        UnarmoredVulnerability: precisionRound(sValuesVulnerability[s] * 100),
+        CorneredVulnerability: precisionRound(sValuesVulnerabilityEnhanced[s] * 100),
       }),
     },
   }

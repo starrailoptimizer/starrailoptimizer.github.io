@@ -3,11 +3,11 @@ import {
   getHitIndex,
 } from 'lib/gpu/injection/injectUtils'
 import {
-  AKeyValue,
+  type AKeyValue,
   getAKeyName,
   getHKeyName,
   HKey,
-  HKeyValue,
+  type HKeyValue,
 } from 'lib/optimization/engine/config/keys'
 import {
   ALL_DAMAGE_TAGS,
@@ -15,13 +15,13 @@ import {
   ALL_ELEMENT_TAGS,
   DamageTag,
   DirectnessTag,
-  ElementTag,
+  type ElementTag,
   OutputTag,
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { OptimizerEntity } from 'lib/optimization/engine/container/computedStatsContainer'
-import { OptimizerAction } from 'types/optimizer'
+import { type OptimizerEntity } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type OptimizerAction } from 'types/optimizer'
 
 export function matchesTargetTag(entity: OptimizerEntity, targetTag: TargetTag, entities?: OptimizerEntity[]): boolean {
   if (targetTag & TargetTag.FullTeam) return true
@@ -240,6 +240,7 @@ export const buff = {
   action: (actionKey: AKeyValue, value: WgslBuffValue) => new ActionBuffBuilder(actionKey, value),
   actionSet: (actionKey: AKeyValue, value: WgslBuffValue) => new ActionBuffBuilder(actionKey, value, WgslOperator.SET),
   actionMultiply: (actionKey: AKeyValue, value: WgslBuffValue) => new ActionBuffBuilder(actionKey, value, WgslOperator.MULTIPLY),
-  actionMultiplicativeComplement: (actionKey: AKeyValue, value: WgslBuffValue) => new ActionBuffBuilder(actionKey, value, WgslOperator.MULTIPLICATIVE_COMPLEMENT),
+  actionMultiplicativeComplement: (actionKey: AKeyValue, value: WgslBuffValue) =>
+    new ActionBuffBuilder(actionKey, value, WgslOperator.MULTIPLICATIVE_COMPLEMENT),
   hit: (hitKey: HKeyValue, value: WgslBuffValue) => new HitBuffBuilder(hitKey, value),
 }

@@ -1,12 +1,12 @@
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
-import {
+import type {
   ElementName,
   PathName,
 } from 'lib/constants/constants'
 import { DamageTag } from 'lib/optimization/engine/config/tag'
-import { ContentItem } from 'types/conditionals'
-import { Hit } from 'types/hitConditionalTypes'
-import {
+import type { ContentItem } from 'types/conditionals'
+import type { Hit } from 'types/hitConditionalTypes'
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -173,23 +173,6 @@ export function teammateMatchesId(context: OptimizerContext, id: string) {
     + (context.teammate2Metadata?.characterId == id ? 1 : 0)
 }
 
-export function teamCharacterIds(context: OptimizerContext) {
-  return [
-    context.characterId,
-    context.teammate0Metadata?.characterId,
-    context.teammate1Metadata?.characterId,
-    context.teammate2Metadata?.characterId,
-  ].filter((x) => !!x)
-}
-
-export function teammateCharacterIds(context: OptimizerContext) {
-  return [
-    context.teammate0Metadata?.characterId,
-    context.teammate1Metadata?.characterId,
-    context.teammate2Metadata?.characterId,
-  ].filter((x) => !!x)
-}
-
 export function mainIsPath(context: OptimizerContext, path: PathName) {
   return context.path == path
 }
@@ -211,17 +194,6 @@ export function createEnum<T extends string>(...values: T[]) {
     obj[v.replace(/[^a-zA-Z0-9]+/g, '_')] = v
   }
   return obj as { [K in T as Sanitize<K>]: K }
-}
-
-export function teammateConditionalActive(action: OptimizerAction, teammateId: string, conditionalId: string) {
-  const teammateAction = [
-    action.teammate0,
-    action.teammate1,
-    action.teammate2,
-  ].find((x) => x && x.actorId == teammateId)
-  if (!teammateAction) return false
-
-  return teammateAction.characterConditionals[conditionalId]
 }
 
 // Returns the entity index of the memosprite, or -1 if not found

@@ -1,8 +1,14 @@
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import { type SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import { RelicRollGrader } from 'lib/relics/relicRollGrader'
-import { BaseWorkerInput, baseWorkerPool } from 'lib/simulations/workerPool'
+import { hashRelic } from 'lib/relics/relicUtils'
+import { objectHash } from 'lib/utils/objectUtils'
+import {
+  type BaseWorkerInput,
+  WorkerCancelledError,
+  workerPool,
+} from 'lib/worker/workerPool'
 import { WorkerType } from 'lib/worker/workerUtils'
-import { Relic } from 'types/relic'
+import { type Relic } from 'types/relic'
 
 export type EstTbpRunnerInput = {
   displayRelics: SingleRelicByPart,
@@ -21,12 +27,14 @@ export type EstTbpRunnerOutput = {
 export type EstTbpWorkerInput = {
   relic: Relic,
   weights: Record<string, number>,
-  workerType: WorkerType,
+  workerType: WorkerType.EST_TBP,
 }
 
 export type EstTbpWorkerOutput = {
   days: number,
 }
+
+export const estbpOutputCache = new Map<string, Promise<EstTbpWorkerOutput>>()
 
 export async function runEstTbpWorker(
   input: EstTbpRunnerInput,
@@ -56,22 +64,29 @@ export async function runEstTbpWorker(
   callback(output)
 }
 
-const errorResult = { days: 0 }
+const errorResult = Promise.resolve({ days: 0 })
 
-export async function handleWork(relic: Relic, weights: Record<string, number>): Promise<EstTbpWorkerOutput> {
-  if (!relic || relic.grade != 5) return errorResult
+export function handleWork(relic: Relic, weights: Record<string, number>): Promise<EstTbpWorkerOutput> {
+  if (!relic || relic.grade !== 5) return errorResult
 
   RelicRollGrader.calculateRelicSubstatRolls(relic)
 
-  try {
-    const input: EstTbpWorkerInput = {
-      relic: relic,
-      weights: weights,
-      workerType: WorkerType.EST_TBP,
-    }
-    return await baseWorkerPool.runTask(input as BaseWorkerInput) as EstTbpWorkerOutput
-  } catch (error) {
+  const runHash = hashRun(relic, weights)
+  const cached = estbpOutputCache.get(runHash)
+  if (cached) return cached
+
+  const input: EstTbpWorkerInput = { relic, weights, workerType: WorkerType.EST_TBP }
+  const promise = workerPool.runTask<BaseWorkerInput, EstTbpWorkerOutput>(input).catch((error) => {
+    estbpOutputCache.delete(runHash)
+    if (error instanceof WorkerCancelledError) throw error
     console.warn('EstTbp worker error:', error)
-    return errorResult
-  }
+    return { days: 0 }
+  })
+
+  estbpOutputCache.set(runHash, promise)
+  return promise
+}
+
+function hashRun(relic: Relic, weights: Record<string, number>): string {
+  return objectHash({ relic: hashRelic(relic), weights: objectHash(weights) })
 }

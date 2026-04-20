@@ -1,11 +1,11 @@
-import { BasicStatsObject } from 'lib/conditionals/conditionalConstants'
+import { type BasicStatsObject } from 'lib/conditionals/conditionalConstants'
 import {
   Stats,
-  StatsValues,
+  type StatsValues,
 } from 'lib/constants/constants'
-import { AKeyType } from 'lib/optimization/engine/config/keys'
-import { BuffSource } from 'lib/optimization/buffSource'
-import { SetCounts } from 'lib/optimization/setMatching'
+import { type BuffSource } from 'lib/optimization/buffSource'
+import { type AKeyType } from 'lib/optimization/engine/config/keys'
+import { type SetCounts } from 'lib/optimization/setMatching'
 
 export type Buff = {
   stat: AKeyType | BasicKeyType,
@@ -40,17 +40,17 @@ const baseCharacterStats = {
   ATK_P: 0,
   DEF_P: 0,
   SPD_P: 0,
-  HP: 0.00000001,
-  ATK: 0.00000001,
-  DEF: 0.00000001,
-  SPD: 0.00000001,
-  CR: 0.00000001,
-  CD: 0.00000001,
-  EHR: 0.00000001,
-  RES: 0.00000001,
-  BE: 0.00000001,
-  ERR: 0.00000001,
-  OHB: 0.00000001,
+  HP: 0,
+  ATK: 0,
+  DEF: 0,
+  SPD: 0,
+  CR: 0,
+  CD: 0,
+  EHR: 0,
+  RES: 0,
+  BE: 0,
+  ERR: 0,
+  OHB: 0,
   PHYSICAL_DMG_BOOST: 0,
   FIRE_DMG_BOOST: 0,
   ICE_DMG_BOOST: 0,
@@ -73,7 +73,10 @@ export const BasicKey: Record<BasicKeyType, number> = Object.keys(baseCharacterS
 )
 
 export const WgslStatName = Object.keys(BasicKey).reduce(
-  (acc, key) => { acc[key as BasicKeyType] = key as BasicKeyType; return acc },
+  (acc, key) => {
+    acc[key as BasicKeyType] = key as BasicKeyType
+    return acc
+  },
   {} as Record<BasicKeyType, BasicKeyType>,
 ) as { readonly [K in BasicKeyType]: K }
 
@@ -103,7 +106,7 @@ export const BasicStatToKey: Record<StatsValues, number> = {
   [Stats.Elation]: BasicKey.ELATION,
 }
 
-export function baseBasicStatsArray() {
+function baseBasicStatsArray() {
   return Float32Array.from(Object.values(baseCharacterStats))
 }
 
@@ -124,7 +127,7 @@ export class BasicStatsArrayCore {
   weight: number
 
   constructor(trace: boolean = false, memosprite = false) {
-    // @ts-ignore
+    // @ts-expect-error - Memosprite instances set m=null to avoid infinite recursion; external code accesses m only on non-memo instances
     this.m = memosprite ? null : new BasicStatsArrayCore(trace, true, () => this)
     this.buffs = []
     this.buffsMemo = []
@@ -139,9 +142,6 @@ export class BasicStatsArrayCore {
     const statKeys = Object.keys(baseCharacterStats) as BasicKeyType[]
     statKeys.forEach((stat, key) => {
       const trace = (value: number, source: BuffSource) => this.trace && this.buffs.push({ stat, key, value, source })
-      const traceMemo = (value: number, source: BuffSource) => this.trace && this.buffsMemo.push({ stat, key, value, source })
-      const traceOverwrite = (value: number, source: BuffSource) =>
-        this.trace && (this.buffs = this.buffs.filter((b) => b.key !== key).concat({ stat, key, value, source }))
 
       Object.defineProperty(this, stat, {
         value: {

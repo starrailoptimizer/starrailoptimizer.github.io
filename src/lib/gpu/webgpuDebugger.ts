@@ -1,18 +1,17 @@
 import { ElementNames } from 'lib/constants/constants'
-import { GpuExecutionContext } from 'lib/gpu/webgpuTypes'
-import { ComputedStatsObjectExternal } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type GpuExecutionContext } from 'lib/gpu/webgpuTypes'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { newStatsConfig } from 'lib/optimization/engine/config/statsConfig'
 import {
   OutputTag,
   SELF_ENTITY_INDEX,
 } from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsObjectExternal } from 'lib/optimization/engine/container/computedStatsContainer'
 import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { logRegisters } from 'lib/simulations/registerLogger'
-import { useOptimizerTabStore } from 'lib/tabs/tabOptimizer/useOptimizerTabStore'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { gridStore } from 'lib/stores/gridStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type OptimizerContext } from 'types/optimizer'
 
 export function debugWebgpuOutput(gpuContext: GpuExecutionContext, arrayBuffer: ArrayBuffer) {
   const array = new Float32Array(arrayBuffer)
@@ -49,35 +48,6 @@ export function debugWebgpuOutput(gpuContext: GpuExecutionContext, arrayBuffer: 
  */
 
 /**
- * Maps action names to standardized ability field names
- */
-function mapActionNameToField(actionName: string): string | null {
-  const upperName = actionName.toUpperCase()
-
-  // Direct matches
-  if (upperName === 'BASIC' || upperName.includes('BASIC')) return 'BASIC'
-  if (upperName === 'SKILL' || upperName.includes('SKILL')) return 'SKILL'
-  if (upperName === 'ULT' || upperName.includes('ULT') || upperName.includes('ULTIMATE')) return 'ULT'
-  if (upperName === 'DOT' || upperName.includes('DOT')) return 'DOT'
-  if (upperName === 'BREAK' || upperName.includes('BREAK')) return 'BREAK'
-
-  // FUA variations
-  if (upperName.includes('FUA') || upperName.includes('FOLLOW') || upperName.includes('FOLLOWUP')) return 'FUA'
-
-  // Memosprite variations
-  if (upperName === 'MEMO_SKILL' || upperName.includes('MEMO_SKILL')) return 'MEMO_SKILL'
-  if (upperName === 'MEMO_TALENT' || upperName.includes('MEMO_TALENT')) return 'MEMO_TALENT'
-
-  // Elation variations
-  if (upperName === 'ELATION_SKILL' || upperName.includes('ELATION_SKILL')) return 'ELATION_SKILL'
-
-  // Unique variations
-  if (upperName === 'UNIQUE' || upperName.includes('UNIQUE')) return 'UNIQUE'
-
-  return null
-}
-
-/**
  * Extracts action damage values from default actions and maps them to standardized fields.
  * Also computes COMBO damage from rotation actions.
  * Extracts HEAL and SHIELD values from rotation action hit registers based on outputTag.
@@ -91,7 +61,6 @@ function extractActionDamageFields(x: ComputedStatsContainer, context: Optimizer
     MEMO_SKILL: 0,
     MEMO_TALENT: 0,
     ELATION_SKILL: 0,
-    UNIQUE: 0,
     DOT: 0,
     BREAK: 0,
     COMBO: 0,
@@ -110,15 +79,13 @@ function extractActionDamageFields(x: ComputedStatsContainer, context: Optimizer
 
   // Extract values from rotation actions
   for (const action of context.rotationActions) {
-    const actionValue = x.getActionRegisterValue(action.registerIndex)
-    const dotComboMultiplier = getDotComboMultiplier(action, context)
-    fields.COMBO += actionValue * dotComboMultiplier
-
-    // Extract heal/shield values from hit registers for aggregate HEAL/SHIELD
+    // Extract per-hit values from hit registers
     if (action.hits) {
       for (const hit of action.hits) {
         const hitValue = x.getHitRegisterValue(hit.registerIndex)
-        if (hit.outputTag === OutputTag.HEAL) {
+        if (hit.outputTag === OutputTag.DAMAGE && hit.recorded !== false) {
+          fields.COMBO += hitValue
+        } else if (hit.outputTag === OutputTag.HEAL) {
           fields.HEAL += hitValue
         } else if (hit.outputTag === OutputTag.SHIELD) {
           fields.SHIELD += hitValue
@@ -131,7 +98,7 @@ function extractActionDamageFields(x: ComputedStatsContainer, context: Optimizer
 }
 
 export function debugExportWebgpuResult(array: Float32Array) {
-  const context = useOptimizerTabStore.getState().context!
+  const context = useOptimizerDisplayStore.getState().context!
   const x = new ComputedStatsContainer()
   const len = context.maxContainerArrayLength
 
@@ -174,18 +141,6 @@ export function debugExportWebgpuResult(array: Float32Array) {
     xOHB: x.getActionValueByIndex(StatKey.OHB, SELF_ENTITY_INDEX),
     xELEMENTAL_DMG: x.getActionValueByIndex(StatKey.DMG_BOOST, SELF_ENTITY_INDEX)
       + x.getActionValueByIndex(elementToStatKeyBoost[context.element], SELF_ENTITY_INDEX),
-    // mHP: x.y,
-    // mATK: x.y,
-    // mDEF: x.y,
-    // mSPD: x.y,
-    // mCR: x.y,
-    // mCD: x.y,
-    // mEHR: x.y,
-    // mRES: x.y,
-    // mBE: x.y,
-    // mERR: x.y,
-    // mOHB: x.y,
-    // mELEMENTAL_DMG: x.y,
     mxHP: x.getActionValueByIndex(StatKey.HP, 1),
     mxATK: x.getActionValueByIndex(StatKey.ATK, 1),
     mxDEF: x.getActionValueByIndex(StatKey.DEF, 1),
@@ -203,17 +158,15 @@ export function debugExportWebgpuResult(array: Float32Array) {
 }
 
 export function debugPinOptimizerWebgpuArray(array: Float32Array) {
-  const currentPinned = window.optimizerGrid.current!.api.getGridOption('pinnedTopRowData') ?? []
+  const currentPinned = gridStore.optimizerGridApi()?.getGridOption('pinnedTopRowData') ?? []
   currentPinned[1] = debugExportWebgpuResult(array)
 
-  window.optimizerGrid.current!.api.updateGridOptions({ pinnedTopRowData: currentPinned })
+  gridStore.optimizerGridApi()?.updateGridOptions({ pinnedTopRowData: currentPinned })
 }
 
 export function debugWebgpuComputedStats(array: Float32Array): ComputedStatsObjectExternal {
   return ComputedStatsContainer.fromArrays(array, new Float32Array(0)).toComputedStatsObject()
 }
-
-// export type WebgpuComputedStats = ReturnType<typeof debugWebgpuComputedStats>
 
 export function debugPrintWebgpuArray(array: Float32Array) {
   const computedStats: ComputedStatsObjectExternal = debugWebgpuComputedStats(array)
@@ -224,18 +177,5 @@ export function debugPrintWebgpuArray(array: Float32Array) {
 }
 
 function fixed(n: number) {
-  return TsUtils.precisionRound(n, 5)
-}
-
-/**
- * Returns the combo multiplier for a rotation action.
- * DOT actions get their damage multiplied by (comboDot / dotAbilities) to represent
- * multiple ticks of DOT damage occurring during the rotation.
- * Non-DOT actions get a multiplier of 1.
- */
-function getDotComboMultiplier(action: OptimizerAction, context: OptimizerContext): number {
-  if (action.actionType === AbilityKind.DOT && context.comboDot > 0 && context.dotAbilities > 0) {
-    return context.comboDot / context.dotAbilities
-  }
-  return 1
+  return precisionRound(n, 5)
 }

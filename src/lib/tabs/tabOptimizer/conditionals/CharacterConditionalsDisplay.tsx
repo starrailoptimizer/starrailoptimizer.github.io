@@ -1,25 +1,24 @@
-import { Flex } from 'antd'
+import { Flex } from '@mantine/core'
 import { characterOptionMapping } from 'lib/conditionals/resolver/characterConditionalsResolver'
 import { Hint } from 'lib/interactions/hint'
-import DisplayFormControl from 'lib/tabs/tabOptimizer/conditionals/DisplayFormControl'
+import { DisplayFormControl } from 'lib/tabs/tabOptimizer/conditionals/DisplayFormControl'
 import { HeaderText } from 'lib/ui/HeaderText'
 import { TooltipImage } from 'lib/ui/TooltipImage'
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
+import type {
   CharacterId,
   Eidolon,
 } from 'types/character'
 
-export interface CharacterConditionalDisplayProps {
+interface CharacterConditionalDisplayProps {
   id?: CharacterId
   eidolon: Eidolon
   teammateIndex?: number
 }
 
-export const CharacterConditionalsDisplay = memo(({ id, eidolon, teammateIndex }: CharacterConditionalDisplayProps) => {
+export const CharacterConditionalsDisplay = memo(function CharacterConditionalsDisplay({ id, eidolon, teammateIndex }: CharacterConditionalDisplayProps) {
   const { t } = useTranslation('optimizerTab')
-  // console.log('getDisplayForCharacter', id, teammateIndex)
 
   const characterId = id as unknown as keyof typeof characterOptionMapping
   if (!id || !characterOptionMapping[characterId]) {
@@ -39,7 +38,7 @@ export const CharacterConditionalsDisplay = memo(({ id, eidolon, teammateIndex }
     : character.content()
 
   return (
-    <Flex vertical gap={5}>
+    <Flex direction='column' gap={5}>
       {(teammateIndex == null)
         && (
           <Flex justify='space-between' align='center'>
@@ -51,5 +50,3 @@ export const CharacterConditionalsDisplay = memo(({ id, eidolon, teammateIndex }
     </Flex>
   )
 })
-
-CharacterConditionalsDisplay.displayName = 'CharacterConditionalDisplay'

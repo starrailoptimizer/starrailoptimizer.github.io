@@ -1,124 +1,36 @@
-import { ThemeConfig } from 'antd'
-import {
+import type { ShowcasePreset } from 'lib/characterPreview/debugVisualConfigStore'
+import type { AppPages } from 'lib/constants/appPages'
+import type {
   ComputeEngine,
-  CUSTOM_TEAM,
-  DEFAULT_TEAM,
 } from 'lib/constants/constants'
-import { OptimizerDisplayDataStatSim } from 'lib/optimization/bufferPacker'
-import { ColorThemeOverrides } from 'lib/rendering/theme'
-import { ScoringType } from 'lib/scoring/simScoringUtils'
-import {
-  Simulation,
-  StatSimTypes,
-} from 'lib/simulations/statSimulationTypes'
-import { AppPages } from 'lib/state/db'
-import { ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { ShowcaseTabSavedSession } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
-import { WarpRequest } from 'lib/tabs/tabWarp/warpCalculatorController'
-import {
-  Build,
+import type { ScoringType } from 'lib/scoring/simScoringUtils'
+import type { CharacterGridDensity } from 'lib/tabs/tabCharacters/characterGridPresets'
+import type { ShowcaseTabSavedSession } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
+import type { WarpRequest } from 'lib/tabs/tabWarp/warpCalculatorController'
+import type {
   Character,
   CharacterId,
 } from 'types/character'
-import {
-  ScoringMetadata,
+import type {
+  ScoringMetadataOverride,
   ShowcasePreferences,
-  ShowcaseTemporaryOptions,
 } from 'types/metadata'
-import { Relic } from 'types/relic'
+import type { Relic } from 'types/relic'
 
-type PermutationDetails = {
-  Head: number,
-  Hands: number,
-  Body: number,
-  Feet: number,
-  PlanarSphere: number,
-  LinkRope: number,
-  HeadTotal: number,
-  HandsTotal: number,
-  BodyTotal: number,
-  FeetTotal: number,
-  PlanarSphereTotal: number,
-  LinkRopeTotal: number,
-}
-
-export type HsrOptimizerStore = { // global store separation plan
-  /* global                   */ version: string,
-  /* global                   */ colorTheme: ColorThemeOverrides,
-  /* optimizerTab             */ optimizerGrid: unknown,
-  /* optimizerTab             */ optimizerTabFocusCharacter?: CharacterId | null,
-  /* give own store?          */ scoringAlgorithmFocusCharacter?: CharacterId | null,
-  /* give own store?          */ statTracesDrawerFocusCharacter?: CharacterId | null,
-  /* global                   */ activeKey: AppPages,
-  /* optimizerTab             */ permutations: number,
-  /* optimizerTab             */ permutationsResults: number,
-  /* optimizerTab             */ permutationsSearched: number,
-  /* global                   */ scoringMetadataOverrides: Partial<Record<CharacterId, ScoringMetadata>>,
-  /* characterTab/showcaseTab */ showcasePreferences: Partial<Record<CharacterId, ShowcasePreferences>>,
-  /* characterTab/showcaseTab */ showcaseTemporaryOptionsByCharacter: Partial<Record<CharacterId, ShowcaseTemporaryOptions>>,
-  /* optimizerTab             */ statSimulationDisplay: StatSimTypes,
-  /* optimizerTab             */ statSimulations: Simulation[],
-  /* optimizerTab             */ selectedStatSimulations: Simulation['key'][],
-  /* optimizerTab             */ optimizationInProgress: boolean,
-  /* optimizerTab             */ optimizationId: string | null,
-  /* optimizerTab             */ teammateCount: number,
-  /* showcaseTab              */ relicScorerSidebarOpen: boolean,
-  /* showcase Tab             */ showcaseTeamPreferenceById: Partial<Record<CharacterId, typeof CUSTOM_TEAM | typeof DEFAULT_TEAM>>,
-  /* optimizerTab             */ optimizerRunningEngine: ComputeEngine,
-  /* optimizerTab             */ optimizerStartTime: number | null,
-  /* optimizerTab             */ optimizerEndTime: number | null,
-  /* optimizerTab             */ optimizerTabFocusCharacterSelectModalOpen: boolean,
-
-  /* optimizerTab             */ comboState: ComboState,
-  /* global                   */ relicsById: Partial<Record<string, Relic>>,
-  /* global                   */ relics: Array<Relic>,
-  /* optimizerTab             */ statDisplay: StatDisplay,
-  /* optimizerTab             */ memoDisplay: MemoDisplay,
-  /* global                   */ settings: UserSettings,
-  /* optimizerTab             */ optimizerBuild: Build | null,
-  /* optimizerTab             */ optimizerSelectedRowData: OptimizerDisplayDataStatSim | null,
-  /* global                   */ setSettings: (settings: UserSettings) => void,
-  /* optimizerTab             */ setOptimizationId: (id: string) => void,
-  /* optimizerTab             */ setComboState: (state: ComboState) => void,
-  /* optimizerTab             */ setOptimizerTabFocusCharacter: (CharacterId: CharacterId | null | undefined) => void,
-  /* optimizerTab             */ setOptimizationInProgress: (open: boolean) => void,
-  /* optimizerTab             */ setOptimizerStartTime: (open: number) => void,
-  /* optimizerTab             */ setOptimizerEndTime: (open: number) => void,
-  /* optimizerTab             */ setOptimizerRunningEngine: (s: ComputeEngine) => void,
-  /* optimizerTab             */ setPermutationsResults: (n: number) => void,
-  /* optimizerTab             */ setPermutationsSearched: (n: number) => void,
-  /* global                   */ setRelicsById: (relicsById: Partial<Record<string, Relic>>) => void,
-  /* global                   */ setSavedSessionKey: <T extends keyof GlobalSavedSession>(key: T, value: GlobalSavedSession[T]) => void,
-  /* global                   */ setActiveKey: (key: AppPages) => void,
-  /* give own store?          */ setScoringAlgorithmFocusCharacter: (id: CharacterId | null | undefined) => void,
-  /* give own store?          */ setStatTracesDrawerFocusCharacter: (id: CharacterId | null | undefined) => void,
-  /* optimizerTab             */ setOptimizerTabFocusCharacterSelectModalOpen: (open: boolean) => void,
-  /* optimizerTab             */ setStatDisplay: (display: StatDisplay) => void,
-  /* optimizerTab             */ setMemoDisplay: (display: MemoDisplay) => void,
-  /* global                   */ setColorTheme: (x: ColorThemeOverrides) => void,
-  /* optimizerTab             */ setOptimizerBuild: (x: Build) => void,
-  /* optimizerTab             */ setOptimizerSelectedRowData: (x: OptimizerDisplayDataStatSim | null) => void,
-  /* global                   */ setSavedSession: (x: GlobalSavedSession) => void,
-  /* optimizerTab             */ setTeammateCount: (x: number) => void,
-  /* optimizerTab             */ setSelectedStatSimulations: (x: Simulation['key'][]) => void,
-  /* optimizerTab             */ setStatSimulations: (x: Simulation[]) => void,
-  /* optimizerTab             */ setStatSimulationDisplay: (x: StatSimTypes) => void,
-  /* global                   */ setScoringMetadataOverrides: (x: Partial<Record<CharacterId, ScoringMetadata>>) => void,
-  /* characterTab/showcaseTab */ setShowcaseTeamPreferenceById: (update: [CharacterId, typeof CUSTOM_TEAM | typeof DEFAULT_TEAM]) => void,
-  /* characterTab/showcaseTab */ setShowcasePreferences: (x: Partial<Record<CharacterId, ShowcasePreferences>>) => void,
-  /* characterTab/showcaseTab */ setShowcaseTemporaryOptionsByCharacter: (x: Partial<Record<CharacterId, ShowcaseTemporaryOptions>>) => void,
-  /* optimizerTab             */ setPermutations: (x: number) => void,
-  /* optimizerTab             */ setPermutationDetails: (x: PermutationDetails) => void,
-  /* global                   */ setVersion: (x: string | undefined) => void,
-  /* optimizerTab             */ setOptimizerMenuState: (x: OptimizerMenuState) => void,
-  /* global                   */ setGlobalThemeConfig: (x: ThemeConfig) => void,
-
-  /* optimizerTab             */ permutationDetails: PermutationDetails,
-
-  /* optimizerTab             */ optimizerMenuState: OptimizerMenuState,
-
-  /* global                   */ savedSession: GlobalSavedSession,
-  /* global                   */ globalThemeConfig: ThemeConfig,
+export type HsrOptimizerStore = {
+  version: string,
+  scoringAlgorithmFocusCharacter?: CharacterId | null,
+  statTracesDrawerFocusCharacter?: CharacterId | null,
+  activeKey: AppPages,
+  settings: UserSettings,
+  setSettings: (settings: UserSettings) => void,
+  setSavedSessionKey: <T extends keyof GlobalSavedSession>(key: T, value: GlobalSavedSession[T]) => void,
+  setActiveKey: (key: AppPages) => void,
+  setScoringAlgorithmFocusCharacter: (id: CharacterId | null | undefined) => void,
+  setStatTracesDrawerFocusCharacter: (id: CharacterId | null | undefined) => void,
+  setSavedSession: (x: GlobalSavedSession) => void,
+  setVersion: (x: string | undefined) => void,
+  savedSession: GlobalSavedSession,
 }
 
 type OptimizerMenuState = Record<string, boolean>
@@ -129,8 +41,11 @@ export type GlobalSavedSession = {
   computeEngine: ComputeEngine,
   showcaseStandardMode: boolean,
   showcaseDarkMode: boolean,
+  showcasePreset: ShowcasePreset,
   showcaseUID: boolean,
   showcasePreciseSpd: boolean,
+  sidebarCollapsed: boolean,
+  characterGridDensity: CharacterGridDensity,
 }
 
 export type UserSettings = {
@@ -145,7 +60,7 @@ export type UserSettings = {
 export type HsrOptimizerSaveFormat = {
   relics: Relic[],
   characters: Character[],
-  scoringMetadataOverrides?: Record<string, ScoringMetadata>,
+  scoringMetadataOverrides?: Record<string, ScoringMetadataOverride>,
   showcasePreferences?: Record<string, ShowcasePreferences>,
   optimizerMenuState?: OptimizerMenuState,
   excludedRelicPotentialCharacters?: CharacterId[],

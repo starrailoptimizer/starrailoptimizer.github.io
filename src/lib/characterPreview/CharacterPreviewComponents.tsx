@@ -1,10 +1,5 @@
-import {
-  Flex,
-  Typography,
-} from 'antd'
-import React, { CSSProperties } from 'react'
-
-const { Text } = Typography
+import { type CSSProperties } from 'react'
+import componentClasses from './CharacterPreviewComponents.module.css'
 
 export enum ShowcaseSource {
   CHARACTER_TAB,
@@ -25,11 +20,14 @@ function isMobileOrSafari() {
 }
 
 // Mobile/Safari shadows don't render correctly on the Y axis
-export const showcaseShadow = isMobileOrSafari() ? 'rgb(0, 0, 0) 1px 0px 6px' : 'rgb(0, 0, 0) 1px 1px 6px'
-export const showcaseShadowInsetAddition = ', inset rgb(255 255 255 / 30%) 0px 0px 2px'
+const showcaseShadowDefault = isMobileOrSafari() ? 'rgb(0, 0, 0) 1px 0px 6px' : 'rgb(0, 0, 0) 1px 1px 6px'
+const showcaseShadowInsetDefault = ', inset rgb(255 255 255 / 30%) 0px 0px 2px'
+
+// Use CSS custom properties so the debug slider panel can override these
+export const showcaseShadow = `var(--showcase-shadow, ${showcaseShadowDefault})`
+export const showcaseShadowInsetAddition = `var(--showcase-shadow-inset, ${showcaseShadowInsetDefault})`
+export const showcaseTransition = 'background-color 0.35s, border-color 0.25s'
 export const showcaseOutlineLight = 'rgba(255, 255, 255, 0.20) solid 1px'
-export const showcaseOutline = 'rgba(255, 255, 255, 0.40) solid 1px'
-export const showcaseBackdropFilter = 'blur(3px)'
 export const showcaseButtonStyle: CSSProperties = {
   flex: 'auto',
   opacity: 0,
@@ -37,36 +35,18 @@ export const showcaseButtonStyle: CSSProperties = {
   visibility: 'hidden',
 }
 
-export function OverlayText(props: {
+export function OverlayText({ text, top }: {
   text: string,
   top: number,
 }) {
-  const top = props.top
   return (
-    <Flex
-      vertical
-      style={{
-        position: 'relative',
-        height: 0,
-        top: top,
-      }}
-      align='center'
+    <div
+      className={componentClasses.overlayOuter}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', top }}
     >
-      <Text
-        style={{
-          position: 'absolute',
-          backgroundColor: 'rgba(0, 0, 0, 0.85)',
-          padding: '2px 14px',
-          borderRadius: 4,
-          fontSize: 12,
-          whiteSpace: 'nowrap',
-          textShadow: '0px 0px 10px black',
-          outline: showcaseOutline,
-          lineHeight: '12px',
-        }}
-      >
-        {props.text}
-      </Text>
-    </Flex>
+      <div className={componentClasses.overlayLabel}>
+        {text}
+      </div>
+    </div>
   )
 }

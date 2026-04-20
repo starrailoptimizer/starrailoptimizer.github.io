@@ -1,0 +1,42 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.pillInactive {
+  background-color: var(--layer-0);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+}
+
+.pillActive {
+  background-color: color-mix(in srgb, var(--primary-default) 28%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary-default) 66%, transparent);
+  color: var(--primary-light);
+}
+
+.badge {
+  background-color: var(--primary-default);
+  color: #fff;
+  border-radius: 10px;
+  padding: 0 5px;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.chevron {
+  font-size: 8px;
+  opacity: 0.3;
+}
+
+.popoverContent {
+  padding: 6px;
+}

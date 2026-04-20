@@ -1,31 +1,40 @@
-import { ElementToDamage, PathNames, Stats, StatsValues, SubStats, } from 'lib/constants/constants'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import {
+  ElementToDamage,
+  PathNames,
+  Stats,
+  SubStats,
+} from 'lib/constants/constants'
+import type { StatsValues } from 'lib/constants/constants'
+import type { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import { BasicStatsArrayCore } from 'lib/optimization/basicStatsArray'
-import { OptimizerDisplayData } from 'lib/optimization/bufferPacker'
+import type { OptimizerDisplayData } from 'lib/optimization/bufferPacker'
 import { generateContext } from 'lib/optimization/context/calculateContext'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { RelicFilters } from 'lib/relics/relicFilters'
-import { aggregatePerActionBuffs, PerActionBuffGroups } from 'lib/simulations/combatBuffsAnalysis'
+import { aggregatePerActionBuffs } from 'lib/simulations/combatBuffsAnalysis'
+import type { PerActionBuffGroups } from 'lib/simulations/combatBuffsAnalysis'
 import { simulateBuild } from 'lib/simulations/simulateBuild'
 import { runStatSimulations } from 'lib/simulations/statSimulation'
+import { StatSimTypes } from 'lib/simulations/statSimulationTypes'
+import type {
+  Simulation,
+  SimulationRelicByPart,
+  SimulationRequest,
+} from 'lib/simulations/statSimulationTypes'
 import {
   convertRelicsToSimulation,
   ornamentSetIndexToName,
   relicSetIndexToNames,
-} from 'lib/simulations/statSimulationController'
-import {
-  Simulation,
-  SimulationRelicByPart,
-  SimulationRequest,
-  StatSimTypes,
-} from 'lib/simulations/statSimulationTypes'
-import DB from 'lib/state/db'
-import { optimizerFormCache } from 'lib/tabs/tabOptimizer/optimizerForm/OptimizerForm'
+} from 'lib/simulations/statSimulationUtils'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { gridStore } from 'lib/stores/gridStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
+import { optimizerFormCache } from 'lib/tabs/tabOptimizer/optimizerForm/optimizerFormActions'
 import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
-import { OptimizerForm } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import { clone } from 'lib/utils/objectUtils'
+import type { CharacterId } from 'types/character'
+import type { OptimizerForm } from 'types/form'
+import type { OptimizerContext } from 'types/optimizer'
 
 export type OptimizerResultAnalysis = {
   oldRowData: OptimizerDisplayData,
@@ -59,7 +68,7 @@ export function calculateStatUpgrades(analysis: OptimizerResultAnalysis) {
   const statUpgrades: StatUpgrade[] = []
 
   for (const substat of SubStats) {
-    const upgradeSim = TsUtils.clone(simulationRequest)
+    const upgradeSim = clone(simulationRequest)
     upgradeSim.stats[substat] = (upgradeSim.stats[substat] ?? 0) + 1.0
 
     const simResult = runStatSimulations([{ request: upgradeSim, simType: StatSimTypes.SubstatRolls, key: substat } as Simulation], request, context)[0]
@@ -78,9 +87,9 @@ export function generateAnalysisData(
   selectedRowData: OptimizerDisplayData,
   form: OptimizerForm,
 ): OptimizerResultAnalysis | null {
-  const oldRelics = TsUtils.clone(OptimizerTabController.calculateRelicsFromId(currentRowData.id, form))
-  const newRelics = TsUtils.clone(OptimizerTabController.calculateRelicsFromId(selectedRowData.id, form))
-  const request = TsUtils.clone(form)
+  const oldRelics = clone(OptimizerTabController.calculateRelicsFromId(currentRowData.id, form))
+  const newRelics = clone(OptimizerTabController.calculateRelicsFromId(selectedRowData.id, form))
+  const request = clone(form)
 
   RelicFilters.condenseSingleRelicByPartSubstatsForOptimizer(oldRelics)
   RelicFilters.condenseSingleRelicByPartSubstatsForOptimizer(newRelics)
@@ -107,7 +116,7 @@ export function generateAnalysisData(
     ? aggregatePerActionBuffs(actionBuffSnapshots, rotationBuffSteps ?? [], newX, request, contextNew.primaryAbilityKey)
     : { byAction: {}, rotationSteps: [], primaryAction: '' }
 
-  const characterMetadata = DB.getMetadata().characters[request.characterId]
+  const characterMetadata = getGameMetadata().characters[request.characterId]
   const elementalDmgValue = ElementToDamage[characterMetadata.element]
 
   const extraRows: StatsValues[] = []
@@ -131,7 +140,7 @@ export function generateAnalysisData(
 }
 
 export function getPinnedRowData() {
-  const currentPinned = window.optimizerGrid?.current?.api?.getGridOption('pinnedTopRowData') as OptimizerDisplayData[] ?? []
+  const currentPinned = gridStore.optimizerGridApi()?.getGridOption('pinnedTopRowData') ?? []
   return currentPinned && currentPinned.length ? currentPinned[0] : null
 }
 
@@ -140,5 +149,5 @@ export function mismatchedCharacter(optimizerTabFocusCharacter?: CharacterId | n
 }
 
 export function getCachedForm() {
-  return optimizerFormCache[window.store.getState().optimizationId!]
+  return optimizerFormCache.get(useOptimizerDisplayStore.getState().optimizationId!)
 }

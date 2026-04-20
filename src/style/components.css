@@ -1,0 +1,67 @@
+.custom-grid {
+    border-radius: var(--radius-md) !important;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease, outline 0.3s ease;
+    cursor: pointer;
+    outline: 1px solid rgba(255, 255, 255, 0.0) !important;
+}
+
+.custom-grid:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    outline: 1px solid rgba(255, 255, 255, 0.4) !important;
+}
+
+.center-input-text > div > input {
+    text-align: center !important;
+}
+
+.centered-placeholder::placeholder {
+    text-align: center;
+}
+
+.character-build-portrait:hover .character-build-portrait-button {
+    opacity: 1 !important;
+    visibility: visible !important;
+    transition: opacity 0.3s ease;
+}
+
+.lightConeCard {
+    transition: box-shadow 0.25s, border-color 0.25s !important;
+}
+
+.lightConeCard:hover {
+    border-color: rgba(255, 255, 255, 0.6) !important;
+    cursor: pointer;
+}
+
+.warp-table-row-disabled {
+    color: rgba(255, 255, 255, 0.10) !important;
+}
+
+.pre-font {
+    font-family: var(--font-mono) !important;
+}
+
+.no-highlight {
+    user-select: none !important;
+}
+
+.layout-sider-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    overflow-y: scroll;
+
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    -webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hide scrollbar for IE, Edge and Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.recharts-wrapper *:focus:not(:focus-visible) {
+    outline: none !important;
+}

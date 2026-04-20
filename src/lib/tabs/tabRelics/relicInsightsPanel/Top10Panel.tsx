@@ -1,52 +1,51 @@
-import {
-  Flex,
-  theme,
-} from 'antd'
+import { RECHARTS_TOOLTIP_WRAPPER_STYLE } from 'lib/constants/constantsUi'
 import {
   OpenCloseIDs,
   setOpen,
 } from 'lib/hooks/useOpenClose'
 import { Assets } from 'lib/rendering/assets'
-import { PanelProps } from 'lib/tabs/tabRelics/relicInsightsPanel/RelicInsightsPanel'
-import { TsUtils } from 'lib/utils/TsUtils'
-import React, { useMemo } from 'react'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { type PanelProps } from 'lib/tabs/tabRelics/relicInsightsPanel/RelicInsightsPanel'
+import { precisionRound } from 'lib/utils/mathUtils'
+import {
+  memo,
+  useMemo,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   CartesianGrid,
-  Cell,
   ErrorBar,
   Legend,
   Scatter,
   ScatterChart,
   Tooltip,
-  TooltipProps,
+  type TooltipContentProps,
   XAxis,
   YAxis,
 } from 'recharts'
-import {
-  NameType,
-  ValueType,
-} from 'recharts/types/component/DefaultTooltipContent'
-import { CharacterId } from 'types/character'
-
-const { useToken } = theme
+import type { CharacterId } from 'types/character'
 
 const N_Displayed = 10
 
-const LEGEND_WIDTH = 273
-const CHART_WIDTH = 320 + LEGEND_WIDTH
+const DEFAULT_LEGEND_WIDTH = 273
+const DEFAULT_CHART_WIDTH = 320 + DEFAULT_LEGEND_WIDTH
+const DEFAULT_HEIGHT = 288
 
 type DataPoint = {
   name: string,
   id: CharacterId,
   owned: boolean,
+  fill: string,
   y: number,
   x: number,
   errX: [number, number],
 }
 
-export const Top10Panel = React.memo(({ scores }: PanelProps) => {
-  const { token } = useToken()
+export const Top10Panel = memo(({ scores, width: propWidth, height: propHeight }: PanelProps) => {
+  const chartWidth = propWidth ?? DEFAULT_CHART_WIDTH
+  const chartHeight = propHeight ?? DEFAULT_HEIGHT
+  const compact = chartHeight < 250
+  const legendWidth = compact ? 240 : DEFAULT_LEGEND_WIDTH
 
   const { sortedScores, data } = useMemo(() => {
     const sortedScores = scores
@@ -56,6 +55,7 @@ export const Top10Panel = React.memo(({ scores }: PanelProps) => {
       name: s.name,
       id: s.id,
       owned: s.owned,
+      fill: idxToColour(idx),
       y: N_Displayed - idx,
       x: s.score.averagePct,
       errX: [s.score.averagePct - s.score.worstPct, s.score.bestPct - s.score.averagePct],
@@ -66,14 +66,14 @@ export const Top10Panel = React.memo(({ scores }: PanelProps) => {
   return (
     <div
       style={{
-        borderRadius: 8,
-        border: `1px solid ${token.colorBorderSecondary}`,
-        backgroundColor: token.colorBgContainer,
+        borderRadius: 6,
+        boxShadow: 'inset 0 0 0 1px var(--border-default)',
+        backgroundColor: 'var(--layer-1)',
       }}
     >
       <ScatterChart
-        width={CHART_WIDTH}
-        height={278}
+        width={chartWidth}
+        height={chartHeight}
         margin={{
           top: 0,
           left: 0,
@@ -100,19 +100,19 @@ export const Top10Panel = React.memo(({ scores }: PanelProps) => {
           allowDataOverflow
           hide
         />
-        <Tooltip content={<TooltipContent />} />
-        <Legend align='right' verticalAlign='middle' width={LEGEND_WIDTH} content={<LegendContent scores={sortedScores} />} />
-        <Scatter data={data}>
-          {data.map((point, idx) => {
-            return (
-              <Cell
-                key={point.id}
-                fill={idxToColour(idx)}
-                style={{ cursor: 'pointer' }}
-                onClick={onClick(point.id)}
-              />
-            )
-          })}
+        <Tooltip
+          content={TooltipContent}
+          isAnimationActive={false}
+          wrapperStyle={RECHARTS_TOOLTIP_WRAPPER_STYLE}
+        />
+        <Legend align='right' verticalAlign='middle' width={legendWidth} content={<LegendContent scores={sortedScores} compact={compact} />} />
+        <Scatter
+          data={data}
+          animationDuration={300}
+          animationEasing='ease'
+          style={{ cursor: 'pointer' }}
+          onClick={(entry) => onClick(entry.payload.id as CharacterId)()}
+        >
           <ErrorBar dataKey='errX' direction='x' stroke='#7d94b0' />
         </Scatter>
       </ScatterChart>
@@ -120,69 +120,78 @@ export const Top10Panel = React.memo(({ scores }: PanelProps) => {
   )
 })
 
-function LegendContent({ scores }: PanelProps) {
+function LegendContent({ scores, compact }: { scores: PanelProps['scores'], compact?: boolean }) {
+  const entryHeight = compact ? 18 : 25.3
+  const avatarSize = compact ? 16 : 20
+  const legendHeight = compact ? entryHeight * N_Displayed : 250
+
   return (
     <div
-      style={{ marginLeft: 20, marginTop: 3, height: 250 }}
+      style={{ marginLeft: compact ? 12 : 20, marginTop: 3, height: legendHeight }}
     >
       {scores.map((s, idx) => (
-        <Flex
-          gap={5}
+        <div
           key={s.id}
-          style={{ height: 25.3 }}
+          style={{
+            display: 'flex',
+            gap: compact ? 3 : 5,
+            height: entryHeight,
+            alignItems: 'center',
+            ...(compact ? { fontSize: 12 } : undefined),
+          }}
         >
-          {idx + '.'}
-          <svg height={25} width={10}>
-            <rect height={10} width={10} fill={idxToColour(idx)} x={0} y={5} />
+          {idx + 1 + '.'}
+          <svg height={10} width={10}>
+            <rect height={10} width={10} fill={idxToColour(idx)} />
           </svg>
           <img
             src={Assets.getCharacterAvatarById(s.id)}
-            width={20}
-            height={20}
+            width={avatarSize}
+            height={avatarSize}
             style={{ cursor: 'pointer' }}
             onClick={onClick(s.id)}
           />
           <div style={{ fontWeight: s.owned ? 'bold' : undefined }}>
             {`${s.name}: ${Math.floor(s.score.worstPct)}% - ${Math.floor(s.score.bestPct)}%`}
           </div>
-        </Flex>
+        </div>
       ))}
     </div>
   )
 }
 
-function TooltipContent(props: TooltipProps<ValueType, NameType>) {
-  const { payload }: { payload?: Array<{ payload?: DataPoint }> } = props
-  const { token } = useToken()
+function TooltipContent(props: TooltipContentProps) {
+  const { payload } = props
+
   const { t } = useTranslation('relicsTab', { keyPrefix: 'RelicInsights' })
   const data = payload?.[0]?.payload
   if (!data) return <></>
   return (
-    <Flex
-      vertical
-      gap={0}
+    <div
       style={{
-        borderRadius: 8,
-        border: `1px solid ${token.colorBorder}`,
-        backgroundColor: token.colorBgBase,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        borderRadius: 6,
+        border: '1px solid var(--border-default)',
+        backgroundColor: 'var(--layer-0)',
         height: 'fit-content',
         padding: 10,
       }}
-      justify='space-between'
     >
       <u>{data.name}</u>
       <div>
         <>
-          <>{t('AvgPotential')}{TsUtils.precisionRound(data.x, 1)}%</>
+          <>{t('AvgPotential')}{precisionRound(data.x, 1)}%</>
         </>
       </div>
-    </Flex>
+    </div>
   )
 }
 
 function onClick(id: CharacterId) {
   return () => {
-    window.store.getState().setScoringAlgorithmFocusCharacter(id)
+    useGlobalStore.getState().setScoringAlgorithmFocusCharacter(id)
     setOpen(OpenCloseIDs.SCORING_MODAL)
   }
 }

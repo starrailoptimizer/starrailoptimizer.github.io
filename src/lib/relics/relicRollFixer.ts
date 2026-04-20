@@ -1,9 +1,10 @@
 import { Constants } from 'lib/constants/constants'
 import { CharacterConverter } from 'lib/importer/characterConverter'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Utils } from 'lib/utils/utils'
-import { UnaugmentedRelic } from 'types/relic'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { flipStringMapping } from 'lib/utils/objectUtils'
+import { isFlat } from 'lib/utils/statUtils'
+import type { UnaugmentedRelic } from 'types/relic'
 
 let optimizerStatToJsonSubStat: Record<string, string>
 let optimizerStatToAffixStat: Record<string, string>
@@ -19,23 +20,23 @@ export const RelicRollFixer = {
     const partId = optimizerPartToPartId[relic.part]
     const grade = relic.grade
     const query = `${grade}${partId}`
-    const affixes = DB.getMetadata().relics.relicMainAffixes[query].affixes
-    const affix = Object.values(affixes).find((x) => x.property == optimizerStatToAffixStat[stat])
+    const affixes = getGameMetadata().relics.relicMainAffixes[query].affixes
+    const affix = Object.values(affixes).find((x) => x.property === optimizerStatToAffixStat[stat])
     if (!affix) return 0
 
     const step = affix.step
     const base = affix.base
     const totalValue = base + step * enhance
-    const scaledValue = Utils.isFlat(stat) ? totalValue : totalValue * 100
+    const scaledValue = isFlat(stat) ? totalValue : totalValue * 100
 
-    return TsUtils.precisionRound(scaledValue, 5)
+    return precisionRound(scaledValue, 5)
   },
 
   fixSubStatValue: (stat: string, value: number, grade: number) => {
     if (!initialized) RelicRollFixer.initialize()
 
     // Can't fix speed values
-    if (stat == Constants.Stats.SPD) return value
+    if (stat === Constants.Stats.SPD) return value
 
     const statsByGrade = relicRollValues[grade]
     if (!statsByGrade) return value
@@ -50,8 +51,8 @@ export const RelicRollFixer = {
     // Duplicate entries are arrays when stats collide
     const rollCount = typeof rolls !== 'number' ? rolls[0] : rolls
 
-    const affixes = DB.getMetadata().relics.relicSubAffixes[grade].affixes
-    const matched = Object.values(affixes).find((x) => x.property == optimizerStatToAffixStat[stat])
+    const affixes = getGameMetadata().relics.relicSubAffixes[grade].affixes
+    const matched = Object.values(affixes).find((x) => x.property === optimizerStatToAffixStat[stat])
     if (!matched) return value
 
     const base = matched.base
@@ -59,19 +60,18 @@ export const RelicRollFixer = {
 
     const oneRoll = base + step * 2
     const totalValue = oneRoll * rollCount
-    const scaledValue = Utils.isFlat(stat) ? totalValue : totalValue * 100
+    const scaledValue = isFlat(stat) ? totalValue : totalValue * 100
 
-    return Utils.precisionRound(scaledValue, 5)
+    return precisionRound(scaledValue, 5)
   },
 
   initialize: () => {
     initialized = true
     const conversions = CharacterConverter.getConstantConversions()
-    // console.log('conversions', conversions)
-    optimizerStatToAffixStat = TsUtils.flipStringMapping(conversions.statConversion)
-    optimizerPartToPartId = TsUtils.flipStringMapping(conversions.partConversion)
+    optimizerStatToAffixStat = flipStringMapping(conversions.statConversion)
+    optimizerPartToPartId = flipStringMapping(conversions.partConversion)
 
-    optimizerStatToJsonSubStat = Utils.flipMapping({
+    optimizerStatToJsonSubStat = flipStringMapping({
       'ATK': Constants.Stats.ATK,
       'HP': Constants.Stats.HP,
       'DEF': Constants.Stats.DEF,

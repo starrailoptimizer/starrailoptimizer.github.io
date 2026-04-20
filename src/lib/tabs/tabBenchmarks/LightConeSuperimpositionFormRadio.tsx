@@ -1,26 +1,23 @@
-import {
-  Form as AntDForm,
-  Radio,
-} from 'antd'
-import { RadioButton } from 'lib/tabs/tabBenchmarks/CharacterEidolonFormRadio'
+import { SegmentedControl } from '@mantine/core'
+import type { UseFormReturnType } from '@mantine/form'
+import { type BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
 import { useTranslation } from 'react-i18next'
 
-export function LightConeSuperimpositionFormRadio() {
+export function LightConeSuperimpositionFormRadio(props: { form: UseFormReturnType<BenchmarkForm> }) {
   const { t } = useTranslation('modals', { keyPrefix: 'EditCharacter' })
 
   return (
-    <AntDForm.Item name='lightConeSuperimposition'>
-      <Radio.Group
-        value={1}
-        buttonStyle='solid'
-        style={{ width: '100%', display: 'flex' }}
-      >
-        <RadioButton text={t('SuperimpositionButton', { superimposition: 1 })} value={1} />
-        <RadioButton text={t('SuperimpositionButton', { superimposition: 2 })} value={2} />
-        <RadioButton text={t('SuperimpositionButton', { superimposition: 3 })} value={3} />
-        <RadioButton text={t('SuperimpositionButton', { superimposition: 4 })} value={4} />
-        <RadioButton text={t('SuperimpositionButton', { superimposition: 5 })} value={5} />
-      </Radio.Group>
-    </AntDForm.Item>
+    <SegmentedControl
+      fullWidth
+      data={[
+        { label: t('SuperimpositionButton', { superimposition: 1 }), value: '1' },
+        { label: t('SuperimpositionButton', { superimposition: 2 }), value: '2' },
+        { label: t('SuperimpositionButton', { superimposition: 3 }), value: '3' },
+        { label: t('SuperimpositionButton', { superimposition: 4 }), value: '4' },
+        { label: t('SuperimpositionButton', { superimposition: 5 }), value: '5' },
+      ]}
+      value={String(props.form.values.lightConeSuperimposition ?? 1)}
+      onChange={(val) => props.form.setFieldValue('lightConeSuperimposition', Number(val))}
+    />
   )
 }

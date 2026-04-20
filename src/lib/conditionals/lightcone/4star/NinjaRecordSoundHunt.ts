@@ -1,18 +1,22 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.NinjaRecordSoundHunt')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.NinjaRecordSoundHunt')
   const { SOURCE_LC } = Source.lightCone(NinjaRecordSoundHunt.id)
 
   const sValuesCd = [0.18, 0.225, 0.27, 0.315, 0.36]
@@ -27,7 +31,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'cdBuff',
       formItem: 'switch',
       text: t('Content.cdBuff.text'),
-      content: t('Content.cdBuff.content', { sValuesCd: TsUtils.precisionRound(100 * sValuesCd[s]) }),
+      content: t('Content.cdBuff.content', { sValuesCd: precisionRound(100 * sValuesCd[s]) }),
     },
   }
 

@@ -1,20 +1,19 @@
 import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
 import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightConeConditionalsResolver'
+import { generateConditionalResolverMetadata } from 'lib/optimization/combo/comboInitializers'
 import { getDefaultForm } from 'lib/optimization/defaultForm'
 import {
   DEFAULT_BASIC,
   NULL_TURN_ABILITY_NAME,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import DB from 'lib/state/db'
-import { generateConditionalResolverMetadata } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { Utils } from 'lib/utils/utils'
-import { CharacterId } from 'types/character'
-import {
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import type { CharacterId } from 'types/character'
+import type {
   CharacterConditionalsController,
   LightConeConditionalsController,
 } from 'types/conditionals'
-import { Form } from 'types/form'
-import { LightConeId } from 'types/lightCone'
+import type { Form } from 'types/form'
+import type { LightConeId } from 'types/lightCone'
 
 export function generateFullDefaultForm(
   characterId: CharacterId,
@@ -23,10 +22,10 @@ export function generateFullDefaultForm(
   lightConeSuperimposition: number,
   teammate = false,
 ): Form {
-  // @ts-ignore
+  // @ts-expect-error - Legacy pattern: returns null typed as Form for missing characterId
   if (!characterId) return null
 
-  const dbMetadata = DB.getMetadata()
+  const dbMetadata = getGameMetadata()
 
   const simulationForm: Form = getDefaultForm({ id: characterId })
 
@@ -35,9 +34,6 @@ export function generateFullDefaultForm(
   simulationForm.lightCone = lightCone
   simulationForm.lightConeSuperimposition = lightConeSuperimposition
 
-  simulationForm.characterConditionals = {}
-  simulationForm.lightConeConditionals = {}
-
   const characterConditionalsRequest = { characterId: characterId, characterEidolon: characterEidolon }
   const lightConeConditionalsRequest = generateConditionalResolverMetadata(simulationForm, dbMetadata)
 
@@ -45,21 +41,18 @@ export function generateFullDefaultForm(
   const lightConeConditionals: LightConeConditionalsController = LightConeConditionalsResolver.get(lightConeConditionalsRequest)
 
   if (teammate) {
-    if (characterConditionals.teammateDefaults) Utils.mergeUndefinedValues(simulationForm.characterConditionals, characterConditionals.teammateDefaults())
-    if (lightConeConditionals.teammateDefaults) Utils.mergeUndefinedValues(simulationForm.lightConeConditionals, lightConeConditionals.teammateDefaults())
+    simulationForm.characterConditionals = characterConditionals.teammateDefaults ? { ...characterConditionals.teammateDefaults() } : {}
+    simulationForm.lightConeConditionals = lightConeConditionals.teammateDefaults ? { ...lightConeConditionals.teammateDefaults() } : {}
   } else {
-    if (characterConditionals.defaults) Utils.mergeUndefinedValues(simulationForm.characterConditionals, characterConditionals.defaults())
-    if (lightConeConditionals.defaults) Utils.mergeUndefinedValues(simulationForm.lightConeConditionals, lightConeConditionals.defaults())
+    simulationForm.characterConditionals = characterConditionals.defaults ? { ...characterConditionals.defaults() } : {}
+    simulationForm.lightConeConditionals = lightConeConditionals.defaults ? { ...lightConeConditionals.defaults() } : {}
   }
 
-  const simulationMetadata = DB.getMetadata().characters[characterId].scoringMetadata?.simulation
+  const simulationMetadata = dbMetadata.characters[characterId].scoringMetadata?.simulation
   if (simulationMetadata) {
     simulationForm.comboTurnAbilities = [...simulationMetadata.comboTurnAbilities]
-    simulationForm.comboDot = simulationMetadata.comboDot
   } else {
-    // @ts-ignore
     simulationForm.comboTurnAbilities = [NULL_TURN_ABILITY_NAME, DEFAULT_BASIC]
-    simulationForm.comboDot = 0
   }
 
   return simulationForm

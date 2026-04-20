@@ -1,9 +1,13 @@
+import { type ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
 import { ConditionalActivation } from 'lib/constants/constants'
-import { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
 import { indent } from 'lib/gpu/injection/wgslUtils'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { ConditionalValueMap } from 'types/conditionals'
-import { OptimizerAction, OptimizerContext, TeammateAction, } from 'types/optimizer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ConditionalValueMap } from 'types/conditionals'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+  type TeammateAction,
+} from 'types/optimizer'
 
 export type DynamicConditional = {
   id: string,
@@ -36,12 +40,12 @@ export function evaluateConditional(conditional: DynamicConditional, x: Computed
     action.teammateLightConeConditionals = teammate.lightConeConditionals
   }
 
-  if (conditional.activation == ConditionalActivation.SINGLE) {
+  if (conditional.activation === ConditionalActivation.SINGLE) {
     if (!action.conditionalState[conditional.id] && conditional.condition(x, action, context)) {
       action.conditionalState[conditional.id] = 1
       conditional.effect(x, action, context)
     }
-  } else if (conditional.activation == ConditionalActivation.CONTINUOUS) {
+  } else if (conditional.activation === ConditionalActivation.CONTINUOUS) {
     if (conditional.condition(x, action, context)) {
       conditional.effect(x, action, context)
     }

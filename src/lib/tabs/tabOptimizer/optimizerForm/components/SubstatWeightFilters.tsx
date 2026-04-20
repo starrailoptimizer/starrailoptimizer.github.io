@@ -1,9 +1,7 @@
-import { Flex } from 'antd'
+import { Flex } from '@mantine/core'
 import { Hint } from 'lib/interactions/hint'
-import {
-  FormStatRollSliders,
-  FormStatRollSliderTopPercent,
-} from 'lib/tabs/tabOptimizer/optimizerForm/components/FormStatRollSlider'
+import { FormStatRollSliders } from 'lib/tabs/tabOptimizer/optimizerForm/components/FormStatRollSlider'
+import { optimizerTabDefaultGap } from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
 import { HeaderText } from 'lib/ui/HeaderText'
 import { TooltipImage } from 'lib/ui/TooltipImage'
 import { useTranslation } from 'react-i18next'
@@ -11,24 +9,13 @@ import { useTranslation } from 'react-i18next'
 export const SubstatWeightFilters = () => {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'WeightFilter' })
   return (
-    <Flex vertical gap={20}>
-      <Flex vertical gap={0}>
-        <Flex justify='space-between' align='center'>
-          <HeaderText>{t('WeightFilterHeader') /* Substat weight filter */}</HeaderText>
-          <TooltipImage type={Hint.substatWeightFilter()} />
-        </Flex>
-
-        <FormStatRollSliders />
+    <Flex direction='column' gap={optimizerTabDefaultGap}>
+      <Flex justify='space-between' align='center'>
+        <HeaderText>{t('WeightFilterHeader') /* Substat weight filter */}</HeaderText>
+        <TooltipImage type={Hint.substatWeightFilter()} />
       </Flex>
 
-      <Flex vertical gap={3}>
-        <HeaderText>{t('RollFilterHeader') /* Weighted rolls per relic */}</HeaderText>
-        <Flex vertical gap={7}>
-          <FormStatRollSliderTopPercent index={0} />
-          <FormStatRollSliderTopPercent index={1} />
-          <FormStatRollSliderTopPercent index={2} />
-        </Flex>
-      </Flex>
+      <FormStatRollSliders rollsHeader={t('RollFilterHeader')} />
     </Flex>
   )
 }

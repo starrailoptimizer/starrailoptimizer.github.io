@@ -1,21 +1,20 @@
 import { COMPUTE_ENGINE_GPU_EXPERIMENTAL } from 'lib/constants/constants'
+import { FixedSizeNumericMinQueue } from 'lib/dataStructures/fixedSizeMinQueue'
 import { generateWgsl } from 'lib/gpu/injection/generateWgsl'
-import { uniformCompatible } from 'lib/gpu/webgpuDevice'
 import {
   generateParamsMatrix,
   mergeRelicsIntoArray,
 } from 'lib/gpu/webgpuDataTransform'
+import { uniformCompatible } from 'lib/gpu/webgpuDevice'
 import {
-  GpuExecutionContext,
-  GpuResult,
-  RelicsByPart,
+  type GpuExecutionContext,
+  type RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
-import { FixedSizePriorityQueue } from 'lib/optimization/fixedSizePriorityQueue'
 import { bitpackBooleanArray } from 'lib/optimization/relicSetSolver'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import { type Form } from 'types/form'
+import { type OptimizerContext } from 'types/optimizer'
 
-export function initializeGpuPipeline(
+export async function initializeGpuPipeline(
   device: GPUDevice,
   relics: RelicsByPart,
   request: Form,
@@ -26,7 +25,7 @@ export function initializeGpuPipeline(
   ornamentSetSolutions: number[],
   debug = false,
   silent = false,
-): GpuExecutionContext {
+): Promise<GpuExecutionContext> {
   const DEBUG = debug
 
   // Threads per workgroup
@@ -69,7 +68,7 @@ export function initializeGpuPipeline(
     console.log(wgsl)
   }
 
-  const computePipeline = generatePipeline(device, wgsl)
+  const computePipeline = await generatePipeline(device, wgsl)
 
   const paramsMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * 8
   const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * BLOCK_SIZE * CYCLES_PER_INVOCATION
@@ -138,14 +137,16 @@ export function initializeGpuPipeline(
   const bindGroups2: [GPUBindGroup, GPUBindGroup] = [0, 1].map((i) =>
     device.createBindGroup({
       layout: computePipeline.getBindGroupLayout(2),
-      entries: [
-        ...(DEBUG
-          ? [{ binding: 0, resource: { buffer: resultMatrixBuffers[i] } }]
+      entries: (
+        DEBUG
+          ? [
+            { binding: 0, resource: { buffer: resultMatrixBuffers[i] } },
+          ]
           : [
             { binding: 1, resource: { buffer: compactCountBuffers[i] } },
             { binding: 2, resource: { buffer: compactResultsBuffers[i] } },
-          ]),
-      ],
+          ]
+      ),
     })
   ) as [GPUBindGroup, GPUBindGroup]
 
@@ -155,7 +156,7 @@ export function initializeGpuPipeline(
   ]
 
   const iterations = Math.ceil(permutations / BLOCK_SIZE / CYCLES_PER_INVOCATION)
-  const resultsQueue = new FixedSizePriorityQueue<GpuResult>(RESULTS_LIMIT, (a, b) => a.value - b.value)
+  const resultsQueue = new FixedSizeNumericMinQueue(RESULTS_LIMIT)
 
   return {
     WORKGROUP_SIZE,
@@ -254,12 +255,12 @@ export function generateExecutionPass(gpuContext: GpuExecutionContext, offset: n
   return { gpuReadBuffer, compactReadBuffer }
 }
 
-export function generatePipeline(device: GPUDevice, wgsl: string) {
+async function generatePipeline(device: GPUDevice, wgsl: string) {
   const shaderModule = device.createShaderModule({
     code: wgsl,
   })
 
-  return device.createComputePipeline({
+  return device.createComputePipelineAsync({
     layout: 'auto',
     compute: {
       module: shaderModule,
@@ -268,7 +269,7 @@ export function generatePipeline(device: GPUDevice, wgsl: string) {
   })
 }
 
-export function createGpuBuffer(
+function createGpuBuffer(
   device: GPUDevice,
   matrix: Int32Array | Float32Array,
   usage: GPUBufferUsageFlags,

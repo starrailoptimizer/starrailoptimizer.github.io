@@ -4,21 +4,21 @@ import {
   Stats,
 } from 'lib/constants/constants'
 import { calculateCustomTraces } from 'lib/optimization/calculateTraces'
+import { generateConditionalResolverMetadata } from 'lib/optimization/combo/comboInitializers'
 import { emptyLightCone } from 'lib/optimization/optimizerUtils'
 import { transformComboState } from 'lib/optimization/rotation/comboStateTransform'
 import { StatCalculator } from 'lib/relics/statCalculator'
 import { initializeContextConditionals } from 'lib/simulations/contextConditionals'
-import DB from 'lib/state/db'
-import { generateConditionalResolverMetadata } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
+import { getGameMetadata } from 'lib/state/gameMetadata'
 import {
-  Form,
-  Teammate,
+  type Form,
+  type Teammate,
 } from 'types/form'
-import { DBMetadata } from 'types/metadata'
+import { type DBMetadata } from 'types/metadata'
 import {
-  CharacterMetadata,
-  CharacterStatsBreakdown,
-  OptimizerContext,
+  type CharacterMetadata,
+  type CharacterStatsBreakdown,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export function generateContext(request: Form): OptimizerContext {
@@ -65,7 +65,7 @@ function generateFiltersContext(request: Form, context: OptimizerContext) {
   context.resultSort = request.resultSort!
 
   // Store the scoring metadata's sortOption key for primary ability stats capture
-  const characterMetadata = DB.getMetadata().characters[request.characterId]
+  const characterMetadata = getGameMetadata().characters[request.characterId]
   context.primaryAbilityKey = characterMetadata?.scoringMetadata?.sortOption?.key ?? ''
 }
 
@@ -73,7 +73,7 @@ function calculateConditionals(request: Form, context: OptimizerContext) {
   transformComboState(request, context)
 }
 
-export const ElementToBreakScaling = {
+const ElementToBreakScaling = {
   Physical: 2.0,
   Fire: 2.0,
   Ice: 1.0,
@@ -84,7 +84,7 @@ export const ElementToBreakScaling = {
 }
 
 function generateCharacterMetadataContext(request: Form, context: Partial<OptimizerContext>) {
-  const dbMetadata = DB.getMetadata()
+  const dbMetadata = getGameMetadata()
   const characterMetadata = dbMetadata.characters[request.characterId]
   const path = characterMetadata.path
   const element = characterMetadata.element
@@ -127,10 +127,10 @@ function generateEnemyContext(request: Form, context: Partial<OptimizerContext>)
 }
 
 function generateBaseStatsContext(request: Form, context: Partial<OptimizerContext>) {
-  const characterMetadata = DB.getMetadata().characters[request.characterId]
+  const characterMetadata = getGameMetadata().characters[request.characterId]
   const characterStats = characterMetadata.stats
 
-  const lightConeMetadata = DB.getMetadata().lightCones[request.lightCone]
+  const lightConeMetadata = getGameMetadata().lightCones[request.lightCone]
   const lightConeStats = lightConeMetadata?.stats || emptyLightCone()
   const lightConeSuperimposition = characterMetadata.path == lightConeMetadata?.path
     ? (lightConeMetadata?.superimpositions[request.lightConeSuperimposition] || {})

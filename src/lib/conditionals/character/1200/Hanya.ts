@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -23,21 +23,22 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { ScoringMetadata } from 'types/metadata'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type ScoringMetadata } from 'types/metadata'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import { precisionRound } from 'lib/utils/mathUtils'
 export const HanyaEntities = createEnum('Hanya')
 export const HanyaAbilities: AbilityKind[] = [
   AbilityKind.BASIC,
@@ -46,7 +47,7 @@ export const HanyaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Hanya')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Hanya')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -91,15 +92,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.ultBuff.text'),
       content: t('Content.ultBuff.content', {
-        ultSpdBuffValue: TsUtils.precisionRound(100 * ultSpdBuffValue),
-        ultAtkBuffValue: TsUtils.precisionRound(100 * ultAtkBuffValue),
+        ultSpdBuffValue: precisionRound(100 * ultSpdBuffValue),
+        ultAtkBuffValue: precisionRound(100 * ultAtkBuffValue),
       }),
     },
     targetBurdenActive: {
       id: 'targetBurdenActive',
       formItem: 'switch',
       text: t('Content.targetBurdenActive.text'),
-      content: t('Content.targetBurdenActive.content', { talentDmgBoostValue: TsUtils.precisionRound(100 * talentDmgBoostValue) }),
+      content: t('Content.targetBurdenActive.content', { talentDmgBoostValue: precisionRound(100 * talentDmgBoostValue) }),
     },
     burdenAtkBuff: {
       id: 'burdenAtkBuff',
@@ -123,8 +124,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('TeammateContent.teammateSPDValue.text'),
       content: t('TeammateContent.teammateSPDValue.content', {
-        ultSpdBuffValue: TsUtils.precisionRound(100 * ultSpdBuffValue),
-        ultAtkBuffValue: TsUtils.precisionRound(100 * ultAtkBuffValue),
+        ultSpdBuffValue: precisionRound(100 * ultSpdBuffValue),
+        ultAtkBuffValue: precisionRound(100 * ultAtkBuffValue),
       }),
       min: 0,
       max: 300,
@@ -275,7 +276,8 @@ const display = {
     y: 1024,
     z: 1.1,
   },
-  showcaseColor: '#9a90e6',
+  disableSpine: true,
+  showcaseColor: '#a988f0',
 }
 
 export const Hanya: CharacterConfig = {

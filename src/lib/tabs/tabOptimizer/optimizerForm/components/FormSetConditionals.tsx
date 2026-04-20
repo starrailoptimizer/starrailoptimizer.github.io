@@ -1,50 +1,68 @@
 import {
   Drawer,
   Flex,
-  Form,
-  Popover,
+  HoverCard,
   Select,
   Switch,
-  Typography,
-} from 'antd'
-import {
-  Constants,
-  Sets,
-} from 'lib/constants/constants'
-import {
-  SetsOrnaments,
-  SetsRelics,
-  SetsRelicsNames,
-  setToConditionalKey,
-  setToId,
-} from 'lib/sets/setConfigRegistry'
+  Text,
+} from '@mantine/core'
+import { Constants } from 'lib/constants/constants'
 import {
   OpenCloseIDs,
   useOpenClose,
 } from 'lib/hooks/useOpenClose'
-import {
-  ConditionalSetMetadata,
-  SelectOptionContent,
-  SetMetadata,
-} from 'lib/optimization/rotation/setConditionalContent'
+import type { SetConditionals } from 'lib/optimization/combo/comboTypes'
 import { Assets } from 'lib/rendering/assets'
-import ColorizeNumbers from 'lib/ui/ColorizeNumbers'
+import {
+  ornamentIndexToSetConfig,
+  relicIndexToSetConfig,
+  type SetsOrnaments,
+  type SetsRelics,
+  setToConditionalKey,
+  setToId,
+} from 'lib/sets/setConfigRegistry'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
+import { useBenchmarksTabStore } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
+import { handleConditionalChange } from 'lib/tabs/tabOptimizer/optimizerForm/optimizerFormActions'
+import { ColorizeNumbers } from 'lib/ui/ColorizeNumbers'
 import { VerticalDivider } from 'lib/ui/Dividers'
 import { HeaderText } from 'lib/ui/HeaderText'
-import { useMemo } from 'react'
+import {
+  useMemo,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import type { SelectOptionContent } from 'types/setConfig'
 
-const { Text } = Typography
+/**
+ * Enum for identifying which store to use for set conditionals.
+ */
+export enum SetConditionalsStoreType {
+  Optimizer = 'optimizer',
+  Benchmark = 'benchmark',
+}
 
-const setConditionalsIconWidth = 40
-const setConditionalsNameWidth = 200
-const setConditionalsWidth = 80
+const setConditionalsIconWidth = 32
+const setConditionalsNameWidth = 255
+const setConditionalsWidth = 100
 const defaultGap = 5
+const columnGap = 6
+
+function getSetConditionalValue(
+  setConditionals: SetConditionals,
+  set: string,
+  storeType: SetConditionalsStoreType,
+  forStore: SetConditionalsStoreType,
+): boolean | number | undefined {
+  if (storeType !== forStore) return undefined
+  return (setConditionals as Record<string, [unknown, boolean | number]>)[set]?.[1]
+}
 
 interface BaseConditionalSetOptionProps {
   description: string
   conditional: string
   selectOptions?: Array<SelectOptionContent>
+  storeType: SetConditionalsStoreType
 }
 interface RelicConditionalSetOptionProps extends BaseConditionalSetOptionProps {
   set: SetsRelics
@@ -56,111 +74,81 @@ interface OrnamentConditionalSetOptionProps extends BaseConditionalSetOptionProp
 }
 type ConditionalSetOptionsProps = OrnamentConditionalSetOptionProps | RelicConditionalSetOptionProps
 
-function ConditionalSetOption(props: ConditionalSetOptionsProps) {
+function ConditionalSetOption({ set, description, conditional, selectOptions, storeType, ...rest }: ConditionalSetOptionsProps) {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'SetConditionals' })
+
+  const fromOptimizer = useOptimizerRequestStore((s) => getSetConditionalValue(s.setConditionals, set, storeType, SetConditionalsStoreType.Optimizer))
+  const fromBenchmark = useBenchmarksTabStore((s) => getSetConditionalValue(s.setConditionals, set, storeType, SetConditionalsStoreType.Benchmark))
+
+  const value = storeType === SetConditionalsStoreType.Optimizer ? fromOptimizer : fromBenchmark
+
+  const handleChange = (newValue: boolean | number | null) => {
+    if (newValue == null) return
+
+    if (storeType === SetConditionalsStoreType.Optimizer) {
+      handleConditionalChange(['setConditionals', set, 1], newValue) // Also patches comboStateJson
+    } else {
+      useBenchmarksTabStore.getState().setSetConditional(set, newValue)
+    }
+  }
+
   const content = (
-    <Flex vertical gap={10}>
-      <Flex vertical>
-        <HeaderText>
-          <p>{t('DescriptionHeader') /* Set description */}</p>
-        </HeaderText>
-        <p>{ColorizeNumbers(props.description)}</p>
+    <Flex direction='column' gap={12}>
+      <Flex direction='column' gap={4}>
+        <HeaderText>{t('DescriptionHeader') /* Set description */}</HeaderText>
+        <Text size='xs'>{ColorizeNumbers(description)}</Text>
       </Flex>
 
-      <Flex vertical>
-        <HeaderText>
-          <p>{t('EffectHeader') /* Enabled effect */}</p>
-        </HeaderText>
-        <p>{props.conditional}</p>
+      <Flex direction='column' gap={4}>
+        <HeaderText>{t('EffectHeader') /* Enabled effect */}</HeaderText>
+        <Text size='xs'>{conditional}</Text>
       </Flex>
     </Flex>
   )
 
-  if (isRelicProps(props)) {
-    // Relics
-    let inputType = <Switch disabled={props.p4Checked} />
-    if (props.selectOptions) {
-      inputType = (
-        <Select
-          optionLabelProp='display'
-          listHeight={500}
-          size='small'
-          style={{ width: setConditionalsWidth }}
-          dropdownStyle={{ width: 'fit-content' }}
-          options={props.selectOptions}
-        />
-      )
-    }
+  const disabled = 'p4Checked' in rest ? rest.p4Checked : 'p2Checked' in rest && rest.p2Checked
 
-    return (
-      <Popover
-        content={content}
-        title={t('SetName', { id: setToId[props.set] })}
-        mouseEnterDelay={0.5}
-        overlayStyle={{
-          width: 600,
-        }}
-      >
-        <Flex gap={defaultGap} align='center' justify='flex-start'>
-          <Flex style={{ width: setConditionalsIconWidth }}>
-            <img
-              src={Assets.getSetImage(props.set, Constants.Parts.PlanarSphere)}
-              style={{ width: 36, height: 36 }}
-            />
-          </Flex>
-          <Text
-            style={{
-              width: setConditionalsNameWidth,
-              textOverflow: 'ellipsis',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t('SetName', { id: setToId[props.set] })}
-          </Text>
-          <Flex style={{ width: setConditionalsWidth }} justify='flex-end'>
-            <Form.Item
-              name={['setConditionals', props.set, 1]}
-              valuePropName={props.selectOptions ? 'value' : 'checked'}
-            >
-              {inputType}
-            </Form.Item>
-          </Flex>
-        </Flex>
-      </Popover>
+  let inputType
+  if (selectOptions) {
+    const stringSelectOptions = selectOptions.map((opt) => ({
+      label: opt.display || opt.label,
+      value: String(opt.value),
+    }))
+    inputType = (
+      <Select
+        maxDropdownHeight={500}
+        style={{ width: setConditionalsWidth }}
+        comboboxProps={{ keepMounted: false, width: 160 }}
+        data={stringSelectOptions}
+        value={value != null ? String(value) : null}
+        onChange={(val) => handleChange(val != null ? Number(val) : null)}
+      />
     )
   } else {
-    // Ornaments
-    let inputType = <Switch disabled={props.p2Checked} />
-    if (props.selectOptions) {
-      inputType = (
-        <Select
-          optionLabelProp='display'
-          listHeight={500}
-          size='small'
-          style={{ width: setConditionalsWidth }}
-          dropdownStyle={{ width: 'fit-content' }}
-          options={props.selectOptions}
-        />
-      )
-    }
-    return (
-      <Popover
-        content={content}
-        title={t('SetName', { id: setToId[props.set] })}
-        mouseEnterDelay={0.5}
-        overlayStyle={{
-          width: 600,
-        }}
-      >
-        <Flex gap={defaultGap} align='center' justify='flex-start'>
-          <Flex style={{ width: setConditionalsIconWidth }}>
+    inputType = (
+      <Switch
+        disabled={disabled}
+        checked={value as boolean}
+        onChange={(event) => handleChange(event.currentTarget.checked)}
+      />
+    )
+  }
+
+  return (
+    <HoverCard width={400} position='left' withArrow openDelay={300} closeDelay={200}>
+      <HoverCard.Target>
+        <Flex
+          gap={defaultGap}
+          align='center'
+          style={{ cursor: 'pointer' }}
+        >
+          <div style={{ width: setConditionalsIconWidth, marginRight: 5 }}>
             <img
-              src={Assets.getSetImage(props.set, Constants.Parts.PlanarSphere)}
-              style={{ width: 36, height: 36 }}
+              src={Assets.getSetImage(set, Constants.Parts.PlanarSphere)}
+              style={{ width: setConditionalsIconWidth, height: setConditionalsIconWidth, display: 'block' }}
             />
-          </Flex>
-          <Text
+          </div>
+          <div
             style={{
               width: setConditionalsNameWidth,
               textOverflow: 'ellipsis',
@@ -168,93 +156,100 @@ function ConditionalSetOption(props: ConditionalSetOptionsProps) {
               whiteSpace: 'nowrap',
             }}
           >
-            {t('SetName', { id: setToId[props.set] })}
-          </Text>
+            {t('SetName', { id: setToId[set] })}
+          </div>
           <Flex style={{ width: setConditionalsWidth }} justify='flex-end'>
-            <Form.Item
-              name={['setConditionals', props.set, 1]}
-              valuePropName={props.selectOptions ? 'value' : 'checked'}
-            >
-              {inputType}
-            </Form.Item>
+            {inputType}
           </Flex>
         </Flex>
-      </Popover>
-    )
-  }
-}
-
-function isRelicProps(props: ConditionalSetOptionsProps): props is RelicConditionalSetOptionProps {
-  return isRelicSet(props.set)
-}
-
-function isRelicSet(set: Sets): set is SetsRelics {
-  return (SetsRelicsNames as Array<Sets>).includes(set)
+      </HoverCard.Target>
+      <HoverCard.Dropdown style={{ fontSize: 13 }}>
+        <Text fw={600} mb={4} size='sm'>{t('SetName', { id: setToId[set] })}</Text>
+        {content}
+      </HoverCard.Dropdown>
+    </HoverCard>
+  )
 }
 
 export function FormSetConditionals({ id }: { id: OpenCloseIDs }) {
   const { close, isOpen } = useOpenClose(id)
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'SetConditionals' })
-  const { t: tSelectOptions } = useTranslation('optimizerTab', { keyPrefix: 'SetConditionals.SelectOptions' })
+  const [hasOpened, setHasOpened] = useState(false)
+  if (isOpen && !hasOpened) setHasOpened(true)
 
-  const { relicOptions, ornamentOptions } = useMemo(() => {
-    const relicOptions: Array<JSX.Element> = []
-    const ornamentOptions: Array<JSX.Element> = []
-    ;(Object.entries(ConditionalSetMetadata) as Array<[Sets, SetMetadata]>).forEach(([set, meta]) => {
-      if (isRelicSet(set)) {
-        relicOptions.push(
-          <ConditionalSetOption
-            key={set}
-            set={set}
-            p4Checked={!meta.modifiable}
-            description={t('RelicDescription', { id: setToId[set] })}
-            conditional={t(setToConditionalKey(set))}
-            selectOptions={meta.selectionOptions?.(tSelectOptions)}
-          />,
-        )
-      } else {
-        ornamentOptions.push(
-          <ConditionalSetOption
-            key={set}
-            set={set}
-            p2Checked={!meta.modifiable}
-            description={t('PlanarDescription', { id: setToId[set] })}
-            conditional={t(setToConditionalKey(set))}
-            selectOptions={meta.selectionOptions?.(tSelectOptions)}
-          />,
-        )
-      }
-    })
-    return { relicOptions, ornamentOptions }
-  }, [tSelectOptions, t])
+  const storeType = id === OpenCloseIDs.BENCHMARKS_SETS_DRAWER
+    ? SetConditionalsStoreType.Benchmark
+    : SetConditionalsStoreType.Optimizer
 
   return (
     <Drawer
       title={t('Title')} // 'Conditional set effects'
-      placement='right'
+      position='right'
       onClose={close}
-      open={isOpen}
-      width={750}
-      forceRender
+      opened={isOpen}
+      size={900}
+      keepMounted
     >
-      <Flex justify='center'>
-        <Flex vertical gap={defaultGap}>
-          <Flex gap={defaultGap} align='center' justify='flex-start'>
-            <Text style={{ width: setConditionalsIconWidth }}></Text>
-            <Text style={{ width: setConditionalsNameWidth }}></Text>
-          </Flex>
-          {relicOptions}
-        </Flex>
-        <VerticalDivider />
-        <Flex vertical gap={defaultGap} style={{ marginLeft: 5 }}>
-          <Flex gap={defaultGap} align='center' justify='flex-start'>
-            <Text style={{ width: setConditionalsIconWidth }}></Text>
-            <Text style={{ width: setConditionalsNameWidth }}></Text>
-          </Flex>
-          {ornamentOptions}
-        </Flex>
-      </Flex>
+      {hasOpened && <FormSetConditionalsContent storeType={storeType} />}
     </Drawer>
   )
 }
 
+function FormSetConditionalsContent({ storeType }: { storeType: SetConditionalsStoreType }) {
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'SetConditionals' })
+  const { t: tSelectOptions } = useTranslation('optimizerTab', { keyPrefix: 'SetConditionals.SelectOptions' })
+
+  const { relicOptions, ornamentOptions } = useMemo(() => {
+    const relicOptions = relicIndexToSetConfig.map((config) => {
+      const set = config.id as SetsRelics
+      return (
+        <ConditionalSetOption
+          key={set}
+          set={set}
+          storeType={storeType}
+          p4Checked={!config.display.modifiable}
+          description={t('RelicDescription', { id: setToId[set] })}
+          conditional={t(setToConditionalKey(set))}
+          selectOptions={config.display.selectionOptions?.(tSelectOptions)}
+        />
+      )
+    })
+
+    const ornamentOptions = ornamentIndexToSetConfig.map((config) => {
+      const set = config.id as SetsOrnaments
+      return (
+        <ConditionalSetOption
+          key={set}
+          set={set}
+          storeType={storeType}
+          p2Checked={!config.display.modifiable}
+          description={t('PlanarDescription', { id: setToId[set] })}
+          conditional={t(setToConditionalKey(set))}
+          selectOptions={config.display.selectionOptions?.(tSelectOptions)}
+        />
+      )
+    })
+
+    return { relicOptions, ornamentOptions }
+  }, [tSelectOptions, t, storeType])
+
+  return (
+    <Flex justify='space-around'>
+      <Flex direction='column' gap={columnGap}>
+        <Flex gap={defaultGap} align='center'>
+          <div style={{ width: setConditionalsIconWidth }} />
+          <div style={{ width: setConditionalsNameWidth }} />
+        </Flex>
+        {relicOptions}
+      </Flex>
+      <VerticalDivider />
+      <Flex direction='column' gap={columnGap}>
+        <Flex gap={defaultGap} align='center'>
+          <div style={{ width: setConditionalsIconWidth }} />
+          <div style={{ width: setConditionalsNameWidth }} />
+        </Flex>
+        {ornamentOptions}
+      </Flex>
+    </Flex>
+  )
+}

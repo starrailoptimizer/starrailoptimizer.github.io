@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -24,7 +24,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
@@ -32,13 +32,13 @@ import {
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
 import { Fugue } from 'lib/conditionals/character/1200/Fugue'
@@ -56,10 +56,11 @@ import {
   START_ULT,
   WHOLE_BASIC,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const March7thImaginaryEntities = createEnum('March7thImaginary')
@@ -71,7 +72,7 @@ export const March7thImaginaryAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.March7thImaginary')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.March7thImaginary')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -117,13 +118,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enhancedBasic',
       formItem: 'switch',
       text: t('Content.enhancedBasic.text'),
-      content: t('Content.enhancedBasic.content', { BasicEnhancedScaling: TsUtils.precisionRound(100 * basicEnhancedScaling) }),
+      content: t('Content.enhancedBasic.content', { BasicEnhancedScaling: precisionRound(100 * basicEnhancedScaling) }),
     },
     basicAttackHits: {
       id: 'basicAttackHits',
       formItem: 'slider',
       text: t('Content.basicAttackHits.text'),
-      content: t('Content.basicAttackHits.content', { BasicEnhancedScaling: TsUtils.precisionRound(100 * basicEnhancedScaling) }),
+      content: t('Content.basicAttackHits.content', { BasicEnhancedScaling: precisionRound(100 * basicEnhancedScaling) }),
       min: 3,
       max: 6,
     },
@@ -131,7 +132,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'masterAdditionalDmgBuff',
       formItem: 'switch',
       text: t('Content.masterAdditionalDmgBuff.text'),
-      content: t('Content.masterAdditionalDmgBuff.content', { ShifuDmgBuff: TsUtils.precisionRound(100 * basicExtraScalingMasterBuff) }),
+      content: t('Content.masterAdditionalDmgBuff.content', { ShifuDmgBuff: precisionRound(100 * basicExtraScalingMasterBuff) }),
     },
     masterToughnessRedBuff: {
       id: 'masterToughnessRedBuff',
@@ -143,7 +144,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentDmgBuff',
       formItem: 'switch',
       text: t('Content.talentDmgBuff.text'),
-      content: t('Content.talentDmgBuff.content', { TalentDmgBuff: TsUtils.precisionRound(100 * talentDmgBuff) }),
+      content: t('Content.talentDmgBuff.content', { TalentDmgBuff: precisionRound(100 * talentDmgBuff) }),
     },
     selfSpdBuff: {
       id: 'selfSpdBuff',
@@ -166,7 +167,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'masterBuff',
       formItem: 'switch',
       text: t('TeammateContent.masterBuff.text'),
-      content: t('TeammateContent.masterBuff.content', { ShifuSpeedBuff: TsUtils.precisionRound(100 * skillSpdScaling) }),
+      content: t('TeammateContent.masterBuff.content', { ShifuSpeedBuff: precisionRound(100 * skillSpdScaling) }),
     },
     masterCdBeBuffs: {
       id: 'masterCdBeBuffs',
@@ -328,7 +329,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   deprioritizeBuffs: false,
   relicSets: [
@@ -407,7 +407,12 @@ const display = {
     y: 950,
     z: 1.1,
   },
-  showcaseColor: '#f7b6f7',
+  backgroundCenterOffset: {
+    x: -310,
+    y: 112,
+    z: -0.17,
+  },
+  showcaseColor: '#d777c1',
 }
 
 export const March7thImaginary: CharacterConfig = {

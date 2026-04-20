@@ -1,22 +1,14 @@
 import { showcaseOutlineLight } from 'lib/characterPreview/CharacterPreviewComponents'
 import { computeLcTransform } from 'lib/rendering/lcImageTransform'
-import { cardShadow } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
-import React from 'react'
+import type { CSSProperties } from 'react'
 
-export function CenteredImage(props: {
+export function CenteredImage({ src, containerW, containerH, imageOffset }: {
   src: string,
   containerW: number,
   containerH: number,
-  imageOffset?: { x: number; y: number; s: number },
+  imageOffset?: { x: number, y: number, s: number },
 }) {
-  const {
-    src,
-    containerW,
-    containerH,
-    imageOffset,
-  } = props
-
-  let imageStyle: React.CSSProperties
+  let imageStyle: CSSProperties
 
   if (imageOffset) {
     const { dy, scale } = computeLcTransform(imageOffset, containerW, containerH)
@@ -24,6 +16,7 @@ export function CenteredImage(props: {
       width: '100%',
       height: 'auto',
       transform: `translateY(${dy}px) scale(${scale})`,
+      imageRendering: '-webkit-optimize-contrast',
     }
   } else {
     imageStyle = {
@@ -34,6 +27,7 @@ export function CenteredImage(props: {
       height: 'auto',
       objectFit: 'cover',
       transform: 'translate(-50%, -50%)',
+      imageRendering: '-webkit-optimize-contrast',
     }
   }
 
@@ -42,8 +36,8 @@ export function CenteredImage(props: {
       style={{
         overflow: 'hidden',
         border: showcaseOutlineLight,
-        boxShadow: cardShadow,
-        borderRadius: 5,
+        boxShadow: 'var(--shadow-card)',
+        borderRadius: 6,
         width: containerW,
         height: containerH,
         position: 'relative',

@@ -1,4 +1,5 @@
 import { Sets } from 'lib/constants/constants'
+import type { ComboState } from 'lib/optimization/combo/comboTypes'
 import { AbilityTriggeredStackPreprocessor } from 'lib/optimization/rotation/preprocessor/utils/abilityTriggeredStackPreprocessor'
 import {
   AbilityKind,
@@ -9,7 +10,6 @@ import {
   DEFAULT_ULT,
   WHOLE_ULT,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
 import {
   beforeEach,
   expect,
@@ -26,7 +26,7 @@ const mockNumberActivation = vi.fn()
 
 const createMockComboState = (): ComboState => ({
   comboCharacter: {
-    // @ts-ignore
+    // @ts-expect-error - Partial mock for test
     metadata: {},
   },
 })

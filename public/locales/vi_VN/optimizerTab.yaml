@@ -230,7 +230,7 @@ Sidebar:
     Header: Lối lên đồ
     Save: Lưu
 TeammateRow:
-  Header: '{{teammateCount}} đồng đội'
+  Header: 'Đồng đội'
 FormRowLabels:
   Character options: Lựa chọn nhân vật
   Relic & stat filters: Bộ lọc di vật và chỉ số
@@ -425,14 +425,8 @@ ComboFilter:
     Simple: Đơn giản
     Advanced: Nâng cao
   RowControls:
-    Header: Điều khiển
-    Add: +
-    Remove: '-'
     ResetConfirm:
       Description: Đặt lại tất cả thứ tự đơn giản / nâng cao thành mặc định?
-    PresetsHeader: Mẫu Cho Sẵn
-  CounterLabels:
-    Dot: Dots
   ComboOptions:
     None: 'Không có'
     Basic: Tấn công thường
@@ -545,16 +539,23 @@ ExpandedDataPanel:
       HEAL_VALUE_P: Δ% Trị Liệu
       SHIELD_VALUE: Δ Lá Chắn
       SHIELD_VALUE_P: Δ% Lá Chắn
+  DamageTags:
+    BASIC: TẤN CÔNG THƯỜNG
+    SKILL: Chiến kỹ
+    ULT: Tuyệt kỹ
+    FUA: Đòn Đánh Theo Sau
+    DOT: DOT
+    BREAK: Kích Phá
   DamageSplits:
+    Mode:
+      Default: Mặc định
     Legend:
-      abilityDmg: Kỹ năng
-      breakDmg: Kích Phá
-      superBreakDmg: Siêu Phá Vỡ
-      additionalDmg: Bổ sung
-      trueDmg: 'ST Chuẩn'
-      jointDmg: ST Chung
-      dotDmg: Dot
-      memoDmg: LH Ký Ức
+      Basic: Tấn công thường
+      Skill: Chiến kỹ
+      Ult: Tuyệt Kỹ
+      Fua: Đòn theo sau
+      Break: Kích Phá
+      Memo: LH Ký Ức
     YAxisLabel:
       BASIC_DMG: Tấn công thường
       SKILL_DMG: Chiến kỹ
@@ -592,6 +593,8 @@ ExpandedDataPanel:
       LightCone: Nón Ánh Sáng
       Set: Bộ
     DefaultAction: Mặc định
+    DamageFunctions:
+      Break: Kích Phá
     Stats:
       CompositeLabels:
         Prefix:
@@ -602,7 +605,6 @@ ExpandedDataPanel:
           Dot: Dot
           Break: Kích Phá
         Suffix:
-          DMG boost: Tăng Sát Thương
           Vulnerability: Yếu điểm
           DEF PEN: Xuyên Phòng Thủ
           Additional DMG: ST Kèm Theo

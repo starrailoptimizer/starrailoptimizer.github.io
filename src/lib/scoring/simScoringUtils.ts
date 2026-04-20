@@ -1,30 +1,32 @@
-import {
+import type {
   ElementName,
-  ElementToStatKeyDmgBoost,
-  Stats,
   StatsValues,
   SubStats,
 } from 'lib/constants/constants'
-import { OptimizerDisplayData } from 'lib/optimization/bufferPacker'
 import {
-  AKeyValue,
+  ElementToStatKeyDmgBoost,
+  Stats,
+} from 'lib/constants/constants'
+import type { OptimizerDisplayData } from 'lib/optimization/bufferPacker'
+import type { AKeyValue } from 'lib/optimization/engine/config/keys'
+import {
   GlobalRegister,
   StatKey,
 } from 'lib/optimization/engine/config/keys'
 import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { StatCalculator } from 'lib/relics/statCalculator'
-import { SimulationStatUpgrade } from 'lib/simulations/scoringUpgrades'
-import {
+import type { SimulationStatUpgrade } from 'lib/simulations/scoringUpgrades'
+import type {
   RunStatSimulationsResult,
   Simulation,
 } from 'lib/simulations/statSimulationTypes'
-import { Utils } from 'lib/utils/utils'
-import { Form } from 'types/form'
-import {
+import { isFlat } from 'lib/utils/statUtils'
+import type { Form } from 'types/form'
+import type {
   DBMetadataCharacter,
   SimulationMetadata,
 } from 'types/metadata'
-import { Relic } from 'types/relic'
+import type { Relic } from 'types/relic'
 
 // Stats string to StatKey mapping - defined here to avoid circular dependency with keys.ts
 export const StatsToStatKey: Record<StatsValues, AKeyValue> = {
@@ -231,7 +233,6 @@ export function invertDiminishingReturnsSpdFormula(mainsCount: number, target: n
   }
 
   const previousRolls = rolls - 1
-  const previousValue = spdDiminishingReturnsFormula(mainsCount, previousRolls) * rollValue
 
   if (current === target) {
     return rolls
@@ -257,7 +258,7 @@ export function invertDiminishingReturnsSpdFormula(mainsCount: number, target: n
   return mid
 }
 
-export function isSpdBoots(simulation: Simulation) {
+function isSpdBoots(simulation: Simulation) {
   return simulation.request.simFeet == Stats.SPD
 }
 
@@ -293,7 +294,7 @@ export function applyScoringFunction(result: RunStatSimulationsResult, metadata:
   result.simScore = unpenalizedSimScore * (penalty ? penaltyMultiplier : 1)
 }
 
-export function calculatePenaltyMultiplier(
+function calculatePenaltyMultiplier(
   simulationResult: RunStatSimulationsResult,
   metadata: SimulationMetadata,
   user = false,
@@ -308,7 +309,7 @@ export function calculatePenaltyMultiplier(
           // Cyrene case
           newPenaltyMultiplier *= 0.75
         }
-      } else if (Utils.isFlat(stat)) {
+      } else if (isFlat(stat)) {
         // Flats are penalized by their percentage
         newPenaltyMultiplier *= (Math.min(1, statValue / metadata.breakpoints[stat]) + 1) / 2
       } else {
@@ -337,6 +338,9 @@ export function cloneSimResult(result: RunStatSimulationsResult) {
   }
   if (result.actionDamage) {
     result.actionDamage = { ...result.actionDamage }
+  }
+  if (result.rotationDamage) {
+    result.rotationDamage = [...result.rotationDamage]
   }
 
   return result

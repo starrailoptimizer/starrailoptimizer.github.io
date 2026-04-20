@@ -10,8 +10,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -29,7 +29,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -45,19 +45,20 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const FeixiaoEntities = createEnum('Feixiao')
@@ -70,7 +71,7 @@ export const FeixiaoAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Feixiao')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Feixiao')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -134,8 +135,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.talentDmgBuff.text'),
       content: t('Content.talentDmgBuff.content', {
-        FuaMultiplier: TsUtils.precisionRound(100 * fuaScaling),
-        DmgBuff: TsUtils.precisionRound(100 * talentDmgBuff),
+        FuaMultiplier: precisionRound(100 * fuaScaling),
+        DmgBuff: precisionRound(100 * talentDmgBuff),
       }),
     },
     skillAtkBuff: {
@@ -315,7 +316,6 @@ const simulation = (): SimulationMetadata => ({
     END_FUA,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.TheWindSoaringValorous, Sets.TheWindSoaringValorous],
     [Sets.TheAshblazingGrandDuke, Sets.TheAshblazingGrandDuke],
@@ -399,7 +399,12 @@ const display = {
     y: 1050,
     z: 1,
   },
-  showcaseColor: '#7fd9e1',
+  spineCenter: {
+    x: 1134,
+    y: 1033,
+    z: 1.9,
+  },
+  showcaseColor: '#589aa3',
 }
 
 export const Feixiao: CharacterConfig = {

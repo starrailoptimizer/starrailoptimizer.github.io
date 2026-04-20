@@ -1,21 +1,25 @@
-import { DamageTag, OutputTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import i18next, { type TFunction } from 'i18next'
+import {
+  DamageTag,
+  OutputTag,
+} from 'lib/optimization/engine/config/tag'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityMeta } from 'lib/optimization/rotation/turnAbilityConfig'
-import { OptimizerAction } from 'types/optimizer'
+import type { OptimizerAction } from 'types/optimizer'
 
 // --- Types ---
 
 export type DamageSplitSegment = {
-  damageType: number
-  label: string
-  damage: number
-  hitIndex: number
+  damageType: number,
+  label: string,
+  damage: number,
+  hitIndex: number,
 }
 
 export type DamageSplitEntry = {
-  name: string
-  segments: DamageSplitSegment[]
-  total: number
+  name: string,
+  segments: DamageSplitSegment[],
+  total: number,
 }
 
 // --- True DMG segment sentinel (not a real DamageTag bitmask value) ---
@@ -24,7 +28,7 @@ export const TRUE_DMG_SEGMENT_TYPE = 0x8000
 
 // --- Label decoding ---
 
-const DAMAGE_TAG_NAMES: Record<number, string> = {
+const DAMAGE_TAG_NAMES = {
   [DamageTag.BASIC]: 'Basic',
   [DamageTag.SKILL]: 'Skill',
   [DamageTag.ULT]: 'Ult',
@@ -36,18 +40,22 @@ const DAMAGE_TAG_NAMES: Record<number, string> = {
   [DamageTag.ADDITIONAL]: 'Additional',
   [DamageTag.ELATION]: 'Elation',
   [TRUE_DMG_SEGMENT_TYPE]: 'True',
-}
+} as const satisfies Record<number, string>
 
 const DAMAGE_TAG_FLAGS = Object.values(DamageTag)
   .filter((v): v is number => typeof v === 'number' && v > 0)
   .sort((a, b) => a - b)
 
-export function decodeDamageTypeLabel(damageType: number): string {
-  if (damageType === TRUE_DMG_SEGMENT_TYPE) return DAMAGE_TAG_NAMES[TRUE_DMG_SEGMENT_TYPE]
+export function decodeDamageTypeLabel(damageType: number, t: TFunction<'optimizerTab'>): string {
+  if (damageType === TRUE_DMG_SEGMENT_TYPE) return t(`ExpandedDataPanel.DamageSplits.Legend.${DAMAGE_TAG_NAMES[TRUE_DMG_SEGMENT_TYPE]}`)
   const parts: string[] = []
   for (const flag of DAMAGE_TAG_FLAGS) {
     if (damageType & flag) {
-      parts.push(DAMAGE_TAG_NAMES[flag] ?? `Unknown(${flag})`)
+      if (flag in DAMAGE_TAG_NAMES) {
+        parts.push(t(`ExpandedDataPanel.DamageSplits.Legend.${DAMAGE_TAG_NAMES[flag as keyof typeof DAMAGE_TAG_NAMES]}`))
+      } else {
+        parts.push(`Unknown(${flag})`)
+      }
     }
   }
   return parts.join(' · ') || 'None'
@@ -120,16 +128,18 @@ export function getDamageTypeColor(damageType: number): string {
 // --- Pie chart aggregation ---
 
 export type DamageTagSlice = {
-  damageType: number
-  label: string
-  color: string
-  value: number
-  percent: number
+  damageType: number,
+  label: string,
+  color: string,
+  fill: string,
+  value: number,
+  percent: number,
 }
 
 export function extractDamageByTag(
   x: ComputedStatsContainer,
   actions: OptimizerAction[],
+  t: TFunction<'optimizerTab'>,
 ): DamageTagSlice[] {
   const totals = new Map<number, number>()
   let grandTotal = 0
@@ -149,10 +159,12 @@ export function extractDamageByTag(
 
   const slices: DamageTagSlice[] = []
   for (const [damageType, value] of totals) {
+    const color = getDamageTypeColor(damageType)
     slices.push({
       damageType,
-      label: decodeDamageTypeLabel(damageType),
-      color: getDamageTypeColor(damageType),
+      label: decodeDamageTypeLabel(damageType, t),
+      color,
+      fill: color,
       value,
       percent: value / grandTotal,
     })
@@ -164,8 +176,14 @@ export function extractDamageByTag(
 
 // --- Action name formatting ---
 
-function formatActionName(action: OptimizerAction, mode: 'default' | 'rotation', comboIndex?: number): string {
-  const label = AbilityMeta[action.actionType].label
+function formatActionName(
+  action: OptimizerAction,
+  mode: 'default' | 'rotation',
+  t: TFunction<'optimizerTab'>,
+  comboIndex?: number,
+): string {
+  const labelKey = AbilityMeta[action.actionType].label
+  const label = t(`ComboFilter.ComboOptions.${labelKey}`)
 
   if (mode === 'default') {
     return label
@@ -180,6 +198,7 @@ export function extractDamageSplits(
   x: ComputedStatsContainer,
   actions: OptimizerAction[],
   mode: 'default' | 'rotation',
+  t: TFunction<'optimizerTab'>,
 ): DamageSplitEntry[] {
   const entries: DamageSplitEntry[] = []
 
@@ -215,7 +234,7 @@ export function extractDamageSplits(
     for (const [damageType, damage] of segmentMap) {
       segments.push({
         damageType,
-        label: decodeDamageTypeLabel(damageType),
+        label: decodeDamageTypeLabel(damageType, t),
         damage,
         hitIndex: -1,
       })
@@ -233,7 +252,7 @@ export function extractDamageSplits(
     if (segments.length === 0) continue
 
     entries.push({
-      name: formatActionName(action, mode, actionIdx),
+      name: formatActionName(action, mode, t, actionIdx),
       segments,
       total,
     })

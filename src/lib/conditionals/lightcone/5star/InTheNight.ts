@@ -1,22 +1,38 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { containerActionVal } from 'lib/gpu/injection/injectUtils'
-import { wgsl, wgslTrue } from 'lib/gpu/injection/wgslUtils'
+import {
+  wgsl,
+  wgslTrue,
+} from 'lib/gpu/injection/wgslUtils'
 import { Source } from 'lib/optimization/buffSource'
-import { HKey, StatKey } from 'lib/optimization/engine/config/keys'
-import { DamageTag, SELF_ENTITY_INDEX } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import {
+  HKey,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import {
+  DamageTag,
+  SELF_ENTITY_INDEX,
+} from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import {
+  floorSafe,
+  precisionRound,
+} from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.InTheNight')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.InTheNight')
   const { SOURCE_LC } = Source.lightCone(InTheNight.id)
 
   const sValuesDmg = [0.06, 0.07, 0.08, 0.09, 0.10]
@@ -33,8 +49,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.spdScalingBuffs.text'),
       content: t('Content.spdScalingBuffs.content', {
-        DmgBuff: TsUtils.precisionRound(100 * sValuesDmg[s]),
-        CritBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
+        DmgBuff: precisionRound(100 * sValuesDmg[s]),
+        CritBuff: precisionRound(100 * sValuesCd[s]),
       }),
     },
   }
@@ -45,7 +61,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
     finalizeCalculations: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
       const r = action.lightConeConditionals as Conditionals<typeof content>
       const spd = x.getActionValueByIndex(StatKey.SPD, SELF_ENTITY_INDEX)
-      const stacks = Math.max(0, Math.min(6, Math.floor((spd - 100) / 10)))
+      const stacks = Math.max(0, Math.min(6, floorSafe((spd - 100) / 10)))
 
       x.buff(StatKey.DMG_BOOST, (r.spdScalingBuffs) ? stacks * sValuesDmg[s] : 0, x.damageType(DamageTag.BASIC | DamageTag.SKILL).source(SOURCE_LC))
       x.buff(StatKey.CD, (r.spdScalingBuffs) ? stacks * sValuesCd[s] : 0, x.damageType(DamageTag.ULT).source(SOURCE_LC))
@@ -55,7 +71,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
 
       return wgsl`
 if (${wgslTrue(r.spdScalingBuffs)}) {
-  let stacks = max(0.0, min(6.0, floor((${containerActionVal(SELF_ENTITY_INDEX, StatKey.SPD, action.config)} - 100.0) / 10.0)));
+  let stacks = max(0.0, min(6.0, floorSafe((${containerActionVal(SELF_ENTITY_INDEX, StatKey.SPD, action.config)} - 100.0) / 10.0)));
   ${buff.hit(HKey.DMG_BOOST, `stacks * ${sValuesDmg[s]}`).damageType(DamageTag.BASIC | DamageTag.SKILL).wgsl(action)}
   ${buff.hit(HKey.CD, `stacks * ${sValuesCd[s]}`).damageType(DamageTag.ULT).wgsl(action)}
 }

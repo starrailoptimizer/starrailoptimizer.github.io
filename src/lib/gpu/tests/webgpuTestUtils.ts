@@ -2,17 +2,13 @@ import {
   COMPUTE_ENGINE_GPU_STABLE,
   Stats,
 } from 'lib/constants/constants'
-import {
-  SetsOrnaments,
-  SetsRelics,
-} from 'lib/sets/setConfigRegistry'
-import { WebgpuTest } from 'lib/gpu/tests/webgpuTestGenerator'
+import type { WebgpuTest } from 'lib/gpu/tests/webgpuTestGenerator'
 import {
   destroyPipeline,
   generateExecutionPass,
   initializeGpuPipeline,
 } from 'lib/gpu/webgpuInternals'
-import { RelicsByPart } from 'lib/gpu/webgpuTypes'
+import type { RelicsByPart } from 'lib/gpu/webgpuTypes'
 import { generateContext } from 'lib/optimization/context/calculateContext'
 import {
   AKeyNames,
@@ -22,21 +18,25 @@ import { STATS_LENGTH } from 'lib/optimization/engine/config/statsConfig'
 import { OutputTag } from 'lib/optimization/engine/config/tag'
 import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { AugmentedStats } from 'lib/relics/relicAugmenter'
+import type { AugmentedStats } from 'lib/relics/relicAugmenter'
+import {
+  SetsOrnaments,
+  SetsRelics,
+} from 'lib/sets/setConfigRegistry'
 import { simulateBuild } from 'lib/simulations/simulateBuild'
-import { SimulationRelicByPart } from 'lib/simulations/statSimulationTypes'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import type { SimulationRelicByPart } from 'lib/simulations/statSimulationTypes'
+import type { Form } from 'types/form'
+import type { OptimizerContext } from 'types/optimizer'
 
 export async function runTestRequest(request: Form, relics: RelicsByPart, device: GPUDevice) {
   request.resultSort = SortOption.COMBO.key
   const context = generateContext(request)
 
-  const relicSetSolutions = new Array<number>(Math.pow(Object.keys(SetsRelics).length, 4)).fill(1)
-  const ornamentSetSolutions = new Array<number>(Math.pow(Object.keys(SetsOrnaments).length, 2)).fill(1)
+  const relicSetSolutions = Array.from<number>({ length: Math.pow(Object.keys(SetsRelics).length, 4) }).fill(1)
+  const ornamentSetSolutions = Array.from<number>({ length: Math.pow(Object.keys(SetsOrnaments).length, 2) }).fill(1)
   const permutations = 1
 
-  const gpuContext = initializeGpuPipeline(
+  const gpuContext = await initializeGpuPipeline(
     device,
     relics,
     request,
@@ -98,14 +98,8 @@ export type StatDelta = {
   pass: boolean,
 }
 
-const EXACT = 0
-const P_0 = 1
-const P_1 = 0.1
 const P_2 = 0.01
-const P_3 = 0.001
 const P_4 = 0.0001
-const P_5 = 0.00001
-const P_6 = 0.000001
 
 // Dynamic precision based on combo magnitude
 // Larger values have more floating point precision loss
@@ -175,9 +169,6 @@ function arrayDelta(cpuContainer: ComputedStatsContainer, gpuContainer: Computed
 
   const cpu = cpuContainer.a
   const gpu = gpuContainer.a
-
-  // console.log(cpu)
-  // console.log(gpu)
 
   const statNames = AKeyNames
 
@@ -273,11 +264,11 @@ export function testWrapper(name: string, request: Form, relics: RelicsByPart, d
 }
 
 export function uncondenseRelics(relicsByPart: RelicsByPart) {
-  for (const [_, relics] of Object.entries(relicsByPart)) {
-    relics.map((relic) => {
+  for (const relics of Object.values(relicsByPart)) {
+    relics.forEach((relic) => {
       const condensedStats = relic.condensedStats!
       relic.substats = []
-      condensedStats.map(([key, value]) => {
+      condensedStats.forEach(([key, value]) => {
         relic.substats.push({
           stat: StatKeyToStat[key] as any,
           value,

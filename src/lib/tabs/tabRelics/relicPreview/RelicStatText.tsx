@@ -1,30 +1,29 @@
-import { Typography } from 'antd'
-import { Languages } from 'lib/utils/i18nUtils'
-import styled from 'styled-components'
+import { type Languages } from 'lib/utils/i18nUtils'
+import {
+  type CSSProperties,
+  memo,
+  useMemo,
+} from 'react'
 
-const { Text } = Typography
-
-const RelicStatText = styled(Text)<{ language?: Languages }>`
-    ${(props) => generateStyling(props.language)}
-`
-
-export default RelicStatText
-
-function generateStyling(language?: Languages) {
-  switch (language) {
-    case 'fr_FR':
-    case 'pt_BR':
-    case 'vi_VN':
-      return `
-        white-space: nowrap;
-        letter-spacing: -0.2px;
-        font-size: 13px;
-        line-height: 22px;
-      `
-    default:
-      return `
-        white-space: nowrap;
-        letter-spacing: -0.2px;
-      `
-  }
+// Pre-computed styles for languages with longer text
+const COMPACT_STYLE: CSSProperties = { whiteSpace: 'nowrap', fontSize: 13, lineHeight: '22px' }
+const DEFAULT_STYLE: CSSProperties = { whiteSpace: 'nowrap' }
+const LANGUAGE_STYLES: Partial<Record<Languages, CSSProperties>> = {
+  fr_FR: COMPACT_STYLE,
+  pt_BR: COMPACT_STYLE,
+  vi_VN: COMPACT_STYLE,
 }
+
+type RelicStatTextProps = React.HTMLAttributes<HTMLDivElement> & { language?: Languages }
+
+export const RelicStatText = memo(function RelicStatText(props: RelicStatTextProps) {
+  const { language, style, ...rest } = props
+  const baseStyle = language ? (LANGUAGE_STYLES[language] ?? DEFAULT_STYLE) : DEFAULT_STYLE
+
+  const mergedStyle = useMemo(
+    () => (style ? { ...baseStyle, ...style as CSSProperties } : baseStyle),
+    [baseStyle, style],
+  )
+
+  return <div style={mergedStyle} {...rest} />
+})

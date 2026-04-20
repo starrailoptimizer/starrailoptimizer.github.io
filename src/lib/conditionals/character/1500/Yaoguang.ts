@@ -3,8 +3,8 @@ import { SparkleB1 } from 'lib/conditionals/character/1300/SparkleB1'
 import { Sparxie } from 'lib/conditionals/character/1500/Sparxie'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
   findTeamAction,
   findTeamMeta,
@@ -26,14 +26,14 @@ import {
 } from 'lib/constants/constants'
 import { wgslTrue } from 'lib/gpu/injection/wgslUtils'
 import { Source } from 'lib/optimization/buffSource'
-import { ModifierContext } from 'lib/optimization/context/calculateActions'
+import { type ModifierContext } from 'lib/optimization/context/calculateActions'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import {
   DamageTag,
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { DamageFunctionType } from 'lib/optimization/engine/damage/damageCalculator'
 import {
   AbilityKind,
@@ -45,25 +45,26 @@ import {
 } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
 import {
-  RELICS_2P_SPEED,
   SPREAD_ORNAMENTS_2P_ENERGY_REGEN,
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { relics2pByStats } from 'lib/sets/setConfigRegistry'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  CharacterConditionalFunction,
-  CharacterConfig,
+  type CharacterConditionalFunction,
+  type CharacterConfig,
 } from 'types/characterConfig'
-import { ElationHit } from 'types/hitConditionalTypes'
+import { type ElationHit } from 'types/hitConditionalTypes'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const YaoguangEntities = createEnum('Yaoguang')
@@ -90,7 +91,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
     SOURCE_ELATION_SKILL,
   } = Source.character(Yaoguang.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yaoguang')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yaoguang')
 
   const basicScaling = basic(e, 0.90, 0.99)
   const skillElationBuff = skill(e, 0.20, 0.22)
@@ -151,19 +152,19 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       id: 'skillZoneActive',
       formItem: 'switch',
       text: t('Content.skillZoneActive.text'),
-      content: t('Content.skillZoneActive.content', { elationConversion: TsUtils.precisionRound(100 * skillElationBuff) }),
+      content: t('Content.skillZoneActive.content', { elationConversion: precisionRound(100 * skillElationBuff) }),
     },
     ultResPenBuff: {
       id: 'ultResPenBuff',
       formItem: 'switch',
       text: t('Content.ultResPenBuff.text'),
-      content: t('Content.ultResPenBuff.content', { resPen: TsUtils.precisionRound(100 * ultResPenValue) }),
+      content: t('Content.ultResPenBuff.content', { resPen: precisionRound(100 * ultResPenValue) }),
     },
     certifiedBanger: {
       id: 'certifiedBanger',
       formItem: 'switch',
       text: t('Content.certifiedBanger.text'),
-      content: t('Content.certifiedBanger.content', { greatBoonScaling: TsUtils.precisionRound(100 * talentElationScaling) }),
+      content: t('Content.certifiedBanger.content', { greatBoonScaling: precisionRound(100 * talentElationScaling) }),
     },
     yaoguangAhaInstant: {
       id: 'yaoguangAhaInstant',
@@ -175,7 +176,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       id: 'woesWhisperVulnerability',
       formItem: 'switch',
       text: t('Content.woesWhisperVulnerability.text'),
-      content: t('Content.woesWhisperVulnerability.content', { woeWhisperVulnerability: TsUtils.precisionRound(100 * elationSkillVulnerability) }),
+      content: t('Content.woesWhisperVulnerability.content', { woeWhisperVulnerability: precisionRound(100 * elationSkillVulnerability) }),
     },
     traceSpdElation: {
       id: 'traceSpdElation',
@@ -212,7 +213,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       id: 'consumesSkillPoints',
       formItem: 'switch',
       text: t('TeammateContent.consumesSkillPoints.text'),
-      content: t('TeammateContent.consumesSkillPoints.content', { greatBoonScaling: TsUtils.precisionRound(100 * talentElationScaling) }),
+      content: t('TeammateContent.consumesSkillPoints.content', { greatBoonScaling: precisionRound(100 * talentElationScaling) }),
     },
     yaoguangAhaInstant: content.yaoguangAhaInstant,
     teammateCertifiedBangerStacks: {
@@ -493,7 +494,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     WHOLE_ELATION_SKILL,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   deprioritizeBuffs: true,
   breakpoints: {
@@ -502,11 +502,10 @@ const simulation = (): SimulationMetadata => ({
   relicSets: [
     [Sets.EverGloriousMagicalGirl, Sets.EverGloriousMagicalGirl],
     [Sets.DivinerOfDistantReach, Sets.DivinerOfDistantReach],
-    RELICS_2P_SPEED,
+    relics2pByStats(Stats.SPD_P),
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
-    // TODO: Add Sets.PunklordeStageZero during 4.1
     Sets.TengokuLivestream,
     Sets.PunklordeStageZero,
     ...SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
@@ -571,11 +570,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 875,
-    y: 1060,
-    z: 1.15,
+    x: 877,
+    y: 1086,
+    z: 1.2,
   },
-  showcaseColor: '#c3d7d8',
+  showcaseColor: '#37a6f4',
 }
 
 export function getYaoguangAhaPunchlineValue(action: OptimizerAction, context: OptimizerContext): number | undefined {

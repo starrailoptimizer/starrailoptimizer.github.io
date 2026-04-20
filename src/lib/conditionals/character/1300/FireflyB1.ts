@@ -1,10 +1,12 @@
 import { Fugue } from 'lib/conditionals/character/1200/Fugue'
 import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
 import { TheDahlia } from 'lib/conditionals/character/1300/TheDahlia'
-import {
-  AbilityEidolon,
+import type {
   Conditionals,
   ContentDefinition,
+} from 'lib/conditionals/conditionalUtils'
+import {
+  AbilityEidolon,
   createEnum,
   teammateMatchesId,
 } from 'lib/conditionals/conditionalUtils'
@@ -38,7 +40,7 @@ import {
   ElementTag,
   SELF_ENTITY_INDEX,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -50,17 +52,19 @@ import {
 } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { SPREAD_RELICS_4P_GENERAL_CONDITIONALS } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { Hit } from 'types/hitConditionalTypes'
-import {
+import type { Eidolon } from 'types/character'
+import type { CharacterConfig } from 'types/characterConfig'
+import type { CharacterConditionalsController } from 'types/conditionals'
+import type { Hit } from 'types/hitConditionalTypes'
+import type {
   ScoringMetadata,
   SimulationMetadata,
 } from 'types/metadata'
-import {
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -73,7 +77,7 @@ export const FireflyB1Abilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Firefly')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.FireflyB1')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -116,7 +120,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enhancedStateActive',
       formItem: 'switch',
       text: t('Content.enhancedStateActive.text'),
-      content: t('Content.enhancedStateActive.content'),
+      content: t('Content.enhancedStateActive.content', {
+        breakDmgDealt: precisionRound(100 * ultWeaknessBrokenBreakVulnerability),
+      }),
     },
     enhancedStateSpdBuff: {
       id: 'enhancedStateSpdBuff',
@@ -141,8 +147,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.talentDmgReductionBuff.text'),
       content: t('Content.talentDmgReductionBuff.content', {
-        talentResBuff: TsUtils.precisionRound(100 * talentResBuff),
-        talentDmgReductionBuff: TsUtils.precisionRound(100 * talentDmgReductionBuff),
+        talentResBuff: precisionRound(100 * talentResBuff),
+        talentDmgReductionBuff: precisionRound(100 * talentDmgReductionBuff),
       }),
     },
     e1DefShred: {
@@ -323,7 +329,7 @@ if (${wgslTrue(r.superBreakDmg && r.enhancedStateActive)} && be >= 3.00) {
             action,
             context,
             SOURCE_TRACE,
-            (convertibleValue) => 0.008 * Math.floor((convertibleValue - 1800) / 10),
+            (convertibleValue) => 0.008 * floorSafe((convertibleValue - 1800) / 10),
           )
         },
         gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -335,7 +341,7 @@ if (${wgslTrue(r.superBreakDmg && r.enhancedStateActive)} && be >= 3.00) {
             this,
             action,
             context,
-            `0.008 * floor((convertibleValue - 1800.0) / 10.0)`,
+            `0.008 * floorSafe((convertibleValue - 1800.0) / 10.0)`,
             `${wgslTrue(r.atkToBeConversion)} && ${containerActionVal(SELF_ENTITY_INDEX, StatKey.ATK, action.config)} > 1800.0`,
           )
         },
@@ -453,7 +459,7 @@ const display = {
     y: 1075,
     z: 1.25,
   },
-  showcaseColor: '#a0efec',
+  showcaseColor: '#00bbab',
 }
 
 export const FireflyB1: CharacterConfig = {

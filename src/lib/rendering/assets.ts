@@ -1,18 +1,15 @@
+import { BASE_PATH } from 'lib/constants/appPages'
 import {
   Constants,
   Parts,
   SACERDOS_RELIVED_ORDEAL_1_STACK,
   SACERDOS_RELIVED_ORDEAL_2_STACK,
-  Sets,
+  type Sets,
   Stats,
 } from 'lib/constants/constants'
 import { setToId } from 'lib/sets/setConfigRegistry'
-import { BASE_PATH } from 'lib/state/db'
-import { Languages } from 'lib/utils/i18nUtils'
-import { Nullable } from 'types/common'
-
-// let baseUrl = process.env.PUBLIC_URL // Local testing;
-// const baseUrl = 'https://d28ecrnsw8u0fj.cloudfront.net'
+import { type Languages } from 'lib/utils/i18nUtils'
+import { type Nullable } from 'types/common'
 
 function getImageUrl(name: string) {
   return new URL(BASE_PATH + `/assets` + name, import.meta.url).href
@@ -46,11 +43,11 @@ const iconFromStatMapping: Record<string, string> = {
 
 export const Assets = {
   getStatIcon: (stat: string, percented: boolean = false) => {
-    if (stat == 'CV') return getImageUrl(`/misc/cv.webp`)
-    if (stat == 'simScore') return getImageUrl(`/misc/battle.webp`)
-    if (stat == Constants.Stats.HP_P && percented) return getImageUrl(`/misc/IconMaxHPPercent.webp`)
-    if (stat == Constants.Stats.ATK_P && percented) return getImageUrl(`/misc/IconAttackPercent.webp`)
-    if (stat == Constants.Stats.DEF_P && percented) return getImageUrl(`/misc/IconDefencePercent.webp`)
+    if (stat === 'CV') return getImageUrl(`/misc/cv.webp`)
+    if (stat === 'simScore') return getImageUrl(`/misc/battle.webp`)
+    if (stat === Constants.Stats.HP_P && percented) return getImageUrl(`/misc/IconMaxHPPercent.webp`)
+    if (stat === Constants.Stats.ATK_P && percented) return getImageUrl(`/misc/IconAttackPercent.webp`)
+    if (stat === Constants.Stats.DEF_P && percented) return getImageUrl(`/misc/IconDefencePercent.webp`)
     if (!stat || !iconFromStatMapping[stat]) return Assets.getBlank()
 
     return getImageUrl(`/icon/property/${iconFromStatMapping[stat]}`)
@@ -172,19 +169,19 @@ export const Assets = {
       [Constants.Parts.LinkRope]: '_1',
     }
     if (actualIcon) {
-      if (set == SACERDOS_RELIVED_ORDEAL_1_STACK || set == SACERDOS_RELIVED_ORDEAL_2_STACK) {
+      if (set === SACERDOS_RELIVED_ORDEAL_1_STACK || set === SACERDOS_RELIVED_ORDEAL_2_STACK) {
         return getImageUrl(`/icon/relic/${setToId[Constants.Sets.SacerdosRelivedOrdeal]}.webp`)
       }
       return getImageUrl(`/icon/relic/${setToId[setId]}.webp`)
     }
-    if (set == SACERDOS_RELIVED_ORDEAL_1_STACK || set == SACERDOS_RELIVED_ORDEAL_2_STACK) {
+    if (set === SACERDOS_RELIVED_ORDEAL_1_STACK || set === SACERDOS_RELIVED_ORDEAL_2_STACK) {
       return getImageUrl(`/icon/relic/${setToId[Constants.Sets.SacerdosRelivedOrdeal]}${partToId[part]}.webp`)
     }
     return getImageUrl(`/icon/relic/${setToId[setId]}${partToId[part]}.webp`)
   },
 
-  getHomeFeature: (file: string, language: Languages = 'en_US') => {
-    return getImageUrl(`/misc/home/${language}/${file}.webp`)
+  getHomeFeature: (file: string) => {
+    return getImageUrl(`/misc/home/features/${file}.webp`)
   },
 
   getHomeBackground: (file: string) => {
@@ -193,5 +190,9 @@ export const Assets = {
 
   getGlobe: () => {
     return getImageUrl(`/misc/globe.webp`)
+  },
+
+  getDefaultRelic: () => {
+    return getImageUrl('/misc/defaultrelic.webp')
   },
 }

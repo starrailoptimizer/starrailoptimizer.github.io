@@ -1,47 +1,77 @@
-import { Flex } from 'antd'
-import i18next from 'i18next'
+import { Divider } from '@mantine/core'
+import { type TFunction } from 'i18next'
+import { RECHARTS_TOOLTIP_WRAPPER_STYLE } from 'lib/constants/constantsUi'
 import {
   chartColor,
-  DamageSplitEntry,
   decodeDamageTypeLabel,
   getDamageTypeColor,
 } from 'lib/tabs/tabOptimizer/analysis/damageSplitsExtractor'
-import { localeNumberComma } from 'lib/utils/i18nUtils'
-import React, { useMemo, useState } from 'react'
+import type { DamageSplitEntry } from 'lib/tabs/tabOptimizer/analysis/damageSplitsExtractor'
+import {
+  localeNumberComma,
+  renderThousandsK,
+} from 'lib/utils/i18nUtils'
+import type { ReactNode } from 'react'
+import {
+  type CSSProperties,
+  Fragment,
+  useMemo,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import type { LabelProps } from 'recharts'
 import {
   Bar,
   BarChart,
   LabelList,
-  LabelProps,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 
-export const DAMAGE_SPLITS_CHART_WIDTH = 730
+type TooltipPayloadEntry = {
+  dataKey?: string | number,
+  value?: number,
+  name?: string,
+  color?: string,
+}
+
+const TOOLTIP_STYLE: CSSProperties = {
+  display: 'flex',
+  flexDirection: 'row',
+  background: 'var(--layer-3)',
+  border: '1px solid var(--border-default)',
+  padding: 8,
+  borderRadius: 'var(--radius-sm)',
+  gap: 8,
+}
+
+const DAMAGE_SPLITS_CHART_WIDTH = 730
 const BAR_HEIGHT = 48
 const CHART_PADDING = 80
+const CHART_LEFT_MARGIN = 105 // 25 margin + 80 YAxis width
+const CHART_RIGHT_MARGIN = 60
+const PLOT_WIDTH = DAMAGE_SPLITS_CHART_WIDTH - CHART_LEFT_MARGIN - CHART_RIGHT_MARGIN
 
 type FlattenedBar = {
-  key: string
-  damageType: number
-  label: string
-  color: string
-  shape: (props: { x: number; y: number; width: number; height: number }) => React.ReactNode
+  key: string,
+  damageType: number,
+  label: string,
+  color: string,
+  shape: (props: { x: number, y: number, width: number, height: number }) => ReactNode,
 }
 
 type LegendItem = {
-  damageType: number
-  color: string
-  label: string
+  damageType: number,
+  color: string,
+  label: string,
 }
 
 type FlatRow = Record<string, number | string> & {
-  name: string
-  total: number
+  name: string,
+  total: number,
 }
 
-function flattenData(data: DamageSplitEntry[]): { rows: FlatRow[]; bars: FlattenedBar[]; legendItems: LegendItem[] } {
+function flattenData(data: DamageSplitEntry[], t: TFunction<'optimizerTab'>): { rows: FlatRow[], bars: FlattenedBar[], legendItems: LegendItem[] } {
   const bars: FlattenedBar[] = []
   const rows: FlatRow[] = []
   const seenDamageTypes = new Set<number>()
@@ -71,7 +101,7 @@ function flattenData(data: DamageSplitEntry[]): { rows: FlatRow[]; bars: Flatten
         legendItems.push({
           damageType: seg.damageType,
           color,
-          label: decodeDamageTypeLabel(seg.damageType),
+          label: decodeDamageTypeLabel(seg.damageType, t),
         })
       }
     }
@@ -79,35 +109,47 @@ function flattenData(data: DamageSplitEntry[]): { rows: FlatRow[]; bars: Flatten
     rows.push(row)
   }
 
+  // Fill missing bar keys with 0 so recharts stacking accumulates positions correctly
+  const allKeys = bars.map((b) => b.key)
+  for (const row of rows) {
+    for (const key of allKeys) {
+      if (row[key] === undefined) {
+        row[key] = 0
+      }
+    }
+  }
+
   return { rows, bars, legendItems }
 }
 
 const SEGMENT_GAP = 2
 
-function renderBarLabel(props: LabelProps) {
-  const x = Number(props.x ?? 0)
-  const y = Number(props.y ?? 0)
-  const width = Number(props.width ?? 0)
-  const height = Number(props.height ?? 0)
-  const value = Number(props.value ?? 0)
-  if (!value) return null
-  return (
-    <text
-      x={x + width + 8}
-      y={y + height / 2}
-      fill={chartColor}
-      dominantBaseline='central'
-      textRendering='geometricPrecision'
-      fontWeight={300}
-      fontSize={14}
-    >
-      {renderThousandsK(value)}
-    </text>
-  )
+function createBarLabelRenderer(maxTotal: number) {
+  return function renderBarLabel(props: LabelProps) {
+    const y = Number(props.y ?? 0)
+    const height = Number(props.height ?? 0)
+    const value = Number(props.value ?? 0)
+    if (!value) return null
+    // Calculate x position based on value and chart scale, not individual bar width
+    const x = CHART_LEFT_MARGIN + (value / maxTotal) * PLOT_WIDTH
+    return (
+      <text
+        x={x + 8}
+        y={y + height / 2}
+        fill={chartColor}
+        dominantBaseline='central'
+        textRendering='geometricPrecision'
+        fontWeight={300}
+        fontSize={14}
+      >
+        {renderThousandsK(value)}
+      </text>
+    )
+  }
 }
 
 function GapBar(color: string, isFirst: boolean) {
-  return (props: { x: number; y: number; width: number; height: number }) => {
+  return (props: { x: number, y: number, width: number, height: number }) => {
     if (props.width <= 0) return null
     if (isFirst) {
       return (
@@ -147,46 +189,77 @@ function GapBar(color: string, isFirst: boolean) {
   }
 }
 
-function parseLabel(name: string): { num: string; label: string } {
+function parseLabel(name: string): { num: string, label: string } {
   const match = name.match(/^(\d+)\.\s*(.+)$/)
   if (match) return { num: match[1], label: match[2] }
   return { num: '', label: name }
 }
 
-function dimNumberLeftTick(props: { x: number; y: number; payload: { value: string } }) {
+function dimNumberLeftTick(props: { x: string | number, y: string | number, payload: { value: string } }) {
   const { x, y, payload } = props
-  const tx = x - 70
+  const tx = Number(x) - 70
   const { num, label } = parseLabel(payload.value)
+  const words = label.split(' ')
+  const multiline = words.length > 1
+  const lineHeight = 14
+  const startDy = multiline ? -((words.length - 1) * lineHeight) / 2 : 0
 
   if (!num) {
     return (
-      <text x={tx} y={y} textAnchor='start' fill={chartColor} fontSize={13} fontWeight={300} dominantBaseline='central'>
-        {payload.value}
+      <text x={tx} y={y} textAnchor='start' fontSize={13} fontWeight={300} dominantBaseline='central'>
+        <tspan fill='transparent'>0.</tspan>
+        {words.map((word, i) => <tspan key={i} x={tx + 23} dy={i === 0 ? startDy : lineHeight} fill={chartColor}>{word}</tspan>)}
       </text>
     )
   }
 
   return (
     <text x={tx} y={y} textAnchor='start' fontSize={13} fontWeight={300} dominantBaseline='central'>
-      <tspan fill='#667'>{num}. </tspan>
-      <tspan fill={chartColor}>{label}</tspan>
+      <tspan fill='#667'>{num}.</tspan>
+      {words.map((word, i) => <tspan key={i} x={tx + 23} dy={i === 0 ? startDy : lineHeight} fill={chartColor}>{word}</tspan>)}
     </text>
   )
 }
 
-export function DamageSplitsChart(props: { data: DamageSplitEntry[] }) {
-  const [hoveredBar, setHoveredBar] = useState<string | null>(null)
+function CustomTooltip({ active, payload, bars }: { active?: boolean, payload?: TooltipPayloadEntry[], bars: FlattenedBar[] }) {
+  if (!active || !payload || payload.length === 0) return null
 
-  const { rows, bars, legendItems } = useMemo(() => flattenData(props.data), [props.data])
+  const entries = payload.filter((p) => typeof p.value === 'number' && p.value > 0)
+  if (entries.length === 0) return null
+
+  return (
+    <div className='pre-font' style={TOOLTIP_STYLE}>
+      {entries.map((entry, idx) => {
+        const barDef = bars.find((b) => b.key === entry.dataKey)
+        if (!barDef) return null
+        return (
+          <Fragment key={entry.dataKey}>
+            <span style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 'bold' }}>{barDef.label}</div>
+              <div>{localeNumberComma(Math.floor(entry.value as number))}</div>
+            </span>
+            {(idx !== entries.length - 1) && <Divider orientation='vertical' />}
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
+export function DamageSplitsChart({ data }: { data: DamageSplitEntry[] }) {
+  const { t } = useTranslation('optimizerTab')
+  const { rows, bars, legendItems } = useMemo(() => flattenData(data, t), [data, t])
 
   if (rows.length === 0) {
     return null
   }
 
   const chartHeight = Math.max(200, rows.length * BAR_HEIGHT + CHART_PADDING)
+  const maxTotal = useMemo(() => Math.max(...rows.map((r) => r.total)), [rows])
+  const renderBarLabel = useMemo(() => createBarLabelRenderer(maxTotal), [maxTotal])
 
   return (
-    <Flex vertical align='center' className='pre-font'>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }} className='pre-font'>
       <BarChart
         layout='vertical'
         data={rows}
@@ -197,6 +270,7 @@ export function DamageSplitsChart(props: { data: DamageSplitEntry[] }) {
       >
         <XAxis
           type='number'
+          domain={[0, maxTotal]}
           tick={{ fill: chartColor, textRendering: 'geometricPrecision', fontWeight: 300, fontSize: 13 }}
           tickFormatter={renderThousandsK}
           width={100}
@@ -210,10 +284,12 @@ export function DamageSplitsChart(props: { data: DamageSplitEntry[] }) {
           tickMargin={15}
           width={80}
         />
+        {/* Only animate opacity (not position) to prevent fly-in from corner on first render */}
         <Tooltip
-          cursor={false}
+          content={<CustomTooltip bars={bars} />}
+          cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }}
           isAnimationActive={false}
-          content={<CustomTooltip hoveredBar={hoveredBar} bars={bars} />}
+          wrapperStyle={RECHARTS_TOOLTIP_WRAPPER_STYLE}
         />
 
         {bars.map((bar, i) => (
@@ -222,66 +298,31 @@ export function DamageSplitsChart(props: { data: DamageSplitEntry[] }) {
             dataKey={bar.key}
             stackId='a'
             fill={bar.color}
-            // @ts-ignore recharts shape typing
+            // @ts-expect-error recharts shape typing doesn't support custom shape functions
             shape={bar.shape}
             activeBar={false}
             isAnimationActive={false}
-            onMouseEnter={() => setHoveredBar(bar.key)}
-            onMouseLeave={() => setHoveredBar(null)}
           >
-            {i === bars.length - 1 && (
-              <LabelList dataKey='total' position='right' content={renderBarLabel} />
-            )}
+            {/* Attach labels to last bar; position calculated from total value, not bar width */}
+            {i === bars.length - 1 && <LabelList dataKey='total' position='right' content={renderBarLabel} />}
           </Bar>
         ))}
       </BarChart>
-      <Flex wrap='wrap' justify='center' gap={16} style={{ marginTop: -10 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 16, marginTop: -10, paddingBlock: 8 }}>
         {legendItems.map((item) => (
-          <Flex key={item.damageType} align='center' gap={6}>
-            <div style={{
-              width: 12,
-              height: 12,
-              borderRadius: 2,
-              backgroundColor: item.color,
-            }} />
+          <div key={item.damageType} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 2,
+                backgroundColor: item.color,
+              }}
+            />
             <span style={{ fontSize: 13, color: chartColor }}>{item.label}</span>
-          </Flex>
+          </div>
         ))}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
-}
-
-type TooltipPayloadItem = {
-  dataKey: string
-  value: number
-}
-
-function CustomTooltip(props: {
-  active?: boolean
-  payload?: TooltipPayloadItem[]
-  hoveredBar: string | null
-  bars: FlattenedBar[]
-}) {
-  const { active, payload, hoveredBar, bars } = props
-  if (!active || !payload || !hoveredBar) return null
-
-  const barDef = bars.find((b) => b.key === hoveredBar)
-  const dataItem = payload.find((p) => p.dataKey === hoveredBar)
-  if (!barDef || !dataItem) return null
-
-  return (
-    <Flex
-      vertical
-      className='pre-font'
-      style={{ background: 'rgb(69,93,154)', padding: 8, borderRadius: 3 }}
-    >
-      <span style={{ fontSize: 14, fontWeight: 'bold' }}>{barDef.label}</span>
-      <span>{localeNumberComma(Math.floor(dataItem.value))}</span>
-    </Flex>
-  )
-}
-
-export function renderThousandsK(n: number) {
-  return `${Math.floor(Number(n) / 1000)}${i18next.t('common:ThousandsSuffix')}`
 }

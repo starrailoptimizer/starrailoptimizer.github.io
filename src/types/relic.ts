@@ -1,12 +1,12 @@
-import {
+import type {
   MainStats,
   Parts,
   Sets,
   StatsValues,
   SubStats,
 } from 'lib/constants/constants'
-import { AugmentedStats } from 'lib/relics/relicAugmenter'
-import { CharacterId } from 'types/character'
+import type { AugmentedStats } from 'lib/relics/relicAugmenter'
+import type { CharacterId } from 'types/character'
 
 export type RelicId = string
 export type RelicGrade = number
@@ -17,10 +17,6 @@ export type UnaugmentedRelic =
   & Partial<Pick<Relic, 'id' | 'augmentedStats' | 'initialRolls' | 'ageIndex' | 'previewSubstats' | 'equippedBy'>>
 
 export type Relic = {
-  /*
-   * refactor?
-   * augmentedCaseWeight?: any;
-   */
   weightScore: number, // optimiser
 
   enhance: RelicEnhance,
@@ -28,7 +24,7 @@ export type Relic = {
   grade: RelicGrade,
   id: RelicId,
   verified?: boolean,
-  ageIndex: number,
+  ageIndex?: number,
 
   main: {
     stat: MainStats,

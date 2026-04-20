@@ -3,8 +3,8 @@ import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae
 import { Tribbie } from 'lib/conditionals/character/1400/Tribbie'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   countTeamPath,
   createEnum,
   mainIsPath,
@@ -26,7 +26,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   END_ULT,
@@ -39,17 +39,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TheHertaEntities = createEnum('TheHerta')
@@ -61,7 +62,7 @@ export const TheHertaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TheHerta')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TheHerta')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -114,23 +115,23 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.eruditionTeammate.text'),
       content: t('Content.eruditionTeammate.content', {
-        PrimaryScalingBonus: TsUtils.precisionRound(talentStackScaling * 100),
-        AdjacentScalingBonus: TsUtils.precisionRound(talentStackScaling * 0.5 * 100),
+        PrimaryScalingBonus: precisionRound(talentStackScaling * 100),
+        AdjacentScalingBonus: precisionRound(talentStackScaling * 0.5 * 100),
       }),
     },
     ultAtkBuff: {
       id: 'ultAtkBuff',
       formItem: 'switch',
       text: t('Content.ultAtkBuff.text'),
-      content: t('Content.ultAtkBuff.content', { AtkBuff: TsUtils.precisionRound(ultAtkBuffScaling * 100) }),
+      content: t('Content.ultAtkBuff.content', { AtkBuff: precisionRound(ultAtkBuffScaling * 100) }),
     },
     interpretationStacks: {
       id: 'interpretationStacks',
       formItem: 'slider',
       text: t('Content.interpretationStacks.text'),
       content: t('Content.interpretationStacks.content', {
-        PrimaryScalingBonus: TsUtils.precisionRound(talentStackScaling * 100),
-        AdjacentScalingBonus: TsUtils.precisionRound(talentStackScaling * 0.5 * 100),
+        PrimaryScalingBonus: precisionRound(talentStackScaling * 100),
+        AdjacentScalingBonus: precisionRound(talentStackScaling * 0.5 * 100),
       }),
       min: 1,
       max: 42,
@@ -306,7 +307,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
@@ -388,7 +388,7 @@ const display = {
     y: 1085,
     z: 1.275,
   },
-  showcaseColor: '#aa81fa',
+  showcaseColor: '#b185eb',
 }
 
 export const TheHerta: CharacterConfig = {

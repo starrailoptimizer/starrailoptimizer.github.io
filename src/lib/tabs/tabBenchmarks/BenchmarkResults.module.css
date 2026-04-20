@@ -1,0 +1,146 @@
+.resultsContainer {
+  width: 100%;
+}
+
+.tableWrapper {
+  padding: 8px;
+  background-color: var(--layer-2);
+  border: 1px solid var(--border-default);
+  border-top: none;
+}
+
+.tableWrapper .benchmarkTable {
+  width: 100%;
+  border: 1px solid var(--border-default);
+  box-shadow: var(--shadow-card-flat);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.expandColumn {
+  width: 30px;
+}
+
+.expandCell {
+  vertical-align: middle;
+}
+
+.expandCell svg {
+  display: block;
+  margin: auto;
+}
+
+.comboColumn {
+  text-align: center !important;
+  width: 200px;
+}
+
+.deltaColumn {
+  text-align: center !important;
+  width: 100px;
+}
+
+.centeredColumn {
+  text-align: center !important;
+}
+
+.setsColumn {
+  text-align: center !important;
+  width: 150px;
+}
+
+.clickableRow {
+  cursor: pointer;
+}
+
+.expandedCell {
+  padding: 0;
+}
+
+.centeredCell {
+  text-align: center;
+}
+
+.comboCellInner {
+  text-align: center;
+  position: relative;
+}
+
+.paginationBar {
+  padding: 8px;
+}
+
+.paginationButton {
+  padding: 4px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+}
+
+.tabsList {
+  width: 100%;
+  margin: 0;
+}
+
+.expandedRow {
+  margin: 8px;
+  background-color: var(--layer-1);
+  border-radius: var(--radius-md);
+  padding: 8px;
+}
+
+.statsColumn {
+  min-width: 300px;
+}
+
+.statIcon {
+  width: 32px;
+}
+
+.setSpacer {
+  width: 10px;
+}
+
+.comboDmgOverlay {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.comboDmgBar {
+  display: block;
+  border-top-right-radius: var(--radius-sm);
+  border-bottom-right-radius: var(--radius-sm);
+  position: absolute;
+  height: 100%;
+  z-index: 1;
+}
+
+.comboDmgContent {
+  width: 100%;
+  z-index: 2;
+}
+
+.comboDmgBadge {
+  opacity: 1;
+  border: 0;
+  padding: 1px 12px;
+}
+
+.comboDmgText {
+  margin: 0;
+  align-items: center;
+  font-weight: normal;
+}
+
+.deltaIcon {
+  font-size: 10px;
+  line-height: 17px;
+}
+
+.sectionHeader {
+  font-size: 16px;
+}

@@ -1,3 +1,16 @@
+import { Archer } from 'lib/conditionals/character/1000/Archer'
+import { Saber } from 'lib/conditionals/character/1000/Saber'
+import { Hook } from 'lib/conditionals/character/1100/Hook'
+import { JingliuB1 } from 'lib/conditionals/character/1200/JingliuB1'
+import { Yunli } from 'lib/conditionals/character/1200/Yunli'
+import { Anaxa } from 'lib/conditionals/character/1400/Anaxa'
+import { Castorice } from 'lib/conditionals/character/1400/Castorice'
+import { Cyrene } from 'lib/conditionals/character/1400/Cyrene'
+import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
+import { Phainon } from 'lib/conditionals/character/1400/Phainon'
+import { TheHerta } from 'lib/conditionals/character/1400/TheHerta'
+import { Ashveil } from 'lib/conditionals/character/1500/Ashveil'
+import type { ComboState } from 'lib/optimization/combo/comboTypes'
 import { AbilityTriggeredStackPreprocessor } from 'lib/optimization/rotation/preprocessor/utils/abilityTriggeredStackPreprocessor'
 import {
   AbilityPreprocessorBase,
@@ -6,22 +19,9 @@ import {
 } from 'lib/optimization/rotation/preprocessor/utils/preprocessUtils'
 import {
   AbilityKind,
-  TurnAbility,
+  type TurnAbility,
   TurnMarker,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { Archer } from 'lib/conditionals/character/1000/Archer'
-import { Saber } from 'lib/conditionals/character/1000/Saber'
-import { Hook } from 'lib/conditionals/character/1100/Hook'
-import { JingliuB1 } from 'lib/conditionals/character/1200/JingliuB1'
-import { Yunli } from 'lib/conditionals/character/1200/Yunli'
-import { TheHerta } from 'lib/conditionals/character/1400/TheHerta'
-import { Anaxa } from 'lib/conditionals/character/1400/Anaxa'
-import { Castorice } from 'lib/conditionals/character/1400/Castorice'
-import { Cyrene } from 'lib/conditionals/character/1400/Cyrene'
-import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
-import { Ashveil } from 'lib/conditionals/character/1500/Ashveil'
-import { Phainon } from 'lib/conditionals/character/1400/Phainon'
-import { ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
 
 export class CastoricePreprocessor extends AbilityPreprocessorBase {
   id = Castorice.id
@@ -94,7 +94,7 @@ export class TheHertaPreprocessor extends AbilityPreprocessorBase {
         setComboBooleanCategoryCharacterActivation(comboState, 'enhancedSkill', index, false)
       }
 
-      if (this.state.postUltEnhancement == true) {
+      if (this.state.postUltEnhancement) {
         setComboNumberCategoryCharacterActivation(comboState, 'interpretationStacks', index, 42)
         this.state.postUltEnhancement = false
       } else {
@@ -145,7 +145,7 @@ export class PhainonPreprocessor extends AbilityPreprocessorBase {
     const { kind } = turnAbility
 
     if (kind == AbilityKind.ULT) {
-      if (this.state.transformedState == false) {
+      if (!this.state.transformedState) {
         setComboBooleanCategoryCharacterActivation(comboState, 'transformedState', index, false)
         this.state.transformedState = true
       } else {
@@ -171,7 +171,7 @@ export class SaberPreprocessor extends AbilityPreprocessorBase {
     const { kind } = turnAbility
 
     if (kind == AbilityKind.SKILL) {
-      if (this.state.enhancedSkill == false) {
+      if (!this.state.enhancedSkill) {
         setComboBooleanCategoryCharacterActivation(comboState, 'enhancedSkill', index, false)
         this.state.enhancedSkill = true
       } else {
@@ -279,14 +279,10 @@ export class AnaxaCyreneEffectPreprocessor extends AbilityPreprocessorBase {
   }
 
   processAbility(turnAbility: TurnAbility, index: number, comboState: ComboState) {
-    const { kind, marker } = turnAbility
+    const { marker } = turnAbility
 
     if (marker == TurnMarker.START || marker == TurnMarker.WHOLE) {
-      if (this.state.cyreneSpecialEffect) {
-        this.state.cyreneSpecialEffect = false
-      } else {
-        this.state.cyreneSpecialEffect = true
-      }
+      this.state.cyreneSpecialEffect = !this.state.cyreneSpecialEffect
     }
     setComboBooleanCategoryCharacterActivation(comboState, 'cyreneSpecialEffect', index, this.state.cyreneSpecialEffect)
   }
@@ -316,7 +312,7 @@ export class CyrenePreprocessor extends AbilityPreprocessorBase {
   }
 
   processAbility(turnAbility: TurnAbility, index: number, comboState: ComboState) {
-    const { kind, marker } = turnAbility
+    const { kind } = turnAbility
 
     if (kind == AbilityKind.MEMO_SKILL && this.state.memoSkillCounter >= 3) {
       this.state.memoSkillCounter = 0

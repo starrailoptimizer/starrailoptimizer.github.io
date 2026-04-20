@@ -1,29 +1,21 @@
-import { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
+import type { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
 import { Stats } from 'lib/constants/constants'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import type { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
 import { indent } from 'lib/gpu/injection/wgslUtils'
-import { ConditionalRegistry } from 'lib/optimization/calculateConditionals'
-import {
+import type { ConditionalRegistry } from 'lib/optimization/calculateConditionals'
+import type {
   Form,
   Teammate,
 } from 'types/form'
-import {
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
 
-function getRequestTeammateIndex(request: Form, conditional: DynamicConditional) {
-  let teammate: Teammate
-  if (conditional.teammateIndex == 0) teammate = request.teammate0
-  else if (conditional.teammateIndex == 1) teammate = request.teammate1
-  else teammate = request.teammate2
-
-  // @ts-ignore
-  teammate.teammateCharacterConditionals = teammate.characterConditionals
-  // @ts-ignore
-  teammate.teammateLightConeConditionals = teammate.lightConeConditionals
-
-  return teammate
+function getRequestTeammateIndex(request: Form, conditional: DynamicConditional): Teammate {
+  if (conditional.teammateIndex === 0) return request.teammate0
+  if (conditional.teammateIndex === 1) return request.teammate1
+  return request.teammate2
 }
 
 function generateDependencyEvaluator(
@@ -42,9 +34,12 @@ function generateDependencyEvaluator(
         if (conditional.teammateIndex == null) {
           return conditional.gpu(action, context)
         } else {
+          const requestTeammate = getRequestTeammateIndex(request, conditional)
           const teammate = {
             ...action,
-            ...getRequestTeammateIndex(request, conditional),
+            ...requestTeammate,
+            teammateCharacterConditionals: requestTeammate.characterConditionals,
+            teammateLightConeConditionals: requestTeammate.lightConeConditionals,
           }
           return conditional.gpu(teammate as unknown as OptimizerAction, context)
         }

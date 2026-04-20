@@ -1,18 +1,17 @@
-import { SettingOutlined } from '@ant-design/icons'
 import {
-  Flex,
-  InputNumber,
+  NumberInput,
   Popover,
-  Typography,
-} from 'antd'
+} from '@mantine/core'
+import { IconSettings } from '@tabler/icons-react'
 import {
-  Parts,
-  Sets,
+  type Parts,
+  type Sets,
 } from 'lib/constants/constants'
 import { Hint } from 'lib/interactions/hint'
 import { Assets } from 'lib/rendering/assets'
-import DB from 'lib/state/db'
 import { SaveState } from 'lib/state/saveState'
+import { createTabAwareStore } from 'lib/stores/infrastructure/createTabAwareStore'
+import { getRelics } from 'lib/stores/relic/relicStore'
 import { HeaderText } from 'lib/ui/HeaderText'
 import { TooltipImage } from 'lib/ui/TooltipImage'
 import {
@@ -20,9 +19,9 @@ import {
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Nullable } from 'types/common'
-import { Relic } from 'types/relic'
-import { create } from 'zustand'
+import type { Nullable } from 'types/common'
+import type { Relic } from 'types/relic'
+import { useShallow } from 'zustand/react/shallow'
 
 type LocatorFilters = { set: Sets | null, part: Parts | null }
 
@@ -38,17 +37,24 @@ type RelicLocatorStateValues = typeof defaultStateValues
 type RelicLocatorState = RelicLocatorStateValues & RelicLocatorStateActions
 
 // use a store to allow access when loading/creating a savefile
-export const useRelicLocatorStore = create<RelicLocatorState>()((set) => ({
+export const useRelicLocatorStore = createTabAwareStore<RelicLocatorState>((set) => ({
   ...defaultStateValues,
 
   setInventoryWidth: (width) => set({ inventoryWidth: width ?? defaultStateValues.inventoryWidth }),
   setRowLimit: (limit) => set({ rowLimit: limit ?? defaultStateValues.rowLimit }),
 }))
 
-export function RelicLocator(props: { relic: Relic | null }) {
-  const { relic } = props
+export function RelicLocator(props: { relic: Relic | null, compact?: boolean, style?: React.CSSProperties }) {
+  const { relic, compact = false, style: styleProp } = props
 
-  const { setInventoryWidth, setRowLimit, inventoryWidth, rowLimit } = useRelicLocatorStore()
+  const { setInventoryWidth, setRowLimit, inventoryWidth, rowLimit } = useRelicLocatorStore(
+    useShallow((s) => ({
+      setInventoryWidth: s.setInventoryWidth,
+      setRowLimit: s.setRowLimit,
+      inventoryWidth: s.inventoryWidth,
+      rowLimit: s.rowLimit,
+    })),
+  )
 
   const { t } = useTranslation('relicsTab', { keyPrefix: 'Toolbar.RelicLocator' })
 
@@ -58,107 +64,110 @@ export function RelicLocator(props: { relic: Relic | null }) {
   useEffect(() => {
     if (!relic) return
     const indexLimit = Math.max(1, rowLimit) * Math.max(1, inventoryWidth)
-    const newerRelics = DB.getRelics().filter((x) => x.ageIndex! > relic.ageIndex!)
+    const newerRelics = getRelics().filter((x) => x.ageIndex! > relic.ageIndex!)
 
     // Part-only filter
-    const partFilteredIndex = newerRelics.filter((x) => relic.part == x.part).length
+    const partFilteredIndex = newerRelics.filter((x) => relic.part === x.part).length
     if (partFilteredIndex < indexLimit) {
       setRelicPositionIndex(partFilteredIndex)
       setLocatorFilters({ set: null, part: relic.part })
       return
     }
 
-    const filteredIndex = newerRelics.filter((x) => relic.part == x.part && relic.set == x.set).length
+    const filteredIndex = newerRelics.filter((x) => relic.part === x.part && relic.set === x.set).length
     setRelicPositionIndex(filteredIndex)
     setLocatorFilters({ set: relic.set, part: relic.part })
   }, [relic, inventoryWidth, rowLimit])
 
   return (
     <Popover
-      trigger='click'
-      onOpenChange={(open) => {
+      onChange={(open) => {
         if (!open) {
           SaveState.delayedSave()
         }
       }}
-      content={
-        <Flex gap={8} style={{ minWidth: 260 }}>
-          <Flex vertical>
-            <Flex justify='space-between' align='center'>
+    >
+      <Popover.Target>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            cursor: 'pointer',
+            paddingLeft: compact ? 6 : 8,
+            paddingRight: compact ? 6 : 10,
+            width: compact ? 140 : 285,
+            marginTop: compact ? 0 : 1,
+            borderRadius: 6,
+            height: compact ? 26 : 30,
+            background: 'var(--mantine-color-default)',
+            boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
+            outline: '1px solid var(--border-default)',
+            ...styleProp,
+          }}
+        >
+          {relic
+            ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <LocatorFilterImage filters={locatorFilters} compact={compact} />
+                <div style={compact ? { fontSize: 13 } : undefined}>
+                  {t('Location', {
+                    rowIndex: Math.ceil((relicPositionIndex + 1) / inventoryWidth),
+                    columnIndex: relicPositionIndex % inventoryWidth + 1,
+                  })}
+                </div>
+                <IconSettings size={compact ? 20 : 24} />
+              </div>
+            )
+            : (
+              <div style={{ display: 'flex', width: '100%', paddingBottom: compact ? 0 : 2, justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ width: compact ? 4 : 10 }}></div>
+                <div style={compact ? { fontSize: 13 } : undefined}>{t('NoneSelected')}</div>
+                <div style={{ width: compact ? 14 : 24 }} />
+              </div>
+            )}
+        </div>
+      </Popover.Target>
+      <Popover.Dropdown>
+        <div style={{ display: 'flex', gap: 8, minWidth: 260 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <HeaderText>{t('Width') /* Inventory width */}</HeaderText>
-            </Flex>
-            <InputNumber
+              <TooltipImage type={Hint.locatorParams()} />
+            </div>
+            <NumberInput
               defaultValue={inventoryWidth}
               style={{ width: 'auto' }}
               min={1}
-              onChange={setInventoryWidth}
+              onChange={(val) => setInventoryWidth(typeof val === 'number' ? val : null)}
             />
-          </Flex>
+          </div>
 
-          <Flex vertical>
-            <Flex justify='space-between' align='center' gap={10}>
+          <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
               <HeaderText>{t('Filter') /* Auto filter rows */}</HeaderText>
-              <TooltipImage type={Hint.locatorParams()} />
-            </Flex>
-            <InputNumber
+              <TooltipImage type={Hint.relicLocation()} />
+            </div>
+            <NumberInput
               defaultValue={rowLimit}
               style={{ width: 'auto' }}
               min={1}
-              onChange={setRowLimit}
+              onChange={(val) => setRowLimit(typeof val === 'number' ? val : null)}
             />
-          </Flex>
-        </Flex>
-      }
-    >
-      <Flex
-        justify='space-between'
-        align='center'
-        style={{
-          cursor: 'pointer',
-          paddingLeft: 8,
-          paddingRight: 10,
-          width: 285,
-          marginTop: 1,
-          borderRadius: 5,
-          height: 30,
-          background: 'rgba(36, 51, 86)',
-          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.2)',
-          outline: '1px solid rgba(63, 90, 150)',
-        }}
-      >
-        {relic
-          ? (
-            <Flex align='center' justify='space-between' style={{ width: '100%' }}>
-              <LocatorFilterImage filters={locatorFilters} />
-              <Typography>
-                {/* Location - Row {{rowIndex}} / Col {{columnIndex}} */}
-                {t('Location', {
-                  columnIndex: relicPositionIndex % inventoryWidth + 1,
-                  rowIndex: Math.ceil((relicPositionIndex + 1) / inventoryWidth),
-                })}
-              </Typography>
-              <SettingOutlined />
-            </Flex>
-          )
-          : (
-            <Flex style={{ width: '100%', paddingBottom: 2 }} justify='space-between'>
-              <div style={{ width: 10 }}></div>
-              {/* Select a relic to locate */}
-              <div>{t('NoneSelected')}</div>
-              <SettingOutlined />
-            </Flex>
-          )}
-      </Flex>
+          </div>
+        </div>
+      </Popover.Dropdown>
     </Popover>
   )
 }
 
-function LocatorFilterImage(props: { filters: LocatorFilters }) {
+function LocatorFilterImage(props: { filters: LocatorFilters, compact?: boolean }) {
   const { part, set } = props.filters
+  const compact = props.compact ?? false
   return (
-    <Flex gap={5} style={{ minWidth: 10 }} justify='flex-start'>
-      <img src={Assets.getPart(part!)} style={{ height: 25 }} />
-      {set && <img src={Assets.getSetImage(set, undefined, true)} style={{ height: 26 }} />}
-    </Flex>
+    <div style={{ display: 'flex', gap: compact ? 3 : 5, minWidth: 10 }}>
+      <img src={Assets.getPart(part!)} style={{ height: compact ? 22 : 25 }} />
+      {set && <img src={Assets.getSetImage(set, undefined, true)} style={{ height: compact ? 24 : 26 }} />}
+    </div>
   )
 }

@@ -10,8 +10,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -29,7 +29,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -45,19 +45,20 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const BladeEntities = createEnum('Blade')
@@ -69,7 +70,7 @@ export const BladeAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Blade')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Blade')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -114,13 +115,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enhancedStateActive',
       formItem: 'switch',
       text: t('Content.enhancedStateActive.text'),
-      content: t('Content.enhancedStateActive.content', { enhancedStateDmgBoost: TsUtils.precisionRound(100 * enhancedStateDmgBoost) }),
+      content: t('Content.enhancedStateActive.content', { enhancedStateDmgBoost: precisionRound(100 * enhancedStateDmgBoost) }),
     },
     hpPercentLostTotal: {
       id: 'hpPercentLostTotal',
       formItem: 'slider',
       text: t('Content.hpPercentLostTotal.text'),
-      content: t('Content.hpPercentLostTotal.content', { hpPercentLostTotalMax: TsUtils.precisionRound(100 * hpPercentLostTotalMax) }),
+      content: t('Content.hpPercentLostTotal.content', { hpPercentLostTotalMax: precisionRound(100 * hpPercentLostTotalMax) }),
       min: 0,
       max: hpPercentLostTotalMax,
       percent: true,
@@ -260,7 +261,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_FUA,
     WHOLE_BASIC,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.LongevousDisciple, Sets.LongevousDisciple],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -342,6 +342,11 @@ const display = {
     x: 990,
     y: 800,
     z: 1,
+  },
+  spineCenter: {
+    x: 1126,
+    y: 804,
+    z: 1.05,
   },
   showcaseColor: '#4d69be',
 }

@@ -7,8 +7,8 @@ import {
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   countTeamPath,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
@@ -29,7 +29,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_SKILL,
@@ -45,17 +45,18 @@ import {
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const AnaxaEntities = createEnum('Anaxa')
@@ -67,7 +68,7 @@ export const AnaxaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Anaxa.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Anaxa.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -122,7 +123,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'exposedNature',
       formItem: 'switch',
       text: t('exposedNature.text'),
-      content: t('exposedNature.content', { DmgBuff: TsUtils.precisionRound(100 * talentDmgScaling) }),
+      content: t('exposedNature.content', { DmgBuff: precisionRound(100 * talentDmgScaling) }),
     },
     eruditionTeammateBuffs: {
       id: 'eruditionTeammateBuffs',
@@ -356,7 +357,6 @@ const simulation = (): SimulationMetadata => ({
     START_SKILL,
     END_SKILL,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   deprioritizeBuffs: false,
   relicSets: [
@@ -442,11 +442,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1235,
-    y: 1025,
-    z: 0.90,
+    x: 1245,
+    y: 1059,
+    z: 1,
   },
-  showcaseColor: '#93d4c2',
+  showcaseColor: '#89ad98',
 }
 
 export const Anaxa: CharacterConfig = {

@@ -3,8 +3,8 @@ import {
 } from 'lib/conditionals/conditionalConstants'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 
@@ -47,7 +47,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -63,18 +63,19 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { AbilityDefinition } from 'types/hitConditionalTypes'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type AbilityDefinition } from 'types/hitConditionalTypes'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const AglaeaAbilities: AbilityKind[] = [
@@ -89,8 +90,8 @@ export const AglaeaEntities = createEnum(
 )
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Aglaea')
-  const tBuff = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Aglaea')
+  const tBuff = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
   const { basic, skill, ult, talent, memoSkill, memoTalent } = AbilityEidolon.SKILL_BASIC_MEMO_TALENT_3_ULT_TALENT_MEMO_SKILL_5
   const {
     SOURCE_BASIC,
@@ -152,13 +153,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'supremeStanceState',
       formItem: 'switch',
       text: t('Content.supremeStanceState.text'),
-      content: t('Content.supremeStanceState.content', { SpdBuff: TsUtils.precisionRound(ultSpdBoost * 100) }),
+      content: t('Content.supremeStanceState.content', { SpdBuff: precisionRound(ultSpdBoost * 100) }),
     },
     seamStitch: {
       id: 'seamStitch',
       formItem: 'switch',
       text: t('Content.seamStitch.text'),
-      content: t('Content.seamStitch.content', { Scaling: TsUtils.precisionRound(talentAdditionalDmg * 100) }),
+      content: t('Content.seamStitch.content', { Scaling: precisionRound(talentAdditionalDmg * 100) }),
     },
     memoSpdStacks: {
       id: 'memoSpdStacks',
@@ -484,7 +485,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_MEMO_SKILL,
     WHOLE_BASIC,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.HeroOfTriumphantSong, Sets.HeroOfTriumphantSong],
@@ -563,11 +563,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1200,
-    y: 750,
-    z: 1.10,
+    x: 1183,
+    y: 723,
+    z: 1.1,
   },
-  showcaseColor: '#86bdf1',
+  showcaseColor: '#fffacf',
 }
 
 export const Aglaea: CharacterConfig = {

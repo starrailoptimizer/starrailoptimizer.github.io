@@ -1,18 +1,17 @@
-
 import {
-  GpuExecutionContext,
-  RelicsByPart,
+  type GpuExecutionContext,
+  type RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
 import { BasicKey } from 'lib/optimization/basicStatsArray'
-import { StringToNumberMap } from 'types/common'
-import { Relic } from 'types/relic'
 import {
   OrnamentSetToIndex,
   RelicSetToIndex,
-  SetsOrnaments,
-  SetsRelics,
+  type SetsOrnaments,
+  type SetsRelics,
   SetsRelicsNames,
 } from 'lib/sets/setConfigRegistry'
+import { type StringToNumberMap } from 'types/common'
+import { type Relic } from 'types/relic'
 
 export function generateParamsMatrix(
   offset: number,
@@ -47,7 +46,7 @@ export function generateParamsMatrix(
     b,
     g,
     h,
-    gpuContext.resultsQueue.size() >= gpuContext.RESULTS_LIMIT ? (gpuContext.resultsQueue.top()?.value ?? 0) : 0,
+    gpuContext.resultsQueue.size() >= gpuContext.RESULTS_LIMIT ? gpuContext.resultsQueue.topPriority() : 0,
     permLimit,
   ])
 }

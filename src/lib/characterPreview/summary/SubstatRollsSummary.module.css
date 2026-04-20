@@ -1,0 +1,41 @@
+.label {
+  composes: label from './summaryStyles.module.css';
+}
+
+.value {
+  composes: value from './summaryStyles.module.css';
+}
+
+.parensSpacer {
+  margin: 3px;
+}
+
+/* Two-column zebra grid */
+.zebraGrid {
+  gap: 0;
+}
+
+.zebraRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.zebraRow:nth-child(odd) {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 2px;
+}
+
+.zebraCell {
+  padding: 2px 5px;
+}
+
+/* Single-column zebra */
+.zebraContainer {
+  composes: zebraContainer from './summaryStyles.module.css';
+  min-width: 150px;
+}
+
+.zebraContainer > div {
+  padding: 2px 5px;
+}

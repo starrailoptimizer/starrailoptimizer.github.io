@@ -1,13 +1,11 @@
+import type { ElementName } from 'lib/constants/constants'
 import {
-  ElementName,
   ElementToStatKeyDmgBoost,
-  Parts,
+  type Parts,
   PartsArray,
 } from 'lib/constants/constants'
-import {
-  BasicStatsArray,
-  BasicStatsArrayCore,
-} from 'lib/optimization/basicStatsArray'
+import type { BasicStatsArray } from 'lib/optimization/basicStatsArray'
+import { BasicStatsArrayCore } from 'lib/optimization/basicStatsArray'
 import { Source } from 'lib/optimization/buffSource'
 import { calculateBaseMultis } from 'lib/optimization/calculateDamage'
 import {
@@ -19,6 +17,7 @@ import {
   calculateRelicStats,
   calculateSetCounts,
 } from 'lib/optimization/calculateStats'
+import { resetConditionalState } from 'lib/optimization/conditionalStateUtils'
 import {
   GlobalRegister,
   StatKey,
@@ -29,25 +28,31 @@ import {
   calculateEhp,
   getDamageFunction,
 } from 'lib/optimization/engine/damage/damageCalculator'
-import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import {
+  type AbilityKind,
+  type TurnAbilityName,
+} from 'lib/optimization/rotation/turnAbilityConfig'
+import type {
+  SetsOrnaments,
+  SetsRelics,
+} from 'lib/sets/setConfigRegistry'
 import {
   OrnamentSetCount,
   OrnamentSetToIndex,
   RelicSetCount,
   RelicSetToIndex,
-  SetsOrnaments,
-  SetsRelics,
 } from 'lib/sets/setConfigRegistry'
-import {
+import type {
   ActionBuffSnapshot,
   ActionDamage,
   PrimaryActionStats,
   RotationBuffStep,
+  RotationDamageStep,
   SimulateBuildResult,
   SimulationRelic,
   SimulationRelicByPart,
 } from 'lib/simulations/statSimulationTypes'
-import {
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -62,7 +67,9 @@ function captureSnapshot(x: ComputedStatsContainer): ActionBuffSnapshot {
   return { buffs: [...x.buffs], buffsMemo: [...x.buffsMemo] }
 }
 
-// To use after combo state and context has been initialized
+// To use after combo state and context has been initialized.
+// skipDefaults=true skips defaultActions processing (actionDamage, primaryActionStats,
+// calculateEhp). Use only when the caller only needs COMBO_DMG (e.g. scoring workers).
 export function simulateBuild(
   relics: SimulationRelicByPart,
   context: OptimizerContext,
@@ -70,6 +77,7 @@ export function simulateBuild(
   cachedComputedStatsContainer: ComputedStatsContainer | null = null,
   trace: boolean = false,
   forcedBasicSpd: number = 0,
+  skipDefaults: boolean = false,
 ): SimulateBuildResult {
   // Compute
   const { Head, Hands, Body, Feet, PlanarSphere, LinkRope } = extractRelics(relics)
@@ -125,7 +133,7 @@ export function simulateBuild(
     const action = context.rotationActions[i]
     x.setConfig(action.config)
 
-    action.conditionalState = {}
+    resetConditionalState(action)
 
     x.setPrecompute(action.precomputedStats.a)
 
@@ -139,7 +147,6 @@ export function simulateBuild(
       rotationBuffSteps!.push({ actionType: action.actionType, snapshot: captureSnapshot(x) })
     }
 
-    const dotComboMultiplier = getDotComboMultiplier(action, context)
     let sum = 0
 
     for (let hitIndex = 0; hitIndex < action.hits!.length; hitIndex++) {
@@ -147,14 +154,14 @@ export function simulateBuild(
 
       const dmg = getDamageFunction(hit.damageFunctionType).apply(x, action, hitIndex, context)
       x.setHitRegisterValue(hit.registerIndex, dmg)
-      if (hit.outputTag == OutputTag.DAMAGE) {
+      if (hit.outputTag === OutputTag.DAMAGE) {
         hit.computedTrueDmgModifier = x.getValue(StatKey.TRUE_DMG_MODIFIER, hitIndex) + (hit.trueDmgModifier ?? 0)
       }
 
       if (hit.recorded !== false) {
         sum += dmg
-        if (hit.outputTag == OutputTag.DAMAGE) {
-          comboDmg += dmg * dotComboMultiplier
+        if (hit.outputTag === OutputTag.DAMAGE) {
+          comboDmg += dmg
         }
       }
     }
@@ -170,75 +177,89 @@ export function simulateBuild(
     sourceEntityElementDmgBoost: 0,
   }
 
-  for (let i = 0; i < context.defaultActions.length; i++) {
-    const action = context.defaultActions[i]
-    x.setConfig(action.config)
+  const actionDamage: ActionDamage = {}
+  const rotationDamage: RotationDamageStep[] = []
 
-    action.conditionalState = {}
+  if (!skipDefaults) {
+    for (let i = 0; i < context.defaultActions.length; i++) {
+      const action = context.defaultActions[i]
+      x.setConfig(action.config)
 
-    x.setPrecompute(action.precomputedStats.a)
+      resetConditionalState(action)
 
-    if (shouldTrace) startTrace(x, action)
+      x.setPrecompute(action.precomputedStats.a)
 
-    calculateBasicEffects(x, action, context)
-    calculateComputedStats(x, action, context)
-    calculateBaseMultis(x, action, context)
+      if (shouldTrace) startTrace(x, action)
 
-    if (shouldTrace) {
-      actionBuffSnapshots![action.actionName] = captureSnapshot(x)
-    }
+      calculateBasicEffects(x, action, context)
+      calculateComputedStats(x, action, context)
+      calculateBaseMultis(x, action, context)
 
-    // Capture stats for the primary scoring action (from scoringMetadata.sortOption.key)
-    // This must happen after calculateComputedStats but before stats are overwritten by next action
-    if (action.actionName === context.primaryAbilityKey) {
-      // Resolve the source entity index from the primary hit (hit 0)
-      // For memosprite characters, the source entity is the memosprite (entity 1), not the main char (entity 0)
-      const sourceEntityIndex = action.hits?.length ? (action.hits[0].sourceEntityIndex ?? 0) : 0
-      const elementDmgBoostKey = ElementToStatKeyDmgBoost[context.element as ElementName]
-
-      // Capture fully resolved stats matching the damage formula:
-      const hasHits = action.hits?.length ?? 0
-      primaryActionStats = {
-        DMG_BOOST: hasHits ? x.getValue(StatKey.DMG_BOOST, 0) : 0,
-        sourceEntityCR: (hasHits ? x.getValue(StatKey.CR, 0) : 0) + x.getActionValueByIndex(StatKey.CR_BOOST, sourceEntityIndex),
-        sourceEntityCD: (hasHits ? x.getValue(StatKey.CD, 0) : 0) + x.getActionValueByIndex(StatKey.CD_BOOST, sourceEntityIndex),
-        sourceEntityElementDmgBoost: x.getActionValueByIndex(elementDmgBoostKey, sourceEntityIndex),
-      }
-    }
-
-    let sum = 0
-
-    for (let hitIndex = 0; hitIndex < action.hits!.length; hitIndex++) {
-      const hit = action.hits![hitIndex]
-
-      const dmg = getDamageFunction(hit.damageFunctionType).apply(x, action, hitIndex, context)
-      x.setHitRegisterValue(hit.registerIndex, dmg)
-      if (hit.outputTag == OutputTag.DAMAGE) {
-        hit.computedTrueDmgModifier = x.getValue(StatKey.TRUE_DMG_MODIFIER, hitIndex) + (hit.trueDmgModifier ?? 0)
+      if (shouldTrace) {
+        actionBuffSnapshots![action.actionName] = captureSnapshot(x)
       }
 
-      if (hit.recorded !== false) {
-        sum += dmg
+      // Capture stats for the primary scoring action (from scoringMetadata.sortOption.key)
+      // This must happen after calculateComputedStats but before stats are overwritten by next action
+      if (action.actionName === context.primaryAbilityKey) {
+        // Resolve the source entity index from the primary hit (hit 0)
+        // For memosprite characters, the source entity is the memosprite (entity 1), not the main char (entity 0)
+        const sourceEntityIndex = action.hits?.length ? (action.hits[0].sourceEntityIndex ?? 0) : 0
+        const elementDmgBoostKey = ElementToStatKeyDmgBoost[context.element as ElementName]
+
+        // Capture fully resolved stats matching the damage formula:
+        const hasHits = action.hits?.length ?? 0
+        primaryActionStats = {
+          DMG_BOOST: hasHits ? x.getValue(StatKey.DMG_BOOST, 0) : 0,
+          sourceEntityCR: (hasHits ? x.getValue(StatKey.CR, 0) : 0) + x.getActionValueByIndex(StatKey.CR_BOOST, sourceEntityIndex),
+          sourceEntityCD: (hasHits ? x.getValue(StatKey.CD, 0) : 0) + x.getActionValueByIndex(StatKey.CD_BOOST, sourceEntityIndex),
+          sourceEntityElementDmgBoost: x.getActionValueByIndex(elementDmgBoostKey, sourceEntityIndex),
+        }
       }
+
+      let sum = 0
+
+      for (let hitIndex = 0; hitIndex < action.hits!.length; hitIndex++) {
+        const hit = action.hits![hitIndex]
+
+        const dmg = getDamageFunction(hit.damageFunctionType).apply(x, action, hitIndex, context)
+        x.setHitRegisterValue(hit.registerIndex, dmg)
+        if (hit.outputTag === OutputTag.DAMAGE) {
+          hit.computedTrueDmgModifier = x.getValue(StatKey.TRUE_DMG_MODIFIER, hitIndex) + (hit.trueDmgModifier ?? 0)
+        }
+
+        if (hit.recorded !== false) {
+          sum += dmg
+        }
+      }
+
+      x.setActionRegisterValue(action.registerIndex, sum)
     }
 
-    x.setActionRegisterValue(action.registerIndex, sum)
+    calculateEhp(x, context)
+
+    // Capture action damage for each default action
+    for (const action of defaultActions) {
+      actionDamage[action.actionName as AbilityKind] = x.getActionRegisterValue(action.registerIndex)
+    }
+
+    // Capture per-step rotation damage
+    for (const action of context.rotationActions) {
+      rotationDamage.push({
+        actionType: action.actionType,
+        actionName: action.actionName as TurnAbilityName,
+        damage: x.getActionRegisterValue(action.registerIndex),
+      })
+    }
   }
-
-  calculateEhp(x, context)
 
   x.setGlobalRegisterValue(GlobalRegister.COMBO_DMG, comboDmg)
-
-  // Capture action damage for each default action
-  const actionDamage: ActionDamage = {}
-  for (const action of defaultActions) {
-    actionDamage[action.actionName as AbilityKind] = x.getActionRegisterValue(action.registerIndex)
-  }
 
   return {
     x,
     primaryActionStats,
     actionDamage,
+    rotationDamage,
     actionBuffSnapshots,
     rotationBuffSteps,
   }
@@ -265,22 +286,9 @@ function extractRelics(relics: SimulationRelicByPart) {
   return relics
 }
 
-export function emptyRelicWithSetAndSubstats(): SimulationRelic {
+function emptyRelicWithSetAndSubstats(): SimulationRelic {
   return {
     set: '',
     condensedStats: [],
   }
-}
-
-/**
- * Returns the combo multiplier for a rotation action.
- * DOT actions get their damage multiplied by (comboDot / dotAbilities) to represent
- * multiple ticks of DOT damage occurring during the rotation.
- * Non-DOT actions get a multiplier of 1.
- */
-function getDotComboMultiplier(action: OptimizerAction, context: OptimizerContext): number {
-  if (action.actionType === AbilityKind.DOT && context.comboDot > 0 && context.dotAbilities > 0) {
-    return context.comboDot / context.dotAbilities
-  }
-  return 1
 }

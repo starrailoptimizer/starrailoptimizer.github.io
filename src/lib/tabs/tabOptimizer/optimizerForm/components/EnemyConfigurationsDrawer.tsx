@@ -1,175 +1,165 @@
 import {
-  CheckOutlined,
-  CloseOutlined,
-} from '@ant-design/icons'
-import {
   Drawer,
   Flex,
-  Form,
-  Select,
   Switch,
-  Typography,
-} from 'antd'
+} from '@mantine/core'
 import {
   OpenCloseIDs,
   useOpenClose,
 } from 'lib/hooks/useOpenClose'
 import { Hint } from 'lib/interactions/hint'
+import type { EnemyConfigFields } from 'lib/stores/optimizerForm/optimizerFormTypes'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
 import { HeaderText } from 'lib/ui/HeaderText'
+import { SearchableCombobox } from 'lib/ui/SearchableCombobox'
 import { TooltipImage } from 'lib/ui/TooltipImage'
-import { Utils } from 'lib/utils/utils'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useShallow } from 'zustand/react/shallow'
 
-const { Text } = Typography
+function setEnemyAndRecalculate<K extends keyof EnemyConfigFields>(field: K, value: EnemyConfigFields[K]) {
+  useOptimizerRequestStore.getState().setEnemyField(field, value)
+}
 
-export const EnemyConfigurationsDrawer = () => {
-  const { t } = useTranslation('optimizerTab', { keyPrefix: 'EnemyConfiguration' })
-
+export function EnemyConfigurationsDrawer() {
   const { close: closeEnemyDrawer, isOpen: isOpenEnemyDrawer } = useOpenClose(OpenCloseIDs.ENEMY_DRAWER)
-
-  const enemyLevelOptions = useMemo(() => {
-    const options: { value: number, label: string }[] = []
-    for (let i = 100; i >= 1; i--) {
-      options.push({
-        value: i,
-        label: t('LevelOptionLabel', { level: i, defense: 200 + 10 * i }), // `Lv. ${i} - ${200 + 10 * i} DEF`,
-      })
-    }
-
-    return options
-  }, [t])
-
-  const enemyCountOptions = useMemo(() => {
-    const options: { value: number, label: string }[] = []
-    for (let i = 1; i <= 5; i += 2) {
-      options.push({
-        value: i,
-        label: t('CountOptionLabel', { targetCount: i }), // `${i} target${i > 1 ? 's' : ''}`,
-      })
-    }
-
-    return options
-  }, [t])
-
-  const enemyResistanceOptions = useMemo(() => {
-    const options: { value: number, label: string }[] = []
-    for (let i = 20; i <= 60; i += 20) {
-      options.push({
-        value: i / 100,
-        label: t('DmgResOptionLabel', { resistance: i }), // `${i}% Damage RES`,
-      })
-    }
-
-    return options
-  }, [t])
-
-  const enemyEffectResistanceOptions = useMemo(() => {
-    const options: { value: number, label: string }[] = []
-    for (let i = 0; i <= 40; i += 10) {
-      options.push({
-        value: i / 100,
-        label: t('EffResOptionLabel', { resistance: i }), // `${i}% Effect RES`,
-      })
-    }
-
-    return options
-  }, [t])
-
-  const enemyMaxToughnessOptions = useMemo(() => {
-    const options: { value: number, label: string }[] = []
-    for (let i = 720; i >= 1; i -= 30) {
-      options.push({
-        value: i,
-        label: t('ToughnessOptionLabel', { toughness: i / 3 }), // `${i} max toughness`,
-      })
-    }
-
-    return options
-  }, [t])
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'EnemyConfiguration' })
 
   return (
     <Drawer
       title={t('Title')} // 'Enemy configurations'
-      placement='right'
+      position='right'
       onClose={closeEnemyDrawer}
-      open={isOpenEnemyDrawer}
-      width={300}
-      forceRender
+      opened={isOpenEnemyDrawer}
+      size={300}
     >
-      <Flex vertical gap={5}>
-        <Flex justify='space-between' align='center' style={{ marginBottom: 5 }}>
-          <HeaderText>{t('StatHeader') /* Enemy stat options */}</HeaderText>
-          <TooltipImage type={Hint.enemyOptions()} />
-        </Flex>
-
-        <Form.Item name={enemyFormItemName('enemyLevel')}>
-          <Select
-            showSearch
-            filterOption={Utils.labelFilterOption}
-            options={enemyLevelOptions}
-          />
-        </Form.Item>
-
-        <Form.Item name={enemyFormItemName('enemyResistance')}>
-          <Select
-            showSearch
-            filterOption={Utils.labelFilterOption}
-            options={enemyResistanceOptions}
-          />
-        </Form.Item>
-
-        <Form.Item name={enemyFormItemName('enemyEffectResistance')}>
-          <Select
-            showSearch
-            filterOption={Utils.labelFilterOption}
-            options={enemyEffectResistanceOptions}
-          />
-        </Form.Item>
-
-        <Form.Item name={enemyFormItemName('enemyMaxToughness')}>
-          <Select
-            showSearch
-            filterOption={Utils.labelFilterOption}
-            options={enemyMaxToughnessOptions}
-          />
-        </Form.Item>
-
-        <Form.Item name={enemyFormItemName('enemyCount')}>
-          <Select
-            showSearch
-            filterOption={Utils.labelFilterOption}
-            options={enemyCountOptions}
-          />
-        </Form.Item>
-
-        <Flex align='center'>
-          <Form.Item name={enemyFormItemName('enemyElementalWeak')} valuePropName='checked'>
-            <Switch
-              checkedChildren={<CheckOutlined />}
-              unCheckedChildren={<CloseOutlined />}
-              defaultChecked
-              style={{ width: 45, marginRight: 5 }}
-            />
-          </Form.Item>
-          <Text>{t('WeaknessLabel') /* Elemental weakness */}</Text>
-        </Flex>
-
-        <Flex align='center'>
-          <Form.Item name={enemyFormItemName('enemyWeaknessBroken')} valuePropName='checked'>
-            <Switch
-              checkedChildren={<CheckOutlined />}
-              unCheckedChildren={<CloseOutlined />}
-              style={{ width: 45, marginRight: 5 }}
-            />
-          </Form.Item>
-          <Text>{t('BrokenLabel') /* Weakness broken */}</Text>
-        </Flex>
-      </Flex>
+      {isOpenEnemyDrawer && <EnemyConfigurationsDrawerContent />}
     </Drawer>
   )
 }
 
-function enemyFormItemName(name: string) {
-  return name
+function EnemyConfigurationsDrawerContent() {
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'EnemyConfiguration' })
+
+  const {
+    enemyLevel,
+    enemyResistance,
+    enemyEffectResistance,
+    enemyMaxToughness,
+    enemyCount,
+    enemyElementalWeak,
+    enemyWeaknessBroken,
+  } = useOptimizerRequestStore(
+    useShallow((s) => ({
+      enemyLevel: s.enemyLevel,
+      enemyResistance: s.enemyResistance,
+      enemyEffectResistance: s.enemyEffectResistance,
+      enemyMaxToughness: s.enemyMaxToughness,
+      enemyCount: s.enemyCount,
+      enemyElementalWeak: s.enemyElementalWeak,
+      enemyWeaknessBroken: s.enemyWeaknessBroken,
+    })),
+  )
+
+  const enemyLevelOptions = useMemo(() =>
+    Array.from({ length: 100 }, (_, i) => 100 - i).map((level) => ({
+      value: level,
+      label: t('LevelOptionLabel', { level, defense: 200 + 10 * level }),
+    })), [t])
+
+  const enemyCountOptions = useMemo(() =>
+    [1, 3, 5].map((count) => ({
+      value: count,
+      label: t('CountOptionLabel', { targetCount: count }),
+    })), [t])
+
+  const enemyResistanceOptions = useMemo(() =>
+    [20, 40, 60].map((res) => ({
+      value: res / 100,
+      label: t('DmgResOptionLabel', { resistance: res }),
+    })), [t])
+
+  const enemyEffectResistanceOptions = useMemo(() =>
+    [0, 10, 20, 30, 40].map((res) => ({
+      value: res / 100,
+      label: t('EffResOptionLabel', { resistance: res }),
+    })), [t])
+
+  const enemyMaxToughnessOptions = useMemo(() =>
+    Array.from({ length: Math.ceil(720 / 30) }, (_, i) => 720 - i * 30)
+      .filter((v) => v >= 1)
+      .map((toughness) => ({
+        value: toughness,
+        label: t('ToughnessOptionLabel', { toughness: toughness / 3 }),
+      })), [t])
+
+  return (
+    <Flex direction='column' gap={10}>
+      <Flex justify='space-between' align='center' style={{ marginBottom: 5 }}>
+        <HeaderText>{t('StatHeader') /* Enemy stat options */}</HeaderText>
+        <TooltipImage type={Hint.enemyOptions()} />
+      </Flex>
+
+      <SearchableCombobox
+        options={enemyLevelOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+        value={enemyLevel != null ? String(enemyLevel) : null}
+        onChange={(val) => {
+          if (val != null) setEnemyAndRecalculate('enemyLevel', Number(val))
+        }}
+      />
+
+      <SearchableCombobox
+        options={enemyMaxToughnessOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+        value={enemyMaxToughness != null ? String(enemyMaxToughness) : null}
+        onChange={(val) => {
+          if (val != null) setEnemyAndRecalculate('enemyMaxToughness', Number(val))
+        }}
+      />
+
+      <SearchableCombobox
+        searchable={false}
+        options={enemyResistanceOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+        value={enemyResistance != null ? String(enemyResistance) : null}
+        onChange={(val) => {
+          if (val != null) setEnemyAndRecalculate('enemyResistance', Number(val))
+        }}
+      />
+
+      <SearchableCombobox
+        searchable={false}
+        options={enemyEffectResistanceOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+        value={enemyEffectResistance != null ? String(enemyEffectResistance) : null}
+        onChange={(val) => {
+          if (val != null) setEnemyAndRecalculate('enemyEffectResistance', Number(val))
+        }}
+      />
+
+      <SearchableCombobox
+        searchable={false}
+        options={enemyCountOptions.map((opt) => ({ value: String(opt.value), label: opt.label }))}
+        value={enemyCount != null ? String(enemyCount) : null}
+        onChange={(val) => {
+          if (val != null) setEnemyAndRecalculate('enemyCount', Number(val))
+        }}
+      />
+
+      <Flex align='center'>
+        <Switch
+          checked={enemyElementalWeak}
+          onChange={(event) => setEnemyAndRecalculate('enemyElementalWeak', event.currentTarget.checked)}
+          style={{ marginRight: 5 }}
+        />
+        <div>{t('WeaknessLabel') /* Elemental weakness */}</div>
+      </Flex>
+
+      <Flex align='center'>
+        <Switch
+          checked={enemyWeaknessBroken}
+          onChange={(event) => setEnemyAndRecalculate('enemyWeaknessBroken', event.currentTarget.checked)}
+          style={{ marginRight: 5 }}
+        />
+        <div>{t('BrokenLabel') /* Weakness broken */}</div>
+      </Flex>
+    </Flex>
+  )
 }

@@ -1,26 +1,20 @@
-import { Alert } from 'antd'
-import i18next from 'i18next'
-import { useAsyncSimScoringExecution } from 'lib/characterPreview/useAsyncSimScoringExecution'
-import {
-  CharacterAnnouncementMessages,
-  CURRENT_DATA_VERSION,
-} from 'lib/constants/constants'
-import { AsyncSimScoringExecution } from 'lib/scoring/dpsScore'
-import { ReactElement } from 'types/components'
+import { Alert } from '@mantine/core'
+import { CharacterAnnouncementMessages } from 'lib/constants/constants'
+import type { CharacterId } from 'types/character'
+import type { SimulationMetadata } from 'types/metadata'
 
-export function CharacterAnnouncement(props: { characterId: string, asyncSimScoringExecution: AsyncSimScoringExecution }) {
-  const { characterId } = props
-  const simScoringExecution = useAsyncSimScoringExecution(props.asyncSimScoringExecution)
-
-  const result = simScoringExecution?.result
+export function CharacterAnnouncement({ characterId, simulationMetadata }: {
+  characterId: CharacterId,
+  simulationMetadata: SimulationMetadata | null,
+}) {
   const messages: string[] = []
 
-  if (characterId && CharacterAnnouncementMessages[characterId]) {
+  if (CharacterAnnouncementMessages[characterId]) {
     messages.push(CharacterAnnouncementMessages[characterId])
   }
 
-  if (result) {
-    for (const teammate of result.simulationMetadata.teammates) {
+  if (simulationMetadata) {
+    for (const teammate of simulationMetadata.teammates) {
       if (CharacterAnnouncementMessages[teammate.characterId]) {
         messages.push(CharacterAnnouncementMessages[teammate.characterId])
       }
@@ -29,24 +23,13 @@ export function CharacterAnnouncement(props: { characterId: string, asyncSimScor
 
   const uniqueMessages = [...new Set(messages)]
 
-  if (uniqueMessages.length == 0) {
-    return <></>
+  if (uniqueMessages.length === 0) {
+    return null
   }
 
-  const render: ReactElement[] = []
-
-  for (let i = 0; i < uniqueMessages.length; i++) {
-    const message = uniqueMessages[i]
-    render.push(
-      <Alert
-        message={message}
-        type='info'
-        showIcon
-        style={{ marginTop: 10 }}
-        key={i}
-      />,
-    )
-  }
-
-  return render
+  return uniqueMessages.map((message, i) => (
+    <Alert color='blue' mt={10} key={i}>
+      {message}
+    </Alert>
+  ))
 }

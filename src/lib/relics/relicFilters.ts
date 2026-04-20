@@ -2,9 +2,19 @@ import {
   Constants,
   Parts,
   RelicSetFilterOptions,
-  StatsValues,
-  SubStatValues,
 } from 'lib/constants/constants'
+import type { StatsValues } from 'lib/constants/constants'
+import type {
+  RelicsByPart,
+  SingleRelicByPart,
+} from 'lib/gpu/webgpuTypes'
+import { BasicStatToKey } from 'lib/optimization/basicStatsArray'
+import { calculateRelicMainStatValue } from 'lib/relics/relicUtils'
+import {
+  FLAT_STAT_SCALING,
+  STAT_NORMALIZATION,
+} from 'lib/relics/scoring/scoringConstants'
+import { weightedSubstatScore } from 'lib/relics/scoring/substatScoring'
 import {
   OrnamentSetToIndex,
   RelicSetToIndex,
@@ -12,54 +22,180 @@ import {
   SetsRelics,
 } from 'lib/sets/setConfigRegistry'
 import {
-  RelicsByPart,
-  SingleRelicByPart,
-} from 'lib/gpu/webgpuTypes'
-import { BasicStatToKey } from 'lib/optimization/basicStatsArray'
-import DB from 'lib/state/db'
-import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Utils } from 'lib/utils/utils'
-import { Form } from 'types/form'
-import { Relic } from 'types/relic'
+  getCharacterById,
+  getCharacters,
+} from 'lib/stores/character/characterStore'
+import { getRelics } from 'lib/stores/relic/relicStore'
+import {
+  arrayOfValue,
+  arrayOfZeroes,
+} from 'lib/utils/arrayUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { isFlat } from 'lib/utils/statUtils'
+import type { Form } from 'types/form'
+import type { Relic } from 'types/relic'
 
-const statScalings = {
-  [Constants.Stats.HP_P]: 64.8 / 43.2,
-  [Constants.Stats.ATK_P]: 64.8 / 43.2,
-  [Constants.Stats.DEF_P]: 64.8 / 54,
-  [Constants.Stats.HP]: (64.8 / 43.2) * SubStatValues[Constants.Stats.HP_P][5].high / SubStatValues[Constants.Stats.HP][5].high,
-  [Constants.Stats.ATK]: (64.8 / 43.2) * SubStatValues[Constants.Stats.ATK_P][5].high / SubStatValues[Constants.Stats.ATK][5].high,
-  [Constants.Stats.DEF]: (64.8 / 54) * SubStatValues[Constants.Stats.DEF_P][5].high / SubStatValues[Constants.Stats.DEF][5].high,
-  [Constants.Stats.CR]: 64.8 / 32.4,
-  [Constants.Stats.CD]: 64.8 / 64.8,
-  [Constants.Stats.OHB]: 64.8 / 34.5,
-  [Constants.Stats.EHR]: 64.8 / 43.2,
-  [Constants.Stats.RES]: 64.8 / 43.2,
-  [Constants.Stats.SPD]: 64.8 / 25,
-  [Constants.Stats.BE]: 64.8 / 64.8,
+export type PartCounts = Record<Parts, number>
+
+const RELIC_PARTS: ReadonlySet<string> = new Set([Parts.Head, Parts.Hands, Parts.Body, Parts.Feet])
+
+function zeroCounts(): PartCounts {
+  return { Head: 0, Hands: 0, Body: 0, Feet: 0, PlanarSphere: 0, LinkRope: 0 }
+}
+
+// Returns true if at least one positively-weighted substat can appear on this relic
+// (i.e. is not blocked by the relic's main stat). When false, the weight filter
+// is impossible to satisfy and the relic should be exempt.
+function hasAchievableWeightedSubstat(weights: Record<string, number>, mainStat: string): boolean {
+  for (const stat in weights) {
+    if (stat === 'minWeightedRolls') continue
+    if (weights[stat] > 0 && stat !== mainStat) return true
+  }
+  return false
+}
+
+function computeWeightScore(relic: Relic, weights: Record<string, number>, upgradeLevel: number): number {
+  let score = weightedSubstatScore(relic.substats, weights as Record<StatsValues, number>)
+  if (upgradeLevel) {
+    for (let i = 0; i < relic.previewSubstats.length; i++) {
+      if (relic.enhance + 3 * i >= upgradeLevel) break
+      const sub = relic.previewSubstats[i]
+      score += (sub.value || 0) * (weights[sub.stat] || 0) * (STAT_NORMALIZATION[sub.stat] || 0)
+    }
+  }
+  return score
 }
 
 export const RelicFilters = {
+  // Count-only variant of getFilteredRelics — single pass, no clone, no mutation
+  getFilteredRelicCounts: (request: Form): { counts: PartCounts, preCounts: PartCounts } => {
+    const allRelics = getRelics()
+    const characters = getCharacters()
+    const selfId = request.characterId || '99999999'
+
+    // Consolidate equipped/rank/exclude into one blacklist
+    const blacklist = new Set<string>()
+    const excludeSet = request.exclude?.length ? new Set(request.exclude) : null
+
+    for (let i = 0; i < characters.length; i++) {
+      const char = characters[i]
+      if (char.id === selfId) continue
+
+      const excluded = !request.includeEquippedRelics
+        || (request.rankFilter && i < request.rank)
+        || (excludeSet != null && excludeSet.has(char.id))
+      if (!excluded) continue
+
+      for (const id of Object.values(char.equipped)) {
+        if (id != null) blacklist.add(id)
+      }
+    }
+
+    // Set filter lookups
+    let relicSetsAllowed: number[] | null = null
+    if (request.relicSets?.length) {
+      relicSetsAllowed = arrayOfZeroes(Object.values(SetsRelics).length)
+      for (const rs of request.relicSets) {
+        if (rs[0] === RelicSetFilterOptions.relic4Piece && rs.length === 2) {
+          relicSetsAllowed[RelicSetToIndex[rs[1]]] = 1
+        } else if (rs[0] === RelicSetFilterOptions.relic2PlusAny) {
+          relicSetsAllowed = arrayOfValue(Object.values(SetsRelics).length, 1)
+        } else if (rs[0] === RelicSetFilterOptions.relic2Plus2Any) {
+          relicSetsAllowed = arrayOfValue(Object.values(SetsRelics).length, 1)
+        } else if (rs[0] === RelicSetFilterOptions.relic2Plus2Piece && rs.length === 3) {
+          relicSetsAllowed[RelicSetToIndex[rs[1]]] = 1
+          relicSetsAllowed[RelicSetToIndex[rs[2]]] = 1
+        }
+      }
+    }
+
+    let ornamentSetsAllowed: number[] | null = null
+    if (request.ornamentSets?.length) {
+      ornamentSetsAllowed = arrayOfZeroes(Object.values(SetsOrnaments).length)
+      for (const os of request.ornamentSets) {
+        ornamentSetsAllowed[OrnamentSetToIndex[os]] = 1
+      }
+    }
+
+    // Weight score thresholds
+    const weights: Record<string, number> = { ...request.weights }
+    weights[Constants.Stats.ATK] = (weights[Constants.Stats.ATK_P] || 0) * FLAT_STAT_SCALING.ATK
+    weights[Constants.Stats.DEF] = (weights[Constants.Stats.DEF_P] || 0) * FLAT_STAT_SCALING.DEF
+    weights[Constants.Stats.HP] = (weights[Constants.Stats.HP_P] || 0) * FLAT_STAT_SCALING.HP
+
+    const rollThreshold = (weights.minWeightedRolls ?? 0) * 6.48 * 0.8
+
+    // Main stat filters (Head/Hands have no main stat constraints)
+    const mainFilters: Partial<Record<Parts, string[]>> = {
+      [Parts.Body]: request.mainBody,
+      [Parts.Feet]: request.mainFeet,
+      [Parts.PlanarSphere]: request.mainPlanarSphere,
+      [Parts.LinkRope]: request.mainLinkRope,
+    }
+
+    // keepCurrentRelics locks specific parts to one relic
+    const lockedParts: Partial<Record<Parts, string>> = {}
+    if (request.keepCurrentRelics) {
+      const equipped = getCharacterById(request.characterId)?.equipped
+      if (equipped) {
+        for (const part of Object.values(Parts)) {
+          if (equipped[part]) lockedParts[part] = equipped[part]
+        }
+      }
+    }
+
+    // Single pass
+    const preCounts = zeroCounts()
+    const counts = zeroCounts()
+    const lockedFound: Partial<Record<Parts, boolean>> = {}
+
+    for (const relic of allRelics) {
+      const part = relic.part as Parts
+
+      if (relic.grade && relic.grade < request.grade) continue
+      if (relic.enhance < request.enhance) continue
+      if (blacklist.has(relic.id)) continue
+
+      preCounts[part]++
+
+      const mainFilter = mainFilters[part]
+      if (mainFilter?.length && !mainFilter.includes(relic.main.stat)) continue
+
+      const isRelic = RELIC_PARTS.has(part)
+      if (isRelic && relicSetsAllowed && relicSetsAllowed[RelicSetToIndex[relic.set as SetsRelics]] !== 1) continue
+      if (!isRelic && ornamentSetsAllowed && ornamentSetsAllowed[OrnamentSetToIndex[relic.set as SetsOrnaments]] !== 1) continue
+
+      if (hasAchievableWeightedSubstat(weights, relic.main.stat) && computeWeightScore(relic, weights, request.mainStatUpscaleLevel) < rollThreshold) continue
+
+      if (lockedParts[part]) {
+        if (relic.id === lockedParts[part]) lockedFound[part] = true
+        continue
+      }
+
+      counts[part]++
+    }
+
+    // Resolve locked parts: count is 0 or 1
+    for (const part of Object.values(Parts)) {
+      if (lockedParts[part]) counts[part] = lockedFound[part] ? 1 : 0
+    }
+
+    return { counts, preCounts }
+  },
+
   calculateWeightScore: (request: Form, relics: Relic[]) => {
     const weights = request.weights || {}
 
-    weights[Constants.Stats.ATK] = weights[Constants.Stats.ATK_P]
-    weights[Constants.Stats.DEF] = weights[Constants.Stats.DEF_P]
-    weights[Constants.Stats.HP] = weights[Constants.Stats.HP_P]
+    weights[Constants.Stats.ATK] = (weights[Constants.Stats.ATK_P] || 0) * FLAT_STAT_SCALING.ATK
+    weights[Constants.Stats.DEF] = (weights[Constants.Stats.DEF_P] || 0) * FLAT_STAT_SCALING.DEF
+    weights[Constants.Stats.HP] = (weights[Constants.Stats.HP_P] || 0) * FLAT_STAT_SCALING.HP
 
     for (const weight of Object.keys(weights) as Array<keyof typeof weights>) {
       if (!weights[weight]) weights[weight] = 0
     }
 
     for (const relic of relics) {
-      let sum = 0
-      for (const substat of relic.substats) {
-        const weight = weights[substat.stat] || 0
-        const scale = statScalings[substat.stat] || 0
-        const value = substat.value || 0
-        sum += value * weight * scale
-      }
-      relic.weightScore = sum
+      relic.weightScore = weightedSubstatScore(relic.substats, weights as Record<StatsValues, number>)
     }
 
     return relics
@@ -67,18 +203,11 @@ export const RelicFilters = {
 
   applyTopFilter: (request: Form, relics: RelicsByPart) => {
     const weights = request.weights || {}
-    const partMinRolls = {
-      [Parts.Head]: weights.headHands ?? 0,
-      [Parts.Hands]: weights.headHands ?? 0,
-      [Parts.Body]: weights.bodyFeet ?? 0,
-      [Parts.Feet]: weights.bodyFeet ?? 0,
-      [Parts.PlanarSphere]: weights.sphereRope ?? 0,
-      [Parts.LinkRope]: weights.sphereRope ?? 0,
-    }
+    const minRolls = (weights.minWeightedRolls ?? 0) * 6.48 * 0.8
 
     for (const part of Object.values(Constants.Parts)) {
       const partition: Relic[] = relics[part]
-      relics[part] = partition.filter((relic) => relic.weightScore >= partMinRolls[part] * 6.48 * 0.8)
+      relics[part] = partition.filter((relic) => !hasAchievableWeightedSubstat(weights, relic.main.stat) || relic.weightScore >= minRolls)
     }
 
     return relics
@@ -87,7 +216,7 @@ export const RelicFilters = {
   applyRankFilter: (request: Form, relics: Relic[]) => {
     if (!request.rankFilter) return relics
 
-    const characters = DB.getCharacters()
+    const characters = getCharacters()
     const characterId = request.characterId
     const higherRankedRelics: Record<string, boolean> = {}
     for (let i = 0; i < characters.length; i++) {
@@ -101,7 +230,7 @@ export const RelicFilters = {
 
       Object.values(rankedCharacter.equipped)
         .filter((relicId) => relicId != null)
-        .map((relicId) => higherRankedRelics[relicId] = true)
+        .forEach((relicId) => higherRankedRelics[relicId] = true)
     }
 
     return relics.filter((x) => !higherRankedRelics[x.id])
@@ -110,13 +239,13 @@ export const RelicFilters = {
   applyExcludeFilter: (request: Form, relics: Relic[]) => {
     if (!request.exclude) return relics
 
-    const characters = DB.getCharacters()
+    const characters = getCharacters()
     const excludedRelics: Record<string, boolean> = {}
     for (const character of characters) {
       if (request.exclude.includes(character.id) && character.id != request.characterId) {
         Object.values(character.equipped)
           .filter((relicId) => relicId != null)
-          .map((relicId) => excludedRelics[relicId] = true)
+          .forEach((relicId) => excludedRelics[relicId] = true)
       }
     }
 
@@ -151,7 +280,7 @@ export const RelicFilters = {
     const characterId = request.characterId || '99999999'
     // TODO: refactor after https://github.com/fribbels/hsr-optimizer/issues/56 is completed
     let blacklist: string[] = []
-    useCharacterTabStore.getState().characters.forEach((char) => {
+    getCharacters().forEach((char) => {
       if (char.id == characterId) return
       const equipped: string[] = Object.values(char.equipped).filter((x) => x != undefined)
       blacklist = blacklist.concat(equipped)
@@ -168,7 +297,7 @@ export const RelicFilters = {
       if (!request.relicSets || request.relicSets.length == 0) {
         return relics
       }
-      let allowedSets = Utils.arrayOfZeroes(Object.values(SetsRelics).length)
+      let allowedSets = arrayOfZeroes(Object.values(SetsRelics).length)
 
       for (const relicSet of request.relicSets) {
         if (relicSet[0] == RelicSetFilterOptions.relic4Piece) {
@@ -179,7 +308,11 @@ export const RelicFilters = {
         }
 
         if (relicSet[0] == RelicSetFilterOptions.relic2PlusAny) {
-          allowedSets = Utils.arrayOfValue(Object.values(SetsRelics).length, 1)
+          allowedSets = arrayOfValue(Object.values(SetsRelics).length, 1)
+        }
+
+        if (relicSet[0] == RelicSetFilterOptions.relic2Plus2Any) {
+          allowedSets = arrayOfValue(Object.values(SetsRelics).length, 1)
         }
 
         if (relicSet[0] == RelicSetFilterOptions.relic2Plus2Piece) {
@@ -211,7 +344,7 @@ export const RelicFilters = {
       if (!request.ornamentSets || request.ornamentSets.length == 0) {
         return relics
       }
-      const allowedSets = Utils.arrayOfZeroes(Object.values(SetsOrnaments).length)
+      const allowedSets = arrayOfZeroes(Object.values(SetsOrnaments).length)
 
       for (const ornamentSet of request.ornamentSets) {
         const index = OrnamentSetToIndex[ornamentSet]
@@ -236,7 +369,7 @@ export const RelicFilters = {
   applyCurrentFilter: (request: Form, relics: RelicsByPart) => {
     if (!request.keepCurrentRelics) return relics
 
-    const character = DB.getCharacterById(request.characterId)
+    const character = getCharacterById(request.characterId)
     if (!character) {
       return relics
     }
@@ -285,13 +418,13 @@ export const RelicFilters = {
   applyMainStatsFilter: (request: Form, relics: Relic[]) => {
     const mainStatUpscaleLevel = request.mainStatUpscaleLevel
     if (mainStatUpscaleLevel) {
-      relics.map((x) => {
+      relics.forEach((x) => {
         const { grade, enhance, main: { stat } } = x
         const maxEnhance = grade * 3
         if (enhance < maxEnhance && enhance < mainStatUpscaleLevel) {
           const newEnhance = maxEnhance < mainStatUpscaleLevel ? maxEnhance : mainStatUpscaleLevel
-          const newValue = TsUtils.calculateRelicMainStatValue(stat, grade, newEnhance) / (Utils.isFlat(x.main.stat) ? 1 : 100)
-          return x.augmentedStats!.mainValue = newValue
+          const newValue = calculateRelicMainStatValue(stat, grade, newEnhance) / (isFlat(x.main.stat) ? 1 : 100)
+          x.augmentedStats!.mainValue = newValue
         }
       })
     }
@@ -331,5 +464,5 @@ export const RelicFilters = {
 }
 
 function getValueByStatType(stat: string, value: number) {
-  return Utils.precisionRound(Utils.isFlat(stat) ? value : value / 100)
+  return precisionRound(isFlat(stat) ? value : value / 100)
 }

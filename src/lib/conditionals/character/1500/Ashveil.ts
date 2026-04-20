@@ -8,10 +8,10 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
-  Mutual,
+  type Mutual,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
 import { AGroundedAscent } from 'lib/conditionals/lightcone/5star/AGroundedAscent'
@@ -29,7 +29,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -45,18 +45,19 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  CharacterConditionalFunction,
-  CharacterConfig,
+  type CharacterConditionalFunction,
+  type CharacterConfig,
 } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const AshveilEntities = createEnum('Ashveil')
@@ -84,7 +85,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
     SOURCE_E6,
   } = Source.character(Ashveil.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Ashveil.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Ashveil.Content')
 
   const basicScaling = basic(e, 1.00, 1.10)
 
@@ -126,25 +127,25 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       id: 'baitActive',
       formItem: 'switch',
       text: t('baitActive.text'),
-      content: t('baitActive.content', { baitActiveDefPen: TsUtils.precisionRound(100 * skillDefPenValue) }),
+      content: t('baitActive.content', { baitActiveDefPen: precisionRound(100 * skillDefPenValue) }),
     },
     targetBait: {
       id: 'targetBait',
       formItem: 'switch',
       text: t('targetBait.text'),
-      content: t('targetBait.content', { baitHitAdditionalScaling: TsUtils.precisionRound(100 * skillAdditionalScaling) }),
+      content: t('targetBait.content', { baitHitAdditionalScaling: precisionRound(100 * skillAdditionalScaling) }),
     },
     enhancedFua: {
       id: 'enhancedFua',
       formItem: 'switch',
       text: t('enhancedFua.text'),
-      content: t('enhancedFua.content', { enhancedFuaGluttonyScaling: TsUtils.precisionRound(100 * ultBonusFuaScaling) }),
+      content: t('enhancedFua.content', { enhancedFuaGluttonyScaling: precisionRound(100 * ultBonusFuaScaling) }),
     },
     gluttonyStacks: {
       id: 'gluttonyStacks',
       formItem: 'slider',
       text: t('gluttonyStacks.text'),
-      content: t('gluttonyStacks.content', { enhancedFuaGluttonyScaling: TsUtils.precisionRound(100 * ultBonusFuaScaling) }),
+      content: t('gluttonyStacks.content', { enhancedFuaGluttonyScaling: precisionRound(100 * ultBonusFuaScaling) }),
       min: 0,
       max: maxGluttonyStacks,
     },
@@ -339,7 +340,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.TheAshblazingGrandDuke, Sets.TheAshblazingGrandDuke],
     [Sets.PioneerDiverOfDeadWaters, Sets.PioneerDiverOfDeadWaters],
@@ -406,7 +406,7 @@ const scoring = (): ScoringMetadata => ({
 })
 
 const display = {
-  showcaseColor: '#d7a6aa',
+  showcaseColor: '#be7dd8',
 }
 
 export const Ashveil: CharacterConfig = {

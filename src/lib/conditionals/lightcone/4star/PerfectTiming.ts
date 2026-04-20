@@ -1,6 +1,6 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import {
   dynamicStatConversionContainer,
@@ -13,18 +13,19 @@ import {
 } from 'lib/constants/constants'
 import { wgslTrue } from 'lib/gpu/injection/wgslUtils'
 import { Source } from 'lib/optimization/buffSource'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { SuperImpositionLevel } from 'types/lightCone'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.PerfectTiming')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.PerfectTiming')
   const { SOURCE_LC } = Source.lightCone(PerfectTiming.id)
 
   const sValues = [0.33, 0.36, 0.39, 0.42, 0.45]
@@ -41,8 +42,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.resToHealingBoost.text'),
       content: t('Content.resToHealingBoost.content', {
-        Scaling: TsUtils.precisionRound(100 * sValues[s]),
-        Limit: TsUtils.precisionRound(100 * sMaxValues[s]),
+        Scaling: precisionRound(100 * sValues[s]),
+        Limit: precisionRound(100 * sMaxValues[s]),
       }),
     },
   }

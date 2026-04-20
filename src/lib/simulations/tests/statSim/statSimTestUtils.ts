@@ -1,10 +1,9 @@
 import i18next from 'i18next'
 import {
   collectResults,
-  TestInput,
-  TestResultByName,
+  type TestInput,
+  type TestResultByName,
 } from 'lib/simulations/tests/simTestUtils'
-import DB from 'lib/state/db'
 import { Metadata } from 'lib/state/metadataInitializer'
 import { expect } from 'vitest'
 
@@ -25,7 +24,7 @@ function expectSingleResultsToMatch(actual: TestResultByName, expected: TestResu
     try {
       expect(actual[key]).toBeCloseTo(value)
     } catch (error: unknown) {
-      // @ts-ignore
+      // @ts-expect-error - Error type narrowing in test assertion
       const message = error.message
       throw new Error(`
 ${i18next.t(`gameData:Characters.${input.character.characterId}.LongName`)} ${key} ${view}

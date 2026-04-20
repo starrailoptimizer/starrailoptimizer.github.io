@@ -1,19 +1,23 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.EarthlyEscapade')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.EarthlyEscapade')
   const { SOURCE_LC } = Source.lightCone(EarthlyEscapade.id)
 
   const sValuesCr = [0.10, 0.11, 0.12, 0.13, 0.14]
@@ -34,8 +38,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.maskActive.text'),
       content: t('Content.maskActive.content', {
-        CritRateBuff: TsUtils.precisionRound(100 * sValuesCr[s]),
-        CritDmgBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
+        CritRateBuff: precisionRound(100 * sValuesCr[s]),
+        CritDmgBuff: precisionRound(100 * sValuesCd[s]),
       }),
     },
   }

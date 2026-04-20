@@ -7,8 +7,8 @@ import { Hyacine } from 'lib/conditionals/character/1400/Hyacine'
 import { Tribbie } from 'lib/conditionals/character/1400/Tribbie'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -37,7 +37,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -52,18 +52,20 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterConfig } from 'types/characterConfig'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
-import { Eidolon } from 'types/character'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const MydeiEntities = createEnum('Mydei')
@@ -75,7 +77,7 @@ export const MydeiAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Mydei.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Mydei.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -114,12 +116,12 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('skillEnhances.text'),
       content: t('skillEnhances.content', {
-        SkillPrimaryScaling: TsUtils.precisionRound(skillScaling * 100),
-        SkillAdjacentScaling: TsUtils.precisionRound(skill(e, 50, 55)),
-        EnhancedSkillPrimaryScaling: TsUtils.precisionRound(skillEnhanced1Scaling * 100),
-        EnhancedSkillAdjacentScaling: TsUtils.precisionRound(skill(e, 66, 72.6)),
-        EnhancedSkill2PrimaryScaling: TsUtils.precisionRound(skillEnhanced2Scaling * 100),
-        EnhancedSkill2AdjacentScaling: TsUtils.precisionRound(skill(e, 168, 184.8)),
+        SkillPrimaryScaling: precisionRound(skillScaling * 100),
+        SkillAdjacentScaling: precisionRound(skill(e, 50, 55)),
+        EnhancedSkillPrimaryScaling: precisionRound(skillEnhanced1Scaling * 100),
+        EnhancedSkillAdjacentScaling: precisionRound(skill(e, 66, 72.6)),
+        EnhancedSkill2PrimaryScaling: precisionRound(skillEnhanced2Scaling * 100),
+        EnhancedSkill2AdjacentScaling: precisionRound(skill(e, 168, 184.8)),
       }),
       min: 0,
       max: 2,
@@ -128,7 +130,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'vendettaState',
       formItem: 'switch',
       text: t('vendettaState.text'),
-      content: t('vendettaState.content', { HpRestoration: TsUtils.precisionRound(talent(e, 25, 27)) }),
+      content: t('vendettaState.content', { HpRestoration: precisionRound(talent(e, 25, 27)) }),
     },
     hpToCrConversion: {
       id: 'hpToCrConversion',
@@ -253,7 +255,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
     newCalculateBasicEffects: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
       const r = action.characterConditionals as Conditionals<typeof content>
 
-      const crBuff = (r.hpToCrConversion) ? Math.max(0, Math.min(0.48, 0.016 * Math.floor((x.c.a[BasicKey.HP] - 5000) / 100))) : 0
+      const crBuff = (r.hpToCrConversion) ? Math.max(0, Math.min(0.48, 0.016 * floorSafe((x.c.a[BasicKey.HP] - 5000) / 100))) : 0
       x.buff(StatKey.UNCONVERTIBLE_CR_BUFF, crBuff, x.source(SOURCE_TRACE))
       x.buff(StatKey.CR, crBuff, x.source(SOURCE_TRACE))
     },
@@ -262,7 +264,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
 
       return `
 if (${wgslTrue(r.hpToCrConversion)}) {
-  let buffValue: f32 = max(0, min(0.48, 0.016 * floor(((*p_c).HP - 5000) / 100)));
+  let buffValue: f32 = max(0, min(0.48, 0.016 * floorSafe(((*p_c).HP - 5000) / 100)));
   ${buff.action(AKey.CR, 'buffValue').wgsl(action)}
   ${buff.action(AKey.UNCONVERTIBLE_CR_BUFF, 'buffValue').wgsl(action)}
 }
@@ -342,7 +344,6 @@ const simulation = (): SimulationMetadata => ({
     END_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -421,7 +422,7 @@ const display = {
     y: 1050,
     z: 1.05,
   },
-  showcaseColor: '#ff94b1',
+  showcaseColor: '#e573a2',
 }
 
 export const Mydei: CharacterConfig = {

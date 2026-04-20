@@ -1,3 +1,4 @@
+import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
 import {
   Stats,
   SubStats,
@@ -5,22 +6,24 @@ import {
 import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   applyScoringFunction,
-  SimulationResult,
   substatRollsModifier,
 } from 'lib/scoring/simScoringUtils'
 import { initializeContextConditionals } from 'lib/simulations/contextConditionals'
 import { runStatSimulations } from 'lib/simulations/statSimulation'
 import {
-  Simulation,
-  SubstatCounts,
+  type Simulation,
+  type SubstatCounts,
 } from 'lib/simulations/statSimulationTypes'
-import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { clone } from 'lib/utils/objectUtils'
 import {
-  ComputeOptimalSimulationWorkerInput,
-  ComputeOptimalSimulationWorkerOutput,
+  type ComputeOptimalSimulationWorkerInput,
+  type ComputeOptimalSimulationWorkerOutput,
 } from 'lib/worker/computeOptimalSimulationWorkerRunner'
 import { SearchTree } from 'lib/worker/maxima/tree/searchTree'
+import {
+  SUBSTAT_COUNT,
+  toSubstatCounts,
+} from 'lib/worker/maxima/tree/statIndexMap'
 import { SubstatDistributionValidator } from 'lib/worker/maxima/validator/substatDistributionValidator'
 
 export function computeOptimalSimulationWorker(e: MessageEvent<ComputeOptimalSimulationWorkerInput>) {
@@ -30,7 +33,7 @@ export function computeOptimalSimulationWorker(e: MessageEvent<ComputeOptimalSim
   initializeContextConditionals(context)
   const optimalSimulation = computeOptimalSimulationSearch(input)
 
-  // @ts-ignore
+  // @ts-expect-error - removing ComputedStatsContainer before postMessage (not serializable)
   delete optimalSimulation.result.x
 
   const workerOutput: ComputeOptimalSimulationWorkerOutput = {
@@ -47,7 +50,7 @@ export function computeOptimalSimulationWorker(e: MessageEvent<ComputeOptimalSim
 function getSubstatRollsModifier(input: ComputeOptimalSimulationWorkerInput) {
   // Manual adjustment for Hysilens scoring - Using non-EHR light cones forces the benchmark to be unable to hit 120%
   // EHR due to diminishing returns. To fix, relax diminishing returns on non-EHR LC builds
-  if (input.context.characterId == Hysilens.id) {
+  if (input.context.characterId === Hysilens.id) {
     const ehrLightCone = input.context.characterStatsBreakdown.lightCone[Stats.EHR]
     if (!ehrLightCone) {
       return (rolls: number, stat: string, sim: Simulation) =>
@@ -68,7 +71,7 @@ function getSubstatRollsModifier(input: ComputeOptimalSimulationWorkerInput) {
   return substatRollsModifier
 }
 
-export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWorkerInput) {
+function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWorkerInput) {
   const {
     partialSimulationWrapper,
     inputMinSubstatRollCounts,
@@ -80,7 +83,7 @@ export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWo
     simulationFlags,
   } = input
 
-  scoringParams.substatRollsModifier = scoringParams.quality == 0.8
+  scoringParams.substatRollsModifier = scoringParams.quality === 0.8
     ? getSubstatRollsModifier(input)
     : (rolls: number) => rolls
 
@@ -88,7 +91,7 @@ export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWo
   const maxSubstatRollCounts = inputMaxSubstatRollCounts
 
   const goal = scoringParams.substatGoal
-  const currentSimulation: Simulation = TsUtils.clone(partialSimulationWrapper.simulation)
+  const currentSimulation: Simulation = clone(partialSimulationWrapper.simulation)
 
   if (scoringParams.enforcePossibleDistribution) {
     maxSubstatRollCounts[Stats.SPD] = Math.max(6, maxSubstatRollCounts[Stats.SPD]) // Fixes SPD
@@ -99,14 +102,19 @@ export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWo
   const cachedComputedStatsContainer = new ComputedStatsContainer()
   cachedComputedStatsContainer.initializeArrays(context.maxContainerArrayLength, context)
 
+  const mergedScoringParams = {
+    ...scoringParams,
+    substatRollsModifier: scoringParams.substatRollsModifier,
+    simulationFlags: simulationFlags,
+    stabilize: false,
+    skipDefaults: true,
+  }
+
   function damageFunction(stats: SubstatCounts, stabilize = false): number {
     currentSimulation.request.stats = stats
-    currentSimulation.result = runStatSimulations([currentSimulation], simulationForm, context, {
-      ...scoringParams,
-      substatRollsModifier: scoringParams.substatRollsModifier,
-      simulationFlags: simulationFlags,
-      stabilize: stabilize,
-    }, cachedComputedStatsContainer)[0]
+    mergedScoringParams.stabilize = stabilize
+    mergedScoringParams.skipDefaults = !stabilize
+    currentSimulation.result = runStatSimulations([currentSimulation], simulationForm, context, mergedScoringParams, cachedComputedStatsContainer)[0]
 
     applyScoringFunction(currentSimulation.result, metadata)
     return currentSimulation.result.simScore
@@ -124,6 +132,20 @@ export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWo
 
   const substatValidator = new SubstatDistributionValidator(goal, request)
 
+  let maxAssignments = 0
+  for (let i = 0; i < SUBSTAT_COUNT; i++) {
+    maxAssignments += Math.min(
+      maxSubstatRollCounts[SubStats[i]] ?? 0,
+      substatValidator.getAvailablePieces(i),
+    )
+  }
+  if (maxAssignments < 24) {
+    throw new Error(
+      `Search space assignment-infeasible: ${maxAssignments}/24 slots fillable. `
+      + `Character's effectiveSubstats needs more filler stats.`,
+    )
+  }
+
   const tree = new SearchTree(
     goal,
     minSubstatRollCounts,
@@ -138,11 +160,8 @@ export function computeOptimalSimulationSearch(input: ComputeOptimalSimulationWo
     return currentSimulation
   }
 
-  const bestPoint = tree.search()
+  const bestPoint = toSubstatCounts(tree.search())
   damageFunction(bestPoint, true)
 
   return currentSimulation
-}
-
-export function DEBUG() {
 }

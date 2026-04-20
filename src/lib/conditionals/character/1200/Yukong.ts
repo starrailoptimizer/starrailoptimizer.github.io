@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -15,21 +15,22 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { ScoringMetadata } from 'types/metadata'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type ScoringMetadata } from 'types/metadata'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import { precisionRound } from 'lib/utils/mathUtils'
 export const YukongEntities = createEnum('Yukong')
 export const YukongAbilities: AbilityKind[] = [
   AbilityKind.BASIC,
@@ -38,7 +39,7 @@ export const YukongAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yukong')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yukong')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -87,16 +88,16 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'roaringBowstringsActive',
       formItem: 'switch',
       text: t('Content.roaringBowstringsActive.text'),
-      content: t('Content.roaringBowstringsActive.content', { skillAtkBuffValue: TsUtils.precisionRound(100 * skillAtkBuffValue) }),
+      content: t('Content.roaringBowstringsActive.content', { skillAtkBuffValue: precisionRound(100 * skillAtkBuffValue) }),
     },
     ultBuff: {
       id: 'ultBuff',
       formItem: 'switch',
       text: t('Content.ultBuff.text'),
       content: t('Content.ultBuff.content', {
-        ultCrBuffValue: TsUtils.precisionRound(100 * ultCrBuffValue),
-        ultCdBuffValue: TsUtils.precisionRound(100 * ultCdBuffValue),
-        ultScaling: TsUtils.precisionRound(100 * ultScaling),
+        ultCrBuffValue: precisionRound(100 * ultCrBuffValue),
+        ultCdBuffValue: precisionRound(100 * ultCdBuffValue),
+        ultScaling: precisionRound(100 * ultScaling),
       }),
     },
     initialSpeedBuff: {
@@ -238,7 +239,12 @@ const display = {
     y: 1055,
     z: 1.1,
   },
-  showcaseColor: '#90a0e6',
+  spineCenter: {
+    x: 922,
+    y: 1057,
+    z: 1.2,
+  },
+  showcaseColor: '#8096fb',
 }
 
 export const Yukong: CharacterConfig = {

@@ -1,9 +1,11 @@
 import { BUFF_TYPE } from 'lib/optimization/buffSource'
-import { DamageTag } from 'lib/optimization/engine/config/tag'
-import { cardShadow } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
-import React, { createContext } from 'react'
+import type { DamageTag } from 'lib/optimization/engine/config/tag'
+import type React from 'react'
+import { createContext } from 'react'
 
-export type DesignOptions = {
+const cardShadow = 'var(--shadow-card)'
+
+type DesignOptions = {
   rowHeight: number,
   iconSize: number,
   tintIntensity: number,
@@ -14,7 +16,7 @@ export type DesignOptions = {
   cardPadding: number,
 }
 
-export const BORDER_RADIUS = 5
+const BORDER_RADIUS = 6
 export const GROUP_SPACING = 10
 
 export const TEXT_DIM = '#ffffff40'
@@ -43,6 +45,7 @@ export const DEFAULT_OPTIONS: DesignOptions = {
 
 export const DesignContext = createContext<DesignOptions>(DEFAULT_OPTIONS)
 export const FilterContext = createContext<DamageTag | null>(null)
+export const FilterChangeContext = createContext<((f: DamageTag | null) => void) | null>(null)
 
 export const ellipsisStyle = (fontSize: number): React.CSSProperties => ({
   overflow: 'hidden',

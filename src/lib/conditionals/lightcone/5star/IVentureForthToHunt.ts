@@ -1,19 +1,23 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { DamageTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.IVentureForthToHunt')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.IVentureForthToHunt')
   const { SOURCE_LC } = Source.lightCone(IVentureForthToHunt.id)
 
   const sValuesDefShred = [0.27, 0.30, 0.33, 0.36, 0.39]
@@ -28,7 +32,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'luminfluxUltStacks',
       formItem: 'slider',
       text: t('Content.luminfluxUltStacks.text'),
-      content: t('Content.luminfluxUltStacks.content', { DefIgnore: TsUtils.precisionRound(100 * sValuesDefShred[s]) }),
+      content: t('Content.luminfluxUltStacks.content', { DefIgnore: precisionRound(100 * sValuesDefShred[s]) }),
       min: 0,
       max: 2,
     },

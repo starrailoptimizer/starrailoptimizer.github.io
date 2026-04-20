@@ -1,108 +1,139 @@
-import 'ag-grid-community/styles/ag-grid.css'
-import 'ag-grid-community/styles/ag-theme-balham.css'
 import {
   Flex,
-  theme,
-} from 'antd'
+  SegmentedControl,
+} from '@mantine/core'
 import { CharacterPreview } from 'lib/characterPreview/CharacterPreview'
 import { ShowcaseSource } from 'lib/characterPreview/CharacterPreviewComponents'
-import { BuildsModal } from 'lib/overlays/modals/BuildsModal'
-import CharacterModal from 'lib/overlays/modals/CharacterModal'
-import { SaveBuildModal } from 'lib/overlays/modals/SaveBuildModal'
-import { SwitchRelicsModal } from 'lib/overlays/modals/SwitchRelicsModal'
-import { getGridTheme } from 'lib/rendering/theme'
-import { AppPages } from 'lib/state/db'
+import { SavedSessionKeys } from 'lib/constants/constantsSession'
+import { TabVisibilityContext } from 'lib/hooks/useTabVisibility'
+import { useCharacterModalStore } from 'lib/overlays/modals/characterModalStore'
+import { SaveState } from 'lib/state/saveState'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { useCharacterStore } from 'lib/stores/character/characterStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
 import { CharacterGrid } from 'lib/tabs/tabCharacters/CharacterGrid'
+import {
+  type CharacterGridDensity,
+  characterGridPresets,
+  precomputedCssVars,
+} from 'lib/tabs/tabCharacters/characterGridPresets'
 import { CharacterMenu } from 'lib/tabs/tabCharacters/CharacterMenu'
 import { CharacterTabController } from 'lib/tabs/tabCharacters/characterTabController'
 import { FilterBar } from 'lib/tabs/tabCharacters/FilterBar'
 import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
-import React, { Suspense } from 'react'
+import { useDeferReveal } from 'lib/ui/DeferredRender'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+} from 'react'
+import type {
+  Character,
+  CharacterId,
+} from 'types/character'
 
-const { useToken } = theme
+import {
+  cardTotalW,
+  defaultGap,
+  parentH,
+} from 'lib/constants/constantsUi'
+import { useTranslation } from 'react-i18next'
 
-export default function CharacterTab() {
-  const { token } = useToken()
+const densityValues = ['default', 'compact'] as const
 
-  const characterModalOpen = useCharacterTabStore((s) => s.characterModalOpen)
-  const setCharacterModalOpen = useCharacterTabStore((s) => s.setCharacterModalOpen)
-  const characterModalInitialCharacter = useCharacterTabStore((s) => s.characterModalInitialCharacter)
-  const setCharacterModalInitialCharacter = useCharacterTabStore((s) => s.setCharacterModalInitialCharacter)
-  const saveBuildModalOpen = useCharacterTabStore((s) => s.saveBuildModalOpen)
-  const setSaveBuildModalOpen = useCharacterTabStore((s) => s.setSaveBuildModalOpen)
-  const buildsModalOpen = useCharacterTabStore((s) => s.buildsModalOpen)
-  const setBuildsModalOpen = useCharacterTabStore((s) => s.setBuildsModalOpen)
+export function CharacterTab() {
+  // Only sync when optimizer focus changed — otherwise tab revisits stomp the user's selection.
+  // Initialize to saved session character so session restore doesn't trigger a sync on first visit.
+  const { addActivationListener } = useContext(TabVisibilityContext)
+  const savedSessionCharacterId = useGlobalStore.getState().savedSession[SavedSessionKeys.optimizerCharacterId]
+  const lastSyncedFocusRef = useRef<CharacterId | undefined>(savedSessionCharacterId)
+  useEffect(() => {
+    return addActivationListener(() => {
+      const id = useOptimizerDisplayStore.getState().focusCharacterId
+      if (!id) return
+      if (id === lastSyncedFocusRef.current) return
+      lastSyncedFocusRef.current = id
+      useCharacterTabStore.getState().setFocusCharacter(id)
+    })
+  }, [addActivationListener])
 
-  console.log('======================================================================= RENDER CharacterTab')
+  const focusCharacter = useCharacterTabStore((s) => s.focusCharacter)
+  const selectedCharacter = useCharacterStore((s) => focusCharacter ? s.charactersById[focusCharacter] : null) ?? null
+  const containerRef = useDeferReveal()
 
-  const selectedCharacter = useCharacterTabStore((s) => s.selectedCharacter)
+  const density = useGlobalStore((s) => s.savedSession.characterGridDensity)
+  const preset = characterGridPresets[density]
+  const gridCssVars = precomputedCssVars[density]
 
-  const defaultGap = 8
-  const parentH = 280 * 3 + defaultGap * 2
+  const onDensityChange = useCallback((value: string) => {
+    if (!(value in characterGridPresets)) return
+    useGlobalStore.getState().setSavedSessionKey(SavedSessionKeys.characterGridDensity, value as CharacterGridDensity)
+    SaveState.delayedSave()
+  }, [])
+
+  const setOriginalCharacterModalInitialCharacter = useCallback((character: Character | null) => {
+    useCharacterModalStore.getState().openOverlay({
+      initialCharacter: character,
+      onOk: CharacterTabController.onCharacterModalOk,
+    })
+  }, [])
+
+  const setOriginalCharacterModalOpen = useCallback((open: boolean) => {
+    if (!open) {
+      useCharacterModalStore.getState().closeOverlay()
+    }
+  }, [])
+
+  const { t } = useTranslation('charactersTab', { keyPrefix: 'GridDensityOptions' })
+
+  const densityOptions = useMemo(() => densityValues.map((x) => ({ value: x, label: t(x) })), [t])
 
   return (
     <Flex
+      ref={containerRef}
       style={{
         height: '100%',
         marginBottom: 200,
-        width: 1455,
+        width: 1593,
       }}
       gap={defaultGap}
     >
-      <Flex vertical gap={defaultGap}>
+      <Flex direction='column' gap={defaultGap}>
         <CharacterMenu />
 
-        <Flex vertical gap={8} style={{ minWidth: 240 }}>
+        <Flex direction='column' gap={defaultGap} miw={preset.listWidth}>
           <div
             id='characterGrid'
-            className='ag-theme-balham-dark'
             style={{
-              display: 'block',
               width: '100%',
               height: parentH,
-              ...getGridTheme(token),
+              ...gridCssVars,
             }}
           >
             <CharacterGrid />
           </div>
+          <SegmentedControl
+            data={densityOptions}
+            value={density}
+            onChange={onDensityChange}
+            fullWidth
+          />
         </Flex>
       </Flex>
 
-      <Flex vertical gap={defaultGap}>
+      <Flex direction='column' gap={defaultGap} w={cardTotalW}>
         <FilterBar />
 
-        <Suspense>
-          <CharacterPreview
-            id='characterTabPreview'
-            source={ShowcaseSource.CHARACTER_TAB}
-            character={selectedCharacter}
-            setOriginalCharacterModalOpen={setCharacterModalOpen}
-            setOriginalCharacterModalInitialCharacter={setCharacterModalInitialCharacter}
-          />
-        </Suspense>
+        <CharacterPreview
+          id='characterTabPreview'
+          source={ShowcaseSource.CHARACTER_TAB}
+          character={selectedCharacter}
+          setOriginalCharacterModalOpen={setOriginalCharacterModalOpen}
+          setOriginalCharacterModalInitialCharacter={setOriginalCharacterModalInitialCharacter}
+        />
       </Flex>
-
-      <CharacterModal
-        onOk={CharacterTabController.onCharacterModalOk}
-        open={characterModalOpen}
-        setOpen={setCharacterModalOpen}
-        initialCharacter={characterModalInitialCharacter}
-      />
-
-      <SwitchRelicsModal />
-
-      <SaveBuildModal
-        source={AppPages.CHARACTERS}
-        character={selectedCharacter}
-        isOpen={saveBuildModalOpen}
-        close={() => setSaveBuildModalOpen(false)}
-      />
-
-      <BuildsModal
-        selectedCharacter={selectedCharacter}
-        isOpen={buildsModalOpen}
-        close={() => setBuildsModalOpen(false)}
-      />
     </Flex>
   )
 }

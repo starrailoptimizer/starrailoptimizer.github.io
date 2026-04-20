@@ -1,86 +1,89 @@
 import {
-  DownOutlined,
-  ExclamationCircleOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
-import {
   Button,
-  Dropdown,
-  Modal,
-} from 'antd'
-import { MenuProps } from 'antd/lib'
-import { TFunction } from 'i18next'
+  Menu,
+} from '@mantine/core'
+import {
+  IconChevronDown,
+  IconUser,
+} from '@tabler/icons-react'
+import type { TFunction } from 'i18next'
+import { useConfirmAction } from 'lib/hooks/useConfirmAction'
 import {
   OpenCloseIDs,
   setOpen,
 } from 'lib/hooks/useOpenClose'
 import { Message } from 'lib/interactions/message'
+import { useBuildsModalStore } from 'lib/overlays/modals/buildsModalStore'
+import { useCharacterModalStore } from 'lib/overlays/modals/characterModalStore'
+import { useSaveBuildModalStore } from 'lib/overlays/modals/saveBuildModalStore'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { getCharacterById } from 'lib/stores/character/characterStore'
 import { CharacterTabController } from 'lib/tabs/tabCharacters/characterTabController'
 import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
-import React, {
-  ReactNode,
-  useCallback,
+import {
+  Fragment,
+  type ReactNode,
   useMemo,
 } from 'react'
 import {
   Trans,
   useTranslation,
 } from 'react-i18next'
+import { BuildSource } from 'types/savedBuild'
 
 export function CharacterMenu() {
   const { t } = useTranslation('charactersTab')
-  const { t: tCommon } = useTranslation('common')
-  const [confirmationModal, contextHolder] = Modal.useModal()
-
-  const confirm = useCallback(async (content: ReactNode) => {
-    return confirmationModal.confirm({
-      title: tCommon('Confirm'), // 'Confirm',
-      icon: <ExclamationCircleOutlined />,
-      content: content,
-      okText: tCommon('Confirm'), // 'Confirm',
-      cancelText: tCommon('Cancel'), // 'Cancel',
-      centered: true,
-    })
-  }, [tCommon, confirmationModal])
+  const confirm = useConfirmAction()
 
   const onClick = useMemo(() => generateOnClickHandler(confirm, t), [confirm, t])
 
   const items = useMemo(() => generateItems(t), [t])
 
-  const actionsMenuProps = { items, onClick }
-
   return (
     <>
-      <Dropdown
-        placement='topLeft'
-        menu={actionsMenuProps}
-        trigger={['hover']}
-      >
-        <Button
-          style={{ width: '100%', height: 40, boxShadow: 'unset', borderRadius: 8 }}
-          icon={<UserOutlined />}
-          type='default'
-        >
-          {t('CharacterMenu.ButtonText') /* Character menu */}
-          <DownOutlined />
-        </Button>
-      </Dropdown>
-      {contextHolder}
+      <Menu trigger='click' position='top-start' width='target'>
+        <Menu.Target>
+          <Button
+            style={{ width: '100%', height: 40, boxShadow: 'unset', borderRadius: 4 }}
+            leftSection={<IconUser size={16} />}
+            rightSection={<IconChevronDown size={16} />}
+            variant='default'
+          >
+            {t('CharacterMenu.ButtonText') /* Character menu */}
+          </Button>
+        </Menu.Target>
+        <Menu.Dropdown>
+          {items.map((group, i) => (
+            <Fragment key={group.key}>
+              {i > 0 && <Menu.Divider />}
+              <Menu.Label>{group.label}</Menu.Label>
+              {group.children.map((child) => (
+                <Menu.Item key={child.key} onClick={() => onClick({ key: child.key })}>
+                  {child.label}
+                </Menu.Item>
+              ))}
+            </Fragment>
+          ))}
+        </Menu.Dropdown>
+      </Menu>
     </>
   )
 }
 
 function generateOnClickHandler(confirm: (content: ReactNode) => Promise<boolean>, t: TFunction<'charactersTab'>) {
-  async function onClick(e: Parameters<NonNullable<MenuProps['onClick']>>[0]) {
+  async function onClick(e: { key: string }) {
     const key = e.key as ReturnType<typeof generateItems>[number]['children'][number]['key']
-    const { selectedCharacter, focusCharacter, setCharacterModalInitialCharacter, setCharacterModalOpen } = useCharacterTabStore.getState()
+    const { focusCharacter } = useCharacterTabStore.getState()
+    const selectedCharacter = getCharacterById(focusCharacter ?? undefined)
     if (!selectedCharacter && !(key === 'scoring' || key === 'sortByScore' || key === 'add')) {
       return Message.error(t('Messages.NoSelectedCharacter')) // No selected character
     }
     switch (key) {
       case 'add':
-        setCharacterModalInitialCharacter(null)
-        setCharacterModalOpen(true)
+        useCharacterModalStore.getState().openOverlay({
+          initialCharacter: null,
+          onOk: CharacterTabController.onCharacterModalOk,
+        })
         break
 
       case 'sortByScore':
@@ -95,18 +98,20 @@ function generateOnClickHandler(confirm: (content: ReactNode) => Promise<boolean
         break
 
       case 'scoring':
-        if (focusCharacter) window.store.getState().setScoringAlgorithmFocusCharacter(focusCharacter)
+        if (focusCharacter) useGlobalStore.getState().setScoringAlgorithmFocusCharacter(focusCharacter)
         setOpen(OpenCloseIDs.SCORING_MODAL)
         break
 
       case 'delete':
-        if (!await confirm(t('Messages.DeleteWarning', { charId: focusCharacter }))) return
+        if (!await confirm(t('Messages.DeleteWarning', { charId: focusCharacter ?? '' }))) return
         CharacterTabController.removeFocusCharacter()
         break
 
       case 'edit':
-        setCharacterModalInitialCharacter(selectedCharacter)
-        setCharacterModalOpen(true)
+        useCharacterModalStore.getState().openOverlay({
+          initialCharacter: selectedCharacter ?? null,
+          onOk: CharacterTabController.onCharacterModalOk,
+        })
         break
 
       case 'moveToTop':
@@ -114,7 +119,9 @@ function generateOnClickHandler(confirm: (content: ReactNode) => Promise<boolean
         break
 
       case 'saveBuild':
-        useCharacterTabStore.getState().setSaveBuildModalOpen(true)
+        if (focusCharacter) {
+          useSaveBuildModalStore.getState().openOverlay({ source: BuildSource.Character, characterId: focusCharacter })
+        }
         break
 
       case 'switchRelics':
@@ -122,12 +129,14 @@ function generateOnClickHandler(confirm: (content: ReactNode) => Promise<boolean
         break
 
       case 'unequip':
-        if (!await confirm(t('Messages.UnequipWarning', { charId: focusCharacter }))) return
+        if (!await confirm(t('Messages.UnequipWarning', { charId: focusCharacter ?? '' }))) return
         CharacterTabController.unequipFocusCharacter()
         break
 
       case 'viewBuilds':
-        useCharacterTabStore.getState().setBuildsModalOpen(true)
+        if (focusCharacter) {
+          useBuildsModalStore.getState().openOverlay({ characterId: focusCharacter })
+        }
         break
 
       default:
@@ -182,17 +191,6 @@ function generateItems(t: TFunction<'charactersTab'>) {
       ],
     },
     {
-      key: 'scoring group' as const,
-      type: 'group' as const,
-      label: t('CharacterMenu.Scoring.Label'), /* Scoring */
-      children: [
-        {
-          label: t('CharacterMenu.Scoring.Options.ScoringModal'), /* Scoring algorithm */
-          key: 'scoring' as const,
-        },
-      ],
-    },
-    {
       key: 'priority group' as const,
       type: 'group' as const,
       label: t('CharacterMenu.Priority.Label'), /* Priority */
@@ -204,6 +202,17 @@ function generateItems(t: TFunction<'charactersTab'>) {
         {
           label: t('CharacterMenu.Priority.Options.MoveToTop'), /* Move character to top */
           key: 'moveToTop' as const,
+        },
+      ],
+    },
+    {
+      key: 'scoring group' as const,
+      type: 'group' as const,
+      label: t('CharacterMenu.Scoring.Label'), /* Scoring */
+      children: [
+        {
+          label: t('CharacterMenu.Scoring.Options.ScoringModal'), /* Scoring algorithm */
+          key: 'scoring' as const,
         },
       ],
     },

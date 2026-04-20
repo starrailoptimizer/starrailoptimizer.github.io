@@ -1,13 +1,13 @@
-import { Flex } from 'antd'
 import { Parts } from 'lib/constants/constants'
-import { useState } from 'react'
+import { useCallback } from 'react'
 
-import RelicModal from 'lib/overlays/modals/RelicModal'
-import { RelicModalController } from 'lib/overlays/modals/relicModalController'
-import { RelicScorer } from 'lib/relics/relicScorerPotential'
-import { AppPages } from 'lib/state/db'
+import { RelicModalController } from 'lib/overlays/modals/relicModal/relicModalController'
+import { useRelicModalStore } from 'lib/overlays/modals/relicModal/relicModalStore'
+import { RelicScorer } from 'lib/relics/scoring/relicScorer'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
+import { useRelicStore } from 'lib/stores/relic/relicStore'
 import { RelicPreview } from 'lib/tabs/tabRelics/RelicPreview'
-import { Relic } from 'types/relic'
+import type { Relic } from 'types/relic'
 
 const partToIndex: Record<Parts, number> = {
   [Parts.Head]: 0,
@@ -27,50 +27,47 @@ const indexToPart: Record<number, Parts> = {
   5: Parts.LinkRope,
 }
 
-export default function OptimizerBuildPreview() {
-  const optimizerBuild = window.store((s) => s.optimizerBuild)
-  const relicsById = window.store((s) => s.relicsById)
-  const characterId = window.store((s) => s.optimizerTabFocusCharacter)
-  const activeKey = window.store((s) => s.activeKey)
+function navigateRelic(direction: 1 | -1) {
+  const currentRelic = useRelicModalStore.getState().config?.selectedRelic
+  const optimizerBuild = useOptimizerDisplayStore.getState().optimizerBuild
+  const relicsById = useRelicStore.getState().relicsById
+  if (!currentRelic || !optimizerBuild) return
 
-  const [selectedRelic, setSelectedRelic] = useState<Relic | null>(null)
-  const [editModalOpen, setEditModalOpen] = useState<boolean>(false)
-
-  if (activeKey !== AppPages.OPTIMIZER || characterId == undefined) {
-    return <></>
-  }
-
-  function onEditOk(relic: Relic) {
-    const updatedRelic = RelicModalController.onEditOk(selectedRelic!, relic)
-    setSelectedRelic(updatedRelic)
-  }
-
-  const next = () => {
-    if (!selectedRelic || !optimizerBuild) {
+  const startingIndex = partToIndex[currentRelic.part] + direction
+  for (let i = 0; i < 6; i++) {
+    const idx = ((startingIndex + direction * i) % 6 + 6) % 6
+    const nextRelic = relicsById[optimizerBuild[indexToPart[idx]]!]
+    if (nextRelic) {
+      useRelicModalStore.getState().updateConfig({ selectedRelic: nextRelic })
       return
     }
-    let startingIndex = partToIndex[selectedRelic.part] + 1
-    let nextRelic: Relic | undefined
-    for (let i = startingIndex; i < startingIndex + 6; i++) {
-      nextRelic = relicsById[optimizerBuild[indexToPart[i % 6]]!]
-      if (nextRelic) {
-        return setSelectedRelic(nextRelic)
-      }
-    }
   }
+}
 
-  const prev = () => {
-    if (!selectedRelic || !optimizerBuild) {
-      return
+const next = () => navigateRelic(1)
+const prev = () => navigateRelic(-1)
+
+export function OptimizerBuildPreview() {
+  const optimizerBuild = useOptimizerDisplayStore((s) => s.optimizerBuild)
+  const relicsById = useRelicStore((s) => s.relicsById)
+  const characterId = useOptimizerDisplayStore((s) => s.focusCharacterId)
+
+  // Stable ref — reads stores imperatively, no reactive deps
+  const openRelicModal = useCallback((_open: boolean, relic?: Relic) => {
+    if (relic) {
+      useRelicModalStore.getState().openOverlay({
+        selectedRelic: relic,
+        onOk: (editedRelic: Relic) => {
+          RelicModalController.onEditOk(relic, editedRelic)
+        },
+        next,
+        prev,
+      })
     }
-    let startingIndex = partToIndex[selectedRelic.part] + 5
-    let nextRelic: Relic | undefined
-    for (let i = startingIndex; i > startingIndex - 6; i--) {
-      nextRelic = relicsById[optimizerBuild[indexToPart[i % 6]]!]
-      if (nextRelic) {
-        return setSelectedRelic(nextRelic)
-      }
-    }
+  }, [])
+
+  if (characterId == undefined) {
+    return null
   }
 
   const headRelic = optimizerBuild?.Head ? relicsById[optimizerBuild.Head] : undefined
@@ -89,15 +86,14 @@ export default function OptimizerBuildPreview() {
 
   return (
     <div>
-      <Flex gap={5} id='optimizerBuildPreviewContainer' justify='space-between' style={{ paddingLeft: 1, paddingRight: 1 }}>
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={headRelic} score={headScore} />
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={handsRelic} score={handsScore} />
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={bodyRelic} score={bodyScore} />
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={feetRelic} score={feetScore} />
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={planarSphereRelic} score={planarSphereScore} />
-        <RelicPreview setEditModalOpen={setEditModalOpen} setSelectedRelic={setSelectedRelic} relic={linkRopeRelic} score={linkRopeScore} />
-      </Flex>
-      <RelicModal selectedRelic={selectedRelic} onOk={onEditOk} setOpen={setEditModalOpen} open={editModalOpen} next={next} prev={prev} />
+      <div id='optimizerBuildPreviewContainer' style={{ display: 'flex', gap: 8, justifyContent: 'space-between', paddingLeft: 1, paddingRight: 1 }}>
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={headRelic} score={headScore} />
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={handsRelic} score={handsScore} />
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={bodyRelic} score={bodyScore} />
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={feetRelic} score={feetScore} />
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={planarSphereRelic} score={planarSphereScore} />
+        <RelicPreview fill setEditModalOpen={openRelicModal} relic={linkRopeRelic} score={linkRopeScore} />
+      </div>
     </div>
   )
 }

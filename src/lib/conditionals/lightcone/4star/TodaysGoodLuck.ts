@@ -1,24 +1,25 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  LightConeConditionalFunction,
-  LightConeConfig,
+  type LightConeConditionalFunction,
+  type LightConeConfig,
 } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals: LightConeConditionalFunction = (s, withContent) => {
   const { SOURCE_LC } = Source.lightCone(TodaysGoodLuck.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TodaysGoodLuck.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TodaysGoodLuck.Content')
 
   const sValues = [0.12, 0.14, 0.16, 0.18, 0.20]
 
@@ -32,7 +33,7 @@ const conditionals: LightConeConditionalFunction = (s, withContent) => {
       id: 'elationStacks',
       formItem: 'slider',
       text: t('elationStacks.text'),
-      content: t('elationStacks.content', { elationBuff: TsUtils.precisionRound(100 * sValues[s]) }),
+      content: t('elationStacks.content', { elationBuff: precisionRound(100 * sValues[s]) }),
       min: 0,
       max: 2,
     },

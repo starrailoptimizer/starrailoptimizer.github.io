@@ -10,8 +10,8 @@ import {
 } from 'lib/conditionals/conditionalConstants'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -30,7 +30,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_MEMO_SKILL,
@@ -45,19 +45,20 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterConfig } from 'types/characterConfig'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
-import { Eidolon } from 'types/character'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { AbilityDefinition } from 'types/hitConditionalTypes'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type AbilityDefinition } from 'types/hitConditionalTypes'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const CastoriceEntities = createEnum(
@@ -74,8 +75,8 @@ export const CastoriceAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Castorice.Content')
-  const tBuff = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Castorice.Content')
+  const tBuff = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
   const { basic, skill, ult, talent, memoSkill, memoTalent } = AbilityEidolon.ULT_BASIC_MEMO_TALENT_3_SKILL_TALENT_MEMO_SKILL_5
   const {
     SOURCE_BASIC,
@@ -141,7 +142,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'memospriteActive',
       formItem: 'switch',
       text: t('memospriteActive.text'),
-      content: t('memospriteActive.content', { ResDown: TsUtils.precisionRound(100 * ultTerritoryResPen) }),
+      content: t('memospriteActive.content', { ResDown: precisionRound(100 * ultTerritoryResPen) }),
     },
     spdBuff: {
       id: 'spdBuff',
@@ -159,7 +160,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentDmgStacks',
       formItem: 'slider',
       text: t('talentDmgStacks.text'),
-      content: t('talentDmgStacks.content', { DmgBuff: TsUtils.precisionRound(100 * talentDmgBoost) }),
+      content: t('talentDmgStacks.content', { DmgBuff: precisionRound(100 * talentDmgBoost) }),
       min: 0,
       max: 3,
     },
@@ -168,8 +169,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('memoSkillEnhances.text'),
       content: t('memoSkillEnhances.content', {
-        Multiplier1Enhance: TsUtils.precisionRound(100 * memoSkillScaling2),
-        Multiplier2Enhance: TsUtils.precisionRound(100 * memoSkillScaling3),
+        Multiplier1Enhance: precisionRound(100 * memoSkillScaling2),
+        Multiplier2Enhance: precisionRound(100 * memoSkillScaling3),
       }),
       min: 1,
       max: 3,
@@ -188,7 +189,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       text: t('memoTalentHits.text'),
       content: t('memoTalentHits.content', {
         BounceCount: e >= 6 ? 9 : 6,
-        Scaling: TsUtils.precisionRound(100 * memoTalentScaling),
+        Scaling: precisionRound(100 * memoTalentScaling),
       }),
       min: 0,
       max: e >= 6 ? 9 : 6,
@@ -429,7 +430,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_MEMO_SKILL,
     DEFAULT_MEMO_TALENT,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.PoetOfMourningCollapse, Sets.PoetOfMourningCollapse],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -508,7 +508,12 @@ const display = {
     y: 950,
     z: 1.00,
   },
-  showcaseColor: '#b985fd',
+  spineCenter: {
+    x: 962,
+    y: 1039,
+    z: 1.3,
+  },
+  showcaseColor: '#bd6ecc',
 }
 
 export const Castorice: CharacterConfig = {

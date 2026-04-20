@@ -4,13 +4,13 @@ import {
 } from 'lib/constants/constants'
 
 export function isFlat(stat: string) {
-  return stat == Constants.Stats.HP
-    || stat == Constants.Stats.ATK
-    || stat == Constants.Stats.DEF
-    || stat == Constants.Stats.SPD
+  return stat === Constants.Stats.HP
+    || stat === Constants.Stats.ATK
+    || stat === Constants.Stats.DEF
+    || stat === Constants.Stats.SPD
 }
 
-export const validSubstats: Record<string, boolean> = {
+const validSubstats: Record<string, boolean> = {
   [Stats.HP_P]: true,
   [Stats.ATK_P]: true,
   [Stats.DEF_P]: true,

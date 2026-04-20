@@ -1,32 +1,34 @@
-import { ComputeEngine } from 'lib/constants/constants'
+import { type ComputeEngine } from 'lib/constants/constants'
 import { debugWebgpuOutput } from 'lib/gpu/webgpuDebugger'
 import {
   destroyPipeline,
-  ExecutionPassResult,
+  type ExecutionPassResult,
   generateExecutionPass,
   initializeGpuPipeline,
 } from 'lib/gpu/webgpuInternals'
 import {
-  GpuExecutionContext,
-  RelicsByPart,
+  type GpuExecutionContext,
+  type RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
 import { Message } from 'lib/interactions/message'
 import { webgpuCrashNotification } from 'lib/interactions/notifications'
 import {
-  BasicStatsArray,
+  type BasicStatsArray,
   BasicStatsArrayCore,
 } from 'lib/optimization/basicStatsArray'
-import { OptimizerDisplayData } from 'lib/optimization/bufferPacker'
+import { type OptimizerDisplayData } from 'lib/optimization/bufferPacker'
 import { formatOptimizerDisplayData } from 'lib/optimization/optimizer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { initializeContextConditionals } from 'lib/simulations/contextConditionals'
 import { simulateBuild } from 'lib/simulations/simulateBuild'
-import { SimulationRelicByPart } from 'lib/simulations/statSimulationTypes'
-import { setSortColumn } from 'lib/tabs/tabOptimizer/optimizerForm/components/RecommendedPresetsButton'
+import { type SimulationRelicByPart } from 'lib/simulations/statSimulationTypes'
+import { setSortColumn } from 'lib/stores/gridStore'
+import { gridStore } from 'lib/stores/gridStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
 import { activateZeroResultSuggestionsModal } from 'lib/tabs/tabOptimizer/OptimizerSuggestionsModal'
 import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import { type Form } from 'types/form'
+import { type OptimizerContext } from 'types/optimizer'
 
 globalThis.WEBGPU_DEBUG = false
 
@@ -49,16 +51,16 @@ export async function gpuOptimize(props: {
   }
 
   device.onuncapturederror = (event) => {
-    if (window.store.getState().optimizationInProgress) {
-      window.store.getState().setOptimizationInProgress(false)
+    if (useOptimizerDisplayStore.getState().optimizationInProgress) {
+      useOptimizerDisplayStore.getState().setOptimizationInProgress(false)
       webgpuCrashNotification()
     }
   }
 
-  window.store.getState().setOptimizerStartTime(Date.now())
-  window.store.getState().setOptimizerRunningEngine(computeEngine as ComputeEngine)
+  useOptimizerDisplayStore.getState().setOptimizerStartTime(Date.now())
+  useOptimizerDisplayStore.getState().setOptimizerRunningEngine(computeEngine as ComputeEngine)
 
-  const gpuContext = initializeGpuPipeline(
+  const gpuContext = await initializeGpuPipeline(
     device,
     relics,
     request,
@@ -74,9 +76,6 @@ export async function gpuOptimize(props: {
     Message.warning('Debug mode is ON', 5)
   }
 
-  // console.log('Raw inputs', { context, request, relics, permutations })
-  // console.log('GPU execution context', gpuContext)
-
   // Double-buffered loop: while CPU reads buffer N, GPU writes buffer N+1.
 
   const permStride = gpuContext.BLOCK_SIZE * gpuContext.CYCLES_PER_INVOCATION
@@ -89,10 +88,8 @@ export async function gpuOptimize(props: {
   // Submit the first dispatch (buffer A)
   let currentBufferIndex = 0
   let currentPassResult = generateExecutionPass(gpuContext, 0, currentBufferIndex)
-  // const profiler = new GpuProfiler()
 
   for (let iteration = 0; iteration < gpuContext.iterations; iteration++) {
-    // profiler.start()
     const offset = iteration * permStride
     const maxPermNumber = offset + permStride
     const passResult = currentPassResult
@@ -107,19 +104,14 @@ export async function gpuOptimize(props: {
       nextPassResult = generateExecutionPass(gpuContext, (iteration + 1) * permStride, nextBufferIndex)
     }
 
-    // profiler.mark('dispatch')
-
     // Await current dispatch and read results
     if (gpuContext.DEBUG) {
       await passResult.gpuReadBuffer.mapAsync(GPUMapMode.READ)
-      // profiler.mark('gpuWait')
       readBufferMapped(offset, passResult.gpuReadBuffer, gpuContext)
       permutationsSearched += permStride
       passResult.gpuReadBuffer.unmap()
     } else {
       await passResult.compactReadBuffer.mapAsync(GPUMapMode.READ)
-      // profiler.mark('gpuWait')
-
       const mappedRange = passResult.compactReadBuffer.getMappedRange()
       const rawCount = new Uint32Array(mappedRange, 0, 1)[0]
       const count = Math.min(rawCount, gpuContext.COMPACT_LIMIT)
@@ -135,11 +127,9 @@ export async function gpuOptimize(props: {
       passResult.compactReadBuffer.unmap()
     }
 
-    // profiler.end('cpuProcess')
-
     // Reset start time after first dispatch to exclude shader compilation from perms/sec
     if (iteration === 0) {
-      window.store.getState().setOptimizerStartTime(Date.now())
+      useOptimizerDisplayStore.getState().setOptimizerStartTime(Date.now())
     }
 
     if (hasNext && nextPassResult) {
@@ -149,28 +139,26 @@ export async function gpuOptimize(props: {
 
     const searchedSnapshot = permutationsSearched
     setTimeout(() => {
-      const state = window.store.getState()
-      state.setOptimizerEndTime(Date.now())
-      state.setPermutationsResults(gpuContext.resultsQueue.size())
-      state.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
+      const uiState = useOptimizerDisplayStore.getState()
+      uiState.setOptimizerEndTime(Date.now())
+      uiState.setPermutationsResults(gpuContext.resultsQueue.size())
+      uiState.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
     }, 0)
 
-    if (gpuContext.permutations <= maxPermNumber || !window.store.getState().optimizationInProgress) {
+    if (gpuContext.permutations <= maxPermNumber || !useOptimizerDisplayStore.getState().optimizationInProgress) {
       gpuContext.cancelled = true
       break
     }
   }
 
-  // profiler.summary(gpuContext)
-
   // Revisit overflowed dispatches now that the threshold is established.
   await revisitOverflowedDispatches(overflowedOffsets, gpuContext, seenIndices, permStride, permutationsSearched)
 
-  if (window.store.getState().optimizationInProgress) {
-    window.store.getState().setPermutationsSearched(gpuContext.permutations)
+  if (useOptimizerDisplayStore.getState().optimizationInProgress) {
+    useOptimizerDisplayStore.getState().setPermutationsSearched(gpuContext.permutations)
   }
-  window.store.getState().setOptimizationInProgress(false)
-  window.store.getState().setPermutationsResults(gpuContext.resultsQueue.size())
+  useOptimizerDisplayStore.getState().setOptimizationInProgress(false)
+  useOptimizerDisplayStore.getState().setPermutationsResults(gpuContext.resultsQueue.size())
 
   setTimeout(() => {
     outputResults(gpuContext)
@@ -192,7 +180,7 @@ function readBufferMapped(offset: number, gpuReadBuffer: GPUBuffer, gpuContext: 
 
 function processResults(offset: number, array: Float32Array, gpuContext: GpuExecutionContext, elementOffset: number = 0) {
   const resultsQueue = gpuContext.resultsQueue
-  let top = resultsQueue.top()?.value ?? 0
+  let top = resultsQueue.size() > 0 ? resultsQueue.topPriority() : 0
 
   let limit = gpuContext.BLOCK_SIZE * gpuContext.CYCLES_PER_INVOCATION
   const maxPermNumber = offset + gpuContext.BLOCK_SIZE * gpuContext.CYCLES_PER_INVOCATION
@@ -211,10 +199,7 @@ function processResults(offset: number, array: Float32Array, gpuContext: GpuExec
       }
       if (value <= top) continue
 
-      top = resultsQueue.fixedSizePushOvercapped({
-        index: indexOffset + j,
-        value: value,
-      }).value
+      top = resultsQueue.fixedSizePushOvercapped(indexOffset + j, value)
     }
   } else {
     for (let j = limit - elementOffset - 1; j >= 0; j--) {
@@ -228,11 +213,8 @@ function processResults(offset: number, array: Float32Array, gpuContext: GpuExec
         continue
       }
 
-      resultsQueue.fixedSizePush({
-        index: indexOffset + j,
-        value: value,
-      })
-      top = resultsQueue.top()!.value
+      resultsQueue.fixedSizePush(indexOffset + j, value)
+      top = resultsQueue.topPriority()
     }
   }
 }
@@ -246,7 +228,7 @@ function processCompactResults(offset: number, count: number, mappedRange: Array
   const f32View = new Float32Array(mappedRange, 4)
 
   const resultsQueue = gpuContext.resultsQueue
-  let top = resultsQueue.top()?.value ?? 0
+  let top = resultsQueue.size() > 0 ? resultsQueue.topPriority() : 0
 
   // Split to skip size check when queue is full
   if (resultsQueue.size() >= gpuContext.RESULTS_LIMIT) {
@@ -255,10 +237,7 @@ function processCompactResults(offset: number, count: number, mappedRange: Array
       if (seenIndices?.has(globalIndex)) continue
       const value = f32View[i * 2 + 1]
       if (value <= top) continue
-      top = resultsQueue.fixedSizePushOvercapped({
-        index: globalIndex,
-        value: value,
-      }).value
+      top = resultsQueue.fixedSizePushOvercapped(globalIndex, value)
       seenIndices?.add(globalIndex)
     }
   } else {
@@ -267,11 +246,8 @@ function processCompactResults(offset: number, count: number, mappedRange: Array
       if (seenIndices?.has(globalIndex)) continue
       const value = f32View[i * 2 + 1]
       if (value <= top && resultsQueue.size() >= gpuContext.RESULTS_LIMIT) continue
-      resultsQueue.fixedSizePush({
-        index: globalIndex,
-        value: value,
-      })
-      top = resultsQueue.top()!.value
+      resultsQueue.fixedSizePush(globalIndex, value)
+      top = resultsQueue.topPriority()
       seenIndices?.add(globalIndex)
     }
   }
@@ -284,7 +260,7 @@ async function revisitOverflowedDispatches(
   permStride: number,
   permutationsSearched: number,
 ) {
-  if (overflowedOffsets.length > 0 && window.store.getState().optimizationInProgress) {
+  if (overflowedOffsets.length > 0 && useOptimizerDisplayStore.getState().optimizationInProgress) {
     for (const overflowOffset of overflowedOffsets) {
       let rawCount: number
       let retries = 0
@@ -303,13 +279,15 @@ async function revisitOverflowedDispatches(
 
       permutationsSearched += permStride
       const searchedSnapshot = permutationsSearched
-      await new Promise<void>((resolve) => setTimeout(() => {
-        const state = window.store.getState()
-        state.setOptimizerEndTime(Date.now())
-        state.setPermutationsResults(gpuContext.resultsQueue.size())
-        state.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
-        resolve()
-      }, 0))
+      await new Promise<void>((resolve) =>
+        setTimeout(() => {
+          const uiState = useOptimizerDisplayStore.getState()
+          uiState.setOptimizerEndTime(Date.now())
+          uiState.setPermutationsResults(gpuContext.resultsQueue.size())
+          uiState.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
+          resolve()
+        }, 0)
+      )
     }
   }
 }
@@ -327,7 +305,7 @@ function outputResults(gpuContext: GpuExecutionContext) {
   const optimizerContext = gpuContext.context
   initializeContextConditionals(optimizerContext)
 
-  const resultArray = gpuContext.resultsQueue.toArray().sort((a, b) => b.value - a.value)
+  const resultArray = gpuContext.resultsQueue.toResults().sort((a, b) => b.value - a.value)
   const outputs: OptimizerDisplayData[] = []
   const basicStatsArrayCore = new BasicStatsArrayCore(false) as BasicStatsArray
 
@@ -361,18 +339,16 @@ function outputResults(gpuContext: GpuExecutionContext) {
     outputs.push(optimizerDisplayData)
   }
 
-  // console.log(outputs)
-
-  if (outputs.length == 0) {
+  if (outputs.length === 0) {
     activateZeroResultSuggestionsModal(gpuContext.request)
   }
 
   const sortOption = SortOption[gpuContext.request.resultSort as keyof typeof SortOption]
   const showMemo = gpuContext.request.memoDisplay === 'memo'
-  const gridSortColumn = gpuContext.request.statDisplay == 'combat'
+  const gridSortColumn = gpuContext.request.statDisplay === 'combat'
     ? (showMemo ? sortOption.memoCombatGridColumn : sortOption.combatGridColumn)
     : (showMemo ? sortOption.memoBasicGridColumn : sortOption.basicGridColumn)
   setSortColumn(gridSortColumn)
   OptimizerTabController.setRows(outputs)
-  window.optimizerGrid.current!.api.updateGridOptions({ datasource: OptimizerTabController.getDataSource() })
+  gridStore.optimizerGridApi()?.updateGridOptions({ datasource: OptimizerTabController.getDataSource() })
 }

@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   countTeamElement,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
@@ -24,18 +24,19 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SparkleEntities = createEnum('Sparkle')
@@ -45,7 +46,7 @@ export const SparkleAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sparkle')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sparkle')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -95,21 +96,21 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.skillCdBuff.text'),
       content: t('Content.skillCdBuff.content', {
-        skillCdBuffScaling: TsUtils.precisionRound(100 * skillCdBuffScaling),
-        skillCdBuffBase: TsUtils.precisionRound(100 * skillCdBuffBase),
+        skillCdBuffScaling: precisionRound(100 * skillCdBuffScaling),
+        skillCdBuffBase: precisionRound(100 * skillCdBuffBase),
       }),
     },
     cipherBuff: {
       id: 'cipherBuff',
       formItem: 'switch',
       text: t('Content.cipherBuff.text'),
-      content: t('Content.cipherBuff.content', { cipherTalentStackBoost: TsUtils.precisionRound(100 * cipherTalentStackBoost) }),
+      content: t('Content.cipherBuff.content', { cipherTalentStackBoost: precisionRound(100 * cipherTalentStackBoost) }),
     },
     talentStacks: {
       id: 'talentStacks',
       formItem: 'slider',
       text: t('Content.talentStacks.text'),
-      content: t('Content.talentStacks.content', { talentBaseStackBoost: TsUtils.precisionRound(100 * talentBaseStackBoost) }),
+      content: t('Content.talentStacks.content', { talentBaseStackBoost: precisionRound(100 * talentBaseStackBoost) }),
       min: 0,
       max: 3,
     },
@@ -128,8 +129,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('TeammateContent.teammateCDValue.text'),
       content: t('TeammateContent.teammateCDValue.content', {
-        skillCdBuffScaling: TsUtils.precisionRound(100 * skillCdBuffScaling),
-        skillCdBuffBase: TsUtils.precisionRound(100 * skillCdBuffBase),
+        skillCdBuffScaling: precisionRound(100 * skillCdBuffScaling),
+        skillCdBuffBase: precisionRound(100 * skillCdBuffBase),
       }),
       min: 0,
       max: 3.50,

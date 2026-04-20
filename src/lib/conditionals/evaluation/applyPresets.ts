@@ -1,4 +1,4 @@
-import { FormInstance } from 'antd/es/form/hooks/useForm'
+import type { UseFormReturnType } from '@mantine/form'
 import { Moze } from 'lib/conditionals/character/1200/Moze'
 import { TheDahlia } from 'lib/conditionals/character/1300/TheDahlia'
 import { Anaxa } from 'lib/conditionals/character/1400/Anaxa'
@@ -20,37 +20,38 @@ import {
   WHOLE_BASIC,
 } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import DB from 'lib/state/db'
+import type { PresetDefinition } from 'lib/scoring/presetEffects'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { setSortColumn } from 'lib/stores/gridStore'
+import { displayToInternal } from 'lib/stores/optimizerForm/optimizerFormConversions'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
+import { useScoringStore } from 'lib/stores/scoring/scoringStore'
+import type { BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
 import {
-  BenchmarkForm,
-  SimpleCharacter,
-} from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
-import {
-  PresetDefinition,
-  setSortColumn,
-} from 'lib/tabs/tabOptimizer/optimizerForm/components/RecommendedPresetsButton'
-import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Utils } from 'lib/utils/utils'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { ScoringMetadata } from 'types/metadata'
+  clone,
+  mergeDefinedValues,
+  mergeUndefinedValues,
+} from 'lib/utils/objectUtils'
+import type { CharacterId } from 'types/character'
+import type { Form } from 'types/form'
+import type { ScoringMetadata } from 'types/metadata'
 
 export function applySpdPreset(spd: number, characterId: CharacterId | null | undefined) {
   if (!characterId) return
 
-  const character = DB.getMetadata().characters[characterId]
-  const metadata = TsUtils.clone(character.scoringMetadata)
+  const character = getGameMetadata().characters[characterId]
+  const metadata = clone(character.scoringMetadata)
 
-  // Using the user's current form so we don't overwrite their other numeric filter values
-  const form: Form = OptimizerTabController.formToDisplay(OptimizerTabController.getForm())
-  const defaultForm: Form = OptimizerTabController.formToDisplay(getDefaultForm(character))
+  // Get current form in internal format
+  const form = displayToInternal(useOptimizerRequestStore.getState())
+  // Get defaults for setConditionals
+  const defaultForm = getDefaultForm(character)
   form.setConditionals = defaultForm.setConditionals
 
-  const overrides = window.store.getState().scoringMetadataOverrides[characterId]
+  const overrides = useScoringStore.getState().scoringMetadataOverrides[characterId]
   if (overrides) {
-    Utils.mergeDefinedValues(metadata.parts, overrides.parts)
-    Utils.mergeDefinedValues(metadata.stats, overrides.stats)
+    mergeDefinedValues(metadata.parts, overrides.parts)
+    mergeDefinedValues(metadata.stats, overrides.stats)
   }
   form.minSpd = spd
 
@@ -61,34 +62,32 @@ export function applySpdPreset(spd: number, characterId: CharacterId | null | un
   form.resultSort = sortOption.key
   setSortColumn(sortOption.combatGridColumn)
 
-  window.optimizerForm.setFieldsValue(form)
-  window.onOptimizerFormValuesChange({} as Form, form)
+  // Load the modified internal form back into store
+  useOptimizerRequestStore.getState().loadForm(form)
 }
 
-export function applyMetadataPresetToForm(form: Form, scoringMetadata: ScoringMetadata) {
-  // @ts-ignore TODO getDefaultForm currently has handling for no character id but is set to be changed
-  Utils.mergeUndefinedValues(form, getDefaultForm())
+function applyMetadataPresetToForm(form: Form, scoringMetadata: ScoringMetadata) {
+  // @ts-expect-error - getDefaultForm currently has handling for no character id but is set to be changed
+  mergeUndefinedValues(form, getDefaultForm())
 
-  form.comboTurnAbilities = scoringMetadata?.simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, WHOLE_BASIC]
+  form.comboTurnAbilities = [...(scoringMetadata?.simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, WHOLE_BASIC])]
   form.comboDot = scoringMetadata?.simulation?.comboDot ?? 0
 
-  // @ts-ignore
+  // @ts-expect-error - maxSpd is typed as number but needs to be cleared for presets
   form.maxSpd = undefined
   form.mainBody = scoringMetadata.parts[Constants.Parts.Body]
   form.mainFeet = scoringMetadata.parts[Constants.Parts.Feet]
   form.mainPlanarSphere = scoringMetadata.parts[Constants.Parts.PlanarSphere]
   form.mainLinkRope = scoringMetadata.parts[Constants.Parts.LinkRope]
   form.weights = { ...form.weights, ...scoringMetadata.stats }
-  form.weights.headHands = form.weights.headHands ?? 0
-  form.weights.bodyFeet = form.weights.bodyFeet ?? 0
-  form.weights.sphereRope = form.weights.sphereRope ?? 0
+  form.weights.minWeightedRolls = form.weights.minWeightedRolls ?? 0
 
   applySetConditionalPresets(form)
   applyScoringMetadataPresets(form)
 }
 
 export function applyScoringMetadataPresets(form: Form | BenchmarkForm) {
-  const character = DB.getMetadata().characters[form.characterId]
+  const character = getGameMetadata().characters[form.characterId]
   const presets = character?.scoringMetadata?.presets ?? []
 
   for (const preset of presets) {
@@ -101,9 +100,9 @@ export function applyPreset(form: Form | BenchmarkForm, preset: PresetDefinition
 }
 
 export function applySetConditionalPresets(form: Form | BenchmarkForm) {
-  const metadataCharacters = DB.getMetadata().characters
+  const metadataCharacters = getGameMetadata().characters
   const characterMetadata = metadataCharacters[form.characterId]
-  Utils.mergeUndefinedValues(form.setConditionals, defaultSetConditionals)
+  mergeUndefinedValues(form.setConditionals, defaultSetConditionals)
 
   // Disable elemental conditions by default if the character is not of the same element
   const element = characterMetadata?.element
@@ -122,7 +121,8 @@ export function applySetConditionalPresets(form: Form | BenchmarkForm) {
 }
 
 export function applyTeamAwareSetConditionalPresets(form: Form | BenchmarkForm, teammateIds?: (CharacterId | undefined)[]) {
-  const metadataCharacters = DB.getMetadata().characters
+  if (!form.setConditionals) return
+  const metadataCharacters = getGameMetadata().characters
 
   const allyIds = [
     form.characterId,
@@ -157,27 +157,11 @@ export function applyTeamAwareSetConditionalPresets(form: Form | BenchmarkForm, 
   }
 }
 
-export function applyTeamAwareSetConditionalPresetsToOptimizerFormInstance(formInstance: FormInstance<Form>) {
-  const form = formInstance.getFieldsValue()
+export function applyTeamAwareSetConditionalPresetsToStore() {
+  const state = useOptimizerRequestStore.getState()
+  const form = displayToInternal(state)
   applyTeamAwareSetConditionalPresets(form)
 
-  formInstance.setFieldValue(['setConditionals', Sets.ArcadiaOfWovenDreams, 1], form.setConditionals[Sets.ArcadiaOfWovenDreams][1])
-}
-
-export function applyTeamAwareSetConditionalPresetsToBenchmarkFormInstance(
-  formInstance: FormInstance<BenchmarkForm>,
-  teammate0?: SimpleCharacter,
-  teammate1?: SimpleCharacter,
-  teammate2?: SimpleCharacter,
-) {
-  const form = formInstance.getFieldsValue()
-  const teammateIds = [
-    teammate0?.characterId,
-    teammate1?.characterId,
-    teammate2?.characterId,
-  ]
-
-  applyTeamAwareSetConditionalPresets(form, teammateIds)
-
-  formInstance.setFieldValue(['setConditionals', Sets.ArcadiaOfWovenDreams, 1], form.setConditionals[Sets.ArcadiaOfWovenDreams][1])
+  // Update the store with the modified set conditionals
+  useOptimizerRequestStore.getState().setSetConditionals(form.setConditionals)
 }

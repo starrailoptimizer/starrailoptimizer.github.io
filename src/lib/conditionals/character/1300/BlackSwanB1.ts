@@ -3,8 +3,8 @@ import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -32,7 +32,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -48,18 +48,19 @@ import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const BlackSwanB1Entities = createEnum('BlackSwanB1')
@@ -72,7 +73,8 @@ export const BlackSwanB1Abilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.BlackSwanB1')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.BlackSwanB1')
+  const tDot = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.DotTickCoefficient')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -102,6 +104,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
   const arcanaStackLimit = e >= 6 ? 80 : 50
 
   const defaults = {
+    dotTickCoefficient: 2,
     skillDefShred: true,
     epiphanyDebuff: true,
     arcanaStacks: arcanaStackLimit,
@@ -123,21 +126,21 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillDefShred',
       formItem: 'switch',
       text: t('Content.skillDefShred.text'),
-      content: t('Content.skillDefShred.content', { skillDefShredScaling: TsUtils.precisionRound(100 * skillDefShredValue) }),
+      content: t('Content.skillDefShred.content', { skillDefShredScaling: precisionRound(100 * skillDefShredValue) }),
     },
     epiphanyDebuff: {
       id: 'epiphanyDebuff',
       formItem: 'switch',
       text: t('Content.epiphanyDebuff.text'),
-      content: t('Content.epiphanyDebuff.content', { epiphanyVulnerability: TsUtils.precisionRound(100 * epiphanyDmgTakenBoost) }),
+      content: t('Content.epiphanyDebuff.content', { epiphanyVulnerability: precisionRound(100 * epiphanyDmgTakenBoost) }),
     },
     arcanaStacks: {
       id: 'arcanaStacks',
       formItem: 'slider',
       text: t('Content.arcanaStacks.text'),
       content: t('Content.arcanaStacks.content', {
-        dotBaseScaling: TsUtils.precisionRound(100 * dotScaling),
-        arcanaAdditionalScaling: TsUtils.precisionRound(100 * arcanaStackMultiplier),
+        dotBaseScaling: precisionRound(100 * dotScaling),
+        arcanaAdditionalScaling: precisionRound(100 * arcanaStackMultiplier),
         arcanaStackLimit,
       }),
       min: 1,
@@ -148,6 +151,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.ehrToDmgBoost.text'),
       content: t('Content.ehrToDmgBoost.content', {}),
+    },
+    dotTickCoefficient: {
+      id: 'dotTickCoefficient',
+      formItem: 'slider',
+      text: tDot('Text'),
+      content: tDot('Content'),
+      min: 0,
+      max: 10,
+      percent: true,
     },
     e1ResReduction: {
       id: 'e1ResReduction',
@@ -238,6 +250,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
               .damageElement(ElementTag.Wind)
               .damageType(DamageTag.DOT)
               .atkScaling(dotScaling + arcanaStackMultiplier * r.arcanaStacks)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
           ],
         },
@@ -335,7 +348,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     DEFAULT_DOT,
   ],
-  comboDot: 8,
   relicSets: [
     [Sets.PrisonerInDeepConfinement, Sets.PrisonerInDeepConfinement],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -411,11 +423,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 950,
-    y: 925,
-    z: 1.25,
+    x: 964,
+    y: 934,
+    z: 1.3,
   },
-  showcaseColor: '#a37df4',
+  showcaseColor: '#b2a2de',
 }
 
 export const BlackSwanB1: CharacterConfig = {

@@ -1,105 +1,23 @@
+import { PreviewRelics } from 'lib/characterPreview/characterPreviewController'
 import {
-  Constants,
   Parts,
+  type Sets,
 } from 'lib/constants/constants'
-import {
-  OrnamentSetToIndex,
-  RelicSetToIndex,
+import type {
+  RelicBuild,
+} from 'lib/scoring/simScoringUtils'
+import type {
   SetsOrnaments,
   SetsRelics,
 } from 'lib/sets/setConfigRegistry'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import {
-  RelicBuild,
-  SimulationScore,
-} from 'lib/scoring/simScoringUtils'
-import {
-  resolveDpsScoreSimulationMetadata,
-  retrieveBenchmarkCache,
-  runDpsScoreBenchmarkOrchestrator,
-  setBenchmarkCache,
-} from 'lib/simulations/orchestrator/runDpsScoreBenchmarkOrchestrator'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
-import {
-  Character,
-  SavedBuild,
-} from 'types/character'
-import {
-  ShowcaseTemporaryOptions,
-  SimulationMetadata,
-} from 'types/metadata'
-
-export type AsyncSimScoringExecution = {
-  done: boolean,
-  result: SimulationScore | null,
-  promise: Promise<SimulationScore | null> | null,
-}
-
-export function getShowcaseSimScoringExecution(
-  character: Character,
-  displayRelics: RelicBuild,
-  teamSelection: string,
-  showcaseTemporaryOptions: ShowcaseTemporaryOptions = {},
-  buildOverride?: SavedBuild | null,
-): AsyncSimScoringExecution {
-  const characterMetadata = DB.getMetadata().characters[character.id]
-  const simulationMetadata = resolveDpsScoreSimulationMetadata(character, teamSelection, buildOverride)
-  const singleRelicByPart = displayRelics as SingleRelicByPart
-
-  const asyncResult: AsyncSimScoringExecution = {
-    done: false,
-    result: null,
-    promise: null,
-  }
-
-  if (!simulationMetadata) {
-    console.log('Invalid sim character')
-    asyncResult.done = true
-    return asyncResult
-  }
-
-  const {
-    cacheKey,
-    cachedOrchestrator,
-  } = retrieveBenchmarkCache(character, simulationMetadata, singleRelicByPart, showcaseTemporaryOptions)
-  if (cachedOrchestrator) {
-    // console.debug('CACHED')
-    const simScore = cachedOrchestrator.simulationScore!
-    asyncResult.done = true
-    asyncResult.promise = Promise.resolve(simScore)
-    asyncResult.result = simScore
-    return asyncResult
-  } else {
-    // console.debug('NEW EXECUTION')
-  }
-
-  async function runSimulation() {
-    try {
-      const simulationOrchestrator = await runDpsScoreBenchmarkOrchestrator(character, simulationMetadata!, singleRelicByPart, showcaseTemporaryOptions)
-      const simulationScore = simulationOrchestrator.simulationScore
-      console.log('Percent', simulationScore?.percent)
-
-      if (!simulationScore) return null
-
-      simulationScore.characterMetadata = characterMetadata
-      asyncResult.result = simulationScore
-      asyncResult.done = true
-
-      setBenchmarkCache(cacheKey, simulationOrchestrator)
-
-      return simulationScore
-    } catch (error) {
-      console.error('Error in simulation:', error)
-      asyncResult.done = true
-      throw error
-    }
-  }
-
-  asyncResult.promise = runSimulation()
-
-  return asyncResult
-}
+  OrnamentSetToIndex,
+  RelicSetToIndex,
+} from 'lib/sets/setConfigRegistry'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Nullable } from 'types/common'
+import type { SimulationMetadata } from 'types/metadata'
+import { type Relic } from 'types/relic'
 
 export type SimulationSets = {
   relicSet1: SetsRelics,
@@ -149,17 +67,17 @@ export function calculateSimSets(
   return { relicSet1, relicSet2, ornamentSet }
 }
 
-export function calculateSetNames(relicsByPart: RelicBuild) {
-  Object.values(Parts).forEach((x) => relicsByPart[x] = relicsByPart[x] || emptyRelicWithSetAndSubstats())
+export function calculateSetNames(relicsByPart: Record<Parts, Nullable<{ set: Sets | null }>>) {
+  Object.values(Parts).forEach((x) => relicsByPart[x] = relicsByPart[x] ?? { set: null })
   const relicSets = [
-    relicsByPart[Parts.Head].set,
-    relicsByPart[Parts.Hands].set,
-    relicsByPart[Parts.Body].set,
-    relicsByPart[Parts.Feet].set,
+    relicsByPart[Parts.Head]!.set,
+    relicsByPart[Parts.Hands]!.set,
+    relicsByPart[Parts.Body]!.set,
+    relicsByPart[Parts.Feet]!.set,
   ].filter((x) => x != null)
   const ornamentSets = [
-    relicsByPart[Parts.PlanarSphere].set,
-    relicsByPart[Parts.LinkRope].set,
+    relicsByPart[Parts.PlanarSphere]!.set,
+    relicsByPart[Parts.LinkRope]!.set,
   ].filter((x) => x != null)
   const relicSetNames = calculateRelicSets(relicSets, true)
   const ornamentSetName: string | undefined = calculateOrnamentSets(ornamentSets, true)
@@ -196,13 +114,6 @@ export function calculateOrnamentSets(ornamentSets: unknown[], nameProvided = tr
   return undefined
 }
 
-function emptyRelicWithSetAndSubstats() {
-  return {
-    set: null,
-    substats: [],
-  }
-}
-
 // Gradual scale
 export const SimScoreGrades = {
   'AEON': 150, // Verified only
@@ -233,7 +144,7 @@ export function getSimScoreGrade(score: number, verified: boolean, numRelics: nu
   }
 
   let best = 'WTF+'
-  const percent = TsUtils.precisionRound(score * 100)
+  const percent = precisionRound(score * 100)
   for (const [key, value] of Object.entries(SimScoreGrades)) {
     if (key == 'AEON' && !verified) {
       continue

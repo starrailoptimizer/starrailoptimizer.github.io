@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -24,18 +24,19 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const RobinEntities = createEnum('Robin')
@@ -45,7 +46,7 @@ export const RobinAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Robin')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Robin')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_ULT_3_BASIC_TALENT_5
   const {
     SOURCE_BASIC,
@@ -94,22 +95,22 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.concertoActive.text'),
       content: t('Content.concertoActive.content', {
-        ultAtkBuffScalingValue: TsUtils.precisionRound(100 * ultAtkBuffScalingValue),
+        ultAtkBuffScalingValue: precisionRound(100 * ultAtkBuffScalingValue),
         ultAtkBuffFlatValue: ultAtkBuffFlatValue,
-        ultScaling: TsUtils.precisionRound(100 * ultScaling),
+        ultScaling: precisionRound(100 * ultScaling),
       }),
     },
     skillDmgBuff: {
       id: 'skillDmgBuff',
       formItem: 'switch',
       text: t('Content.skillDmgBuff.text'),
-      content: t('Content.skillDmgBuff.content', { skillDmgBuffValue: TsUtils.precisionRound(100 * skillDmgBuffValue) }),
+      content: t('Content.skillDmgBuff.content', { skillDmgBuffValue: precisionRound(100 * skillDmgBuffValue) }),
     },
     talentCdBuff: {
       id: 'talentCdBuff',
       formItem: 'switch',
       text: t('Content.talentCdBuff.text'),
-      content: t('Content.talentCdBuff.content', { talentCdBuffValue: TsUtils.precisionRound(100 * talentCdBuffValue) }),
+      content: t('Content.talentCdBuff.content', { talentCdBuffValue: precisionRound(100 * talentCdBuffValue) }),
     },
     e1UltResPen: {
       id: 'e1UltResPen',
@@ -149,8 +150,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('TeammateContent.teammateATKValue.text'),
       content: t('TeammateContent.teammateATKValue.content', {
-        ultAtkBuffFlatValue: TsUtils.precisionRound(ultAtkBuffFlatValue),
-        ultAtkBuffScalingValue: TsUtils.precisionRound(100 * ultAtkBuffScalingValue),
+        ultAtkBuffFlatValue: precisionRound(ultAtkBuffFlatValue),
+        ultAtkBuffScalingValue: precisionRound(100 * ultAtkBuffScalingValue),
       }),
       min: 0,
       max: 10000,
@@ -350,11 +351,16 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1024,
-    y: 925,
-    z: 1,
+    x: 1021,
+    y: 855,
+    z: 1.15,
   },
-  showcaseColor: '#d7a4f1',
+  spineCenter: {
+    x: 1009,
+    y: 923,
+    z: 1.15,
+  },
+  showcaseColor: '#a071c9',
 }
 
 export const Robin: CharacterConfig = {

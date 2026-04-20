@@ -2,24 +2,28 @@ import {
   ConditionalDataType,
   Sets,
 } from 'lib/constants/constants'
-import { BasicStatsArray } from 'lib/optimization/basicStatsArray'
+import { type BasicStatsArray } from 'lib/optimization/basicStatsArray'
 import { Source } from 'lib/optimization/buffSource'
-import { AKey, HKey, StatKey } from 'lib/optimization/engine/config/keys'
-import { DamageTag } from 'lib/optimization/engine/config/tag'
-import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
-  OptimizerAction,
-  OptimizerContext,
-  SetConditional,
+  AKey,
+  HKey,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import { DamageTag } from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+  type SetConditional,
 } from 'types/optimizer'
 import {
-  SelectOptionContent,
-  SetConditionalTFunction,
-  SetConditionals,
-  SetConfig,
-  SetDisplay,
-  SetInfo,
+  type SelectOptionContent,
+  type SetConditionals,
+  type SetConditionalTFunction,
+  type SetConfig,
+  type SetDisplay,
+  type SetInfo,
   SetType,
 } from 'types/setConfig'
 
@@ -27,6 +31,7 @@ const info = {
   index: 14,
   setType: SetType.RELIC,
   ingameId: '115',
+  twoPieceStatTag: null,
 } as const satisfies SetInfo
 
 const display = {

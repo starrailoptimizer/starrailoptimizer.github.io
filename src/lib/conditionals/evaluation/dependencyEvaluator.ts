@@ -1,7 +1,7 @@
-import { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
+import type { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
 import { Stats } from 'lib/constants/constants'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
-import { ConditionalRegistry } from 'lib/optimization/calculateConditionals'
+import type { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import type { ConditionalRegistry } from 'lib/optimization/calculateConditionals'
 
 const MAX_EVALUATIONS = 3
 
@@ -151,7 +151,12 @@ function emptyRegistry(): ConditionalRegistry {
   }
 }
 
-function getTotalReachableConditionals(stat: ConvertibleStatsType, remainingConditionals: Set<string>, registry: ConditionalRegistry, visited = new Set<ConvertibleStatsType>()): number {
+function getTotalReachableConditionals(
+  stat: ConvertibleStatsType,
+  remainingConditionals: Set<string>,
+  registry: ConditionalRegistry,
+  visited = new Set<ConvertibleStatsType>(),
+): number {
   if (visited.has(stat)) return 0
   visited.add(stat)
 

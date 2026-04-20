@@ -1,10 +1,10 @@
+import { createTabAwareStore } from 'lib/stores/infrastructure/createTabAwareStore'
 import {
   DEFAULT_WARP_REQUEST,
-  WarpRequest,
-  WarpResult,
+  type WarpRequest,
+  type WarpResult,
 } from 'lib/tabs/tabWarp/warpCalculatorController'
-import { Nullable } from 'types/common'
-import { create } from 'zustand'
+import { type Nullable } from 'types/common'
 
 const defaultStateValues = {
   request: DEFAULT_WARP_REQUEST,
@@ -20,7 +20,7 @@ type WarpCalculatorStateActions = {
 
 type WarpCalculatorStoreState = WarpCalculatorStateValues & WarpCalculatorStateActions
 
-export const useWarpCalculatorStore = create<WarpCalculatorStoreState>()((set) => ({
+export const useWarpCalculatorStore = createTabAwareStore<WarpCalculatorStoreState>((set) => ({
   ...defaultStateValues,
 
   setRequest: (request) => set({ request: request ?? DEFAULT_WARP_REQUEST }),

@@ -1,21 +1,22 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TheUnreachableSide')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TheUnreachableSide')
   const { SOURCE_LC } = Source.lightCone(TheUnreachableSide.id)
 
   const sValues = [0.24, 0.28, 0.32, 0.36, 0.40]
@@ -30,7 +31,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'dmgBuff',
       formItem: 'switch',
       text: t('Content.dmgBuff.text'),
-      content: t('Content.dmgBuff.content', { DmgBuff: TsUtils.precisionRound(sValues[s] * 100) }),
+      content: t('Content.dmgBuff.content', { DmgBuff: precisionRound(sValues[s] * 100) }),
     },
   }
 

@@ -1,9 +1,9 @@
 import {
-  SetKey,
+  type SetKey,
   Sets,
 } from 'lib/constants/constants'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
 
 export enum BUFF_TYPE {
   PRIMARY = 'PRIMARY', // Not to be used on buffs - only an organizational token - used to separate target character from teammates in buffs display

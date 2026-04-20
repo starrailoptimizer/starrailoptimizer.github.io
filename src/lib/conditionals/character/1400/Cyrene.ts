@@ -8,8 +8,8 @@ import {
 import { BuffPriority } from 'lib/conditionals/conditionalConstants'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
   findTeamAction,
 } from 'lib/conditionals/conditionalUtils'
@@ -39,7 +39,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -51,24 +51,26 @@ import {
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
-  RELICS_2P_SPEED,
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { relics2pByStats } from 'lib/sets/setConfigRegistry'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  CharacterId,
-  Eidolon,
+  type CharacterId,
+  type Eidolon,
 } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const CHRYSOS_HEIR_IDS = [
@@ -100,8 +102,8 @@ export const CyreneAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Cyrene')
-  const tBuff = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Cyrene')
+  const tBuff = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
 
   // TODO: Confirm memo scaling
   const { basic, skill, ult, talent, memoSkill, memoTalent } = AbilityEidolon.ULT_TALENT_MEMO_SKILL_3_SKILL_BASIC_MEMO_TALENT_5
@@ -174,21 +176,21 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.memospriteActive.text'),
       content: t('Content.memospriteActive.content', {
-        CRBuff: TsUtils.precisionRound(100 * ultCrBuff),
-        HPBuff: TsUtils.precisionRound(100 * memoTalentHpBuff),
+        CRBuff: precisionRound(100 * ultCrBuff),
+        HPBuff: precisionRound(100 * memoTalentHpBuff),
       }),
     },
     zoneActive: {
       id: 'zoneActive',
       formItem: 'switch',
       text: t('Content.zoneActive.text'),
-      content: t('Content.zoneActive.content', { TrueDmg: TsUtils.precisionRound(100 * skillTrueDmgBuff) }),
+      content: t('Content.zoneActive.content', { TrueDmg: precisionRound(100 * skillTrueDmgBuff) }),
     },
     talentDmgBuff: {
       id: 'talentDmgBuff',
       formItem: 'switch',
       text: t('Content.talentDmgBuff.text'),
-      content: t('Content.talentDmgBuff.content', { DmgBuff: TsUtils.precisionRound(100 * talentDmgBuff) }),
+      content: t('Content.talentDmgBuff.content', { DmgBuff: precisionRound(100 * talentDmgBuff) }),
     },
     traceSpdBasedBuff: {
       id: 'traceSpdBasedBuff',
@@ -247,7 +249,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'specialEffect',
       formItem: 'switch',
       text: t('TeammateContent.specialEffect.text'),
-      content: t('TeammateContent.specialEffect.content', { DmgBuff: TsUtils.precisionRound(100 * memoSkillDmgBuff) }),
+      content: t('TeammateContent.specialEffect.content', { DmgBuff: precisionRound(100 * memoSkillDmgBuff) }),
     },
     cyreneSpdDmg: {
       id: 'cyreneSpdDmg',
@@ -259,7 +261,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'cyreneHp',
       formItem: 'slider',
       text: t('TeammateContent.cyreneHp.text'),
-      content: t('TeammateContent.cyreneHp.content', { ConversionRate: TsUtils.precisionRound(100 * memoSkillTrailblazerAtkScaling) }),
+      content: t('TeammateContent.cyreneHp.content', { ConversionRate: precisionRound(100 * memoSkillTrailblazerAtkScaling) }),
       min: 0,
       max: 20000,
     },
@@ -267,7 +269,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'cyreneCr',
       formItem: 'slider',
       text: t('TeammateContent.cyreneCr.text'),
-      content: t('TeammateContent.cyreneCr.content', { ConversionRate: TsUtils.precisionRound(100 * memoSkillTrailblazerCrScaling) }),
+      content: t('TeammateContent.cyreneCr.content', { ConversionRate: precisionRound(100 * memoSkillTrailblazerCrScaling) }),
       min: 0,
       max: 1.50,
       percent: true,
@@ -418,7 +420,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
         x.buff(StatKey.DMG_BOOST, 0.20, x.targets(TargetTag.SelfAndMemosprite).source(SOURCE_TRACE))
         x.buff(
           StatKey.RES_PEN,
-          Math.floor(Math.min(60, spd - 180)) * 0.02,
+          floorSafe(Math.min(60, spd - 180)) * 0.02,
           x.elements(ElementTag.Ice).targets(TargetTag.SelfAndMemosprite).source(SOURCE_TRACE),
         )
       }
@@ -430,7 +432,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
 if (${containerActionVal(SELF_ENTITY_INDEX, StatKey.SPD, action.config)} >= 180.0 && ${wgslTrue(r.traceSpdBasedBuff)}) {
   ${buff.action(AKey.DMG_BOOST, 0.20).targets(TargetTag.SelfAndMemosprite).wgsl(action)}
 
-  let penBuff = floor(min(60.0, ${containerActionVal(SELF_ENTITY_INDEX, StatKey.SPD, action.config)} - 180.0)) * 0.02;
+  let penBuff = floorSafe(min(60.0, ${containerActionVal(SELF_ENTITY_INDEX, StatKey.SPD, action.config)} - 180.0)) * 0.02;
   ${buff.hit(HKey.RES_PEN, 'penBuff').elements(ElementTag.Ice).targets(TargetTag.SelfAndMemosprite).wgsl(action)}
 }
       `
@@ -474,11 +476,10 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     DEFAULT_MEMO_SKILL,
   ],
-  comboDot: 0,
   deprioritizeBuffs: true,
   relicSets: [
     [Sets.WorldRemakingDeliverer, Sets.WorldRemakingDeliverer],
-    RELICS_2P_SPEED,
+    relics2pByStats(Stats.SPD_P),
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
@@ -559,11 +560,25 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1030,
-    y: 1225,
-    z: 1.60,
+    x: 1044,
+    y: 1230,
+    z: 1.65,
   },
-  showcaseColor: '#8a88e4',
+  backgroundOffset: {
+    x: 0,
+    y: 500,
+  },
+  spineCenter: {
+    x: 971,
+    y: 1215,
+    z: 1.7,
+  },
+  backgroundCenterOffset: {
+    x: 144,
+    y: 384,
+    z: -0.5,
+  },
+  showcaseColor: '#b89fd4',
 }
 
 export function getCyreneAction(action: OptimizerAction) {

@@ -1,10 +1,10 @@
-import {
+import type {
   ColDef,
   GetRowIdParams,
   GridOptions,
 } from 'ag-grid-community'
-import { TFunction } from 'i18next'
-import {
+import type { TFunction } from 'i18next'
+import type {
   OptimizerDisplayData,
   OptimizerDisplayDataStatSim,
 } from 'lib/optimization/bufferPacker'
@@ -13,41 +13,44 @@ import {
   SortOption,
 } from 'lib/optimization/sortOptions'
 import { Gradient } from 'lib/rendering/gradient'
+import {
+  OrnamentSetCellRenderer,
+  RelicSetCellRenderer,
+} from 'lib/rendering/gridRenderers'
 import { Renderer } from 'lib/rendering/renderer'
-import { Utils } from 'lib/utils/utils'
+import { uuid } from 'lib/utils/miscUtils'
 
-export const DIGITS_3 = 46
-export const DIGITS_4 = 50
+const DIGITS_3 = 46
+const DIGITS_4 = 50
 export const DIGITS_5 = 56
-export const DIGITS_6 = 62
-export const DIGITS_7 = 68
+const DIGITS_6 = 62
 
 export const optimizerTabDefaultGap = 5
-export const panelWidth = 211
-export const defaultPadding = 11
+export const panelWidth = 226
 
 export const optimizerGridOptions: GridOptions<OptimizerDisplayDataStatSim> = {
   rowHeight: 33,
+  rowBuffer: 20,
   pagination: true,
   rowModelType: 'infinite',
-  datasource: undefined,
   paginationPageSize: 500,
   paginationPageSizeSelector: [100, 500, 1000],
   cacheBlockSize: 500,
-  maxBlocksInCache: 1,
+  maxBlocksInCache: 2,
   alwaysShowVerticalScroll: false,
   suppressDragLeaveHidesColumns: true,
   suppressScrollOnNewData: true,
   suppressMultiSort: true,
-  getRowId: (params: GetRowIdParams<OptimizerDisplayDataStatSim>) => String(params.data.id || Utils.randomId()),
+  suppressNoRowsOverlay: true,
+  getRowId: (params: GetRowIdParams<OptimizerDisplayDataStatSim>) => String(params.data.id ?? uuid()),
 }
 
+export const optimizerRowSelection = { mode: 'singleRow' as const, checkboxes: false, enableClickSelection: true }
+
 export const optimizerGridDefaultColDef: ColDef<OptimizerDisplayDataStatSim> = {
-  cellStyle: Gradient.getOptimizerColumnGradient,
   sortable: true,
   sortingOrder: ['desc', 'asc'],
   wrapHeaderText: true,
-  autoHeaderHeight: true,
 }
 
 const MEMO_MARKER = '\u1D39' // ᴹ
@@ -87,27 +90,43 @@ function buildColumnDefs(mode: DisplayMode, t: TFunction<'optimizerTab', 'Grid'>
   const headerMemo = (key: string) => (t(`${headerGroup}.${key}` as any) as string) + suffix
 
   return [
-    { field: 'relicSetIndex' as const, cellRenderer: Renderer.relicSet, width: 72, headerName: header('Set') },
-    { field: 'ornamentSetIndex' as const, cellRenderer: Renderer.ornamentSet, width: 42, headerName: header('Set') },
+    { field: 'relicSetIndex' as const, cellRenderer: RelicSetCellRenderer, width: 72, headerName: header('Set') },
+    { field: 'ornamentSetIndex' as const, cellRenderer: OrnamentSetCellRenderer, width: 42, headerName: header('Set') },
 
     ...statColumns.map((col) => ({
       field: getGridColumn(col.option, statDisplay, memoDisplay) as keyof OptimizerDisplayData,
       valueFormatter: col.renderer,
+      cellStyle: Gradient.getOptimizerColumnGradient,
       minWidth: col.minWidth,
       flex: 10,
       headerName: headerMemo(col.headerKey),
     })),
 
-    { field: dmgFields[mode] as keyof OptimizerDisplayData, valueFormatter: Renderer.x100Tenths, minWidth: DIGITS_4, flex: 10, headerName: headerMemo('DMG') },
+    {
+      field: dmgFields[mode] as keyof OptimizerDisplayData,
+      valueFormatter: Renderer.x100Tenths,
+      cellStyle: Gradient.getOptimizerColumnGradient,
+      minWidth: DIGITS_4,
+      flex: 10,
+      headerName: headerMemo('DMG'),
+    },
     {
       field: getGridColumn(SortOption.EHP, statDisplay, memoDisplay) as keyof OptimizerDisplayData,
       valueFormatter: Renderer.floor,
+      cellStyle: Gradient.getOptimizerColumnGradient,
       minWidth: DIGITS_4,
       flex: 10,
       headerName: header('EHP'),
     },
-    // Dynamic ability columns (BASIC, SKILL, ULT, etc.) are injected in OptizerGrid.tsx
-    { field: getGridColumn(SortOption.COMBO, statDisplay, memoDisplay) as keyof OptimizerDisplayData, valueFormatter: Renderer.floor, minWidth: DIGITS_6, flex: 13, headerName: header('COMBO') },
+    // Dynamic ability columns (BASIC, SKILL, ULT, etc.) are injected in OptimizerGrid.tsx
+    {
+      field: getGridColumn(SortOption.COMBO, statDisplay, memoDisplay) as keyof OptimizerDisplayData,
+      valueFormatter: Renderer.floor,
+      cellStyle: Gradient.getOptimizerColumnGradient,
+      minWidth: DIGITS_6,
+      flex: 13,
+      headerName: header('COMBO'),
+    },
   ]
 }
 

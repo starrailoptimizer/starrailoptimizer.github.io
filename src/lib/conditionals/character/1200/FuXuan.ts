@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -22,22 +22,23 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { ScoringMetadata } from 'types/metadata'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type ScoringMetadata } from 'types/metadata'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import { precisionRound } from 'lib/utils/mathUtils'
 export const FuXuanEntities = createEnum('FuXuan')
 export const FuXuanAbilities: AbilityKind[] = [
   AbilityKind.BASIC,
@@ -47,7 +48,7 @@ export const FuXuanAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.FuXuan')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.FuXuan')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -90,15 +91,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentActive',
       formItem: 'switch',
       text: t('Content.talentActive.text'),
-      content: t('Content.talentActive.content', { talentDmgReductionValue: TsUtils.precisionRound(100 * talentDmgReductionValue) }),
+      content: t('Content.talentActive.content', { talentDmgReductionValue: precisionRound(100 * talentDmgReductionValue) }),
     },
     skillActive: {
       id: 'skillActive',
       formItem: 'switch',
       text: t('Content.skillActive.text'),
       content: t('Content.skillActive.content', {
-        skillHpBuffValue: TsUtils.precisionRound(100 * skillHpBuffValue),
-        skillCrBuffValue: TsUtils.precisionRound(100 * skillCrBuffValue),
+        skillHpBuffValue: precisionRound(100 * skillHpBuffValue),
+        skillCrBuffValue: precisionRound(100 * skillCrBuffValue),
       }),
     },
     e6TeamHpLostPercent: {
@@ -120,7 +121,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'teammateHPValue',
       formItem: 'slider',
       text: t('TeammateContent.teammateHPValue.text'),
-      content: t('TeammateContent.teammateHPValue.content', { skillHpBuffValue: TsUtils.precisionRound(100 * skillHpBuffValue) }),
+      content: t('TeammateContent.teammateHPValue.content', { skillHpBuffValue: precisionRound(100 * skillHpBuffValue) }),
       min: 0,
       max: 10000,
     },
@@ -310,7 +311,8 @@ const display = {
     y: 950,
     z: 1,
   },
-  showcaseColor: '#dd9cf2',
+  disableSpine: true,
+  showcaseColor: '#e6c1e3',
 }
 
 export const FuXuan: CharacterConfig = {

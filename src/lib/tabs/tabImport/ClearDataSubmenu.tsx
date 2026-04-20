@@ -1,12 +1,11 @@
-import { DeleteOutlined } from '@ant-design/icons'
 import {
   Button,
   Flex,
-  Popconfirm,
-  Typography,
-} from 'antd'
+} from '@mantine/core'
+import { modals } from '@mantine/modals'
+import { IconTrash } from '@tabler/icons-react'
 import { Message } from 'lib/interactions/message'
-import DB from 'lib/state/db'
+import * as persistenceService from 'lib/services/persistenceService'
 import {
   importerTabButtonWidth,
   importerTabSpinnerMs,
@@ -14,41 +13,41 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const { Text } = Typography
-
 export function ClearDataSubmenu() {
   const [loading, setLoading] = useState(false)
   const { t } = useTranslation(['importSaveTab'], { keyPrefix: 'ClearData' })
   const { t: tCommon } = useTranslation('common')
 
   function clearDataClicked() {
-    console.log('Clear data')
     setLoading(true)
     setTimeout(() => {
       setLoading(false)
-      DB.resetStore()
+      persistenceService.resetAll()
 
       Message.success(t('SuccessMessage') /* Cleared data */)
     }, importerTabSpinnerMs)
   }
 
   return (
-    <Flex vertical gap={5}>
-      <Text>
+    <Flex direction='column' gap={5}>
+      <div>
         {t('Label') /* Clear all optimizer data. */}
-      </Text>
-      <Popconfirm
-        title={t('WarningTitle') /* Erase all data */}
-        description={t('WarningDescription') /* Are you sure you want to clear all relics and characters */}
-        onConfirm={clearDataClicked}
-        placement='bottom'
-        okText={tCommon('Yes') /* Yes */}
-        cancelText={tCommon('Cancel') /* Cancel */}
+      </div>
+      <Button
+        leftSection={<IconTrash size={16} />}
+        loading={loading}
+        w={importerTabButtonWidth}
+        onClick={() =>
+          modals.openConfirmModal({
+            title: t('WarningTitle'),
+            children: t('WarningDescription'),
+            labels: { confirm: tCommon('Yes'), cancel: tCommon('Cancel') },
+            centered: true,
+            onConfirm: clearDataClicked,
+          })}
       >
-        <Button type='primary' icon={<DeleteOutlined />} loading={loading} style={{ width: importerTabButtonWidth }}>
-          {t('ButtonText') /* Clear data */}
-        </Button>
-      </Popconfirm>
+        {t('ButtonText') /* Clear data */}
+      </Button>
     </Flex>
   )
 }

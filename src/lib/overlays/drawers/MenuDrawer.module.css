@@ -1,0 +1,212 @@
+/* ---- Wrapper ---- */
+
+.wrapper {
+  height: 100%;
+}
+
+/* ---- Layout ---- */
+
+.root {
+  position: relative;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+}
+
+/* ---- Sliding indicator ---- */
+
+.indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(90deg, hsla(215, 82%, 62%, 0.18), hsla(215, 82%, 62%, 0.06));
+  border-left: 3px solid var(--primary-default);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+  transition:
+    transform 150ms ease,
+    height 150ms ease,
+    opacity 0.1s ease;
+}
+
+/* ---- Group sections ---- */
+
+.group {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---- Group dividers (solid) ---- */
+
+.group + .group {
+  padding-top: 8px;
+}
+
+.group + .group::before {
+  content: '';
+  display: block;
+  height: 1px;
+  margin: 0 14px 8px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.groupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 10px 14px 4px;
+  user-select: none;
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0px;
+}
+
+/* ---- Nav items ---- */
+
+/* Reset anchor styling for link items */
+a.item,
+a.itemCollapsed {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Double selector to beat Mantine UnstyledButton reset (padding: 0) */
+.item.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  align-self: stretch;
+  padding: 8px 14px;
+  margin: 0;
+  position: relative;
+  z-index: 1;
+  border-radius: 3px;
+  transition: background 0.08s ease;
+  cursor: pointer;
+}
+
+.item:hover {
+  background: hsla(215, 82%, 62%, 0.08);
+}
+
+.item:hover .itemLabel {
+  color: var(--primary-light);
+}
+
+.item:hover .itemIcon {
+  color: var(--text-muted);
+}
+
+.item[data-active] .itemLabel {
+  color: var(--primary-light);
+  font-weight: 500;
+}
+
+.item[data-active] .itemIcon {
+  color: var(--primary-light);
+}
+
+/* Also highlight focused drawer items (Settings, Get Started) */
+.item[data-focused] .itemLabel {
+  color: var(--primary-light);
+  font-weight: 500;
+}
+
+.item[data-focused] .itemIcon {
+  color: var(--primary-light);
+}
+
+.itemIcon {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  border-radius: var(--radius-md);
+  background: hsla(215, 30%, 50%, 0.15);
+  color: var(--text-muted);
+  transition: color 0.1s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Size the icon SVGs consistently */
+.itemIcon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.itemLabel {
+  font-size: 14px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.63);
+  transition: color 0.1s ease;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+/* ---- Collapsed mode (icon-only) ---- */
+
+.rootCollapsed {
+  position: relative;
+  padding: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.rootCollapsed .group {
+  width: 100%;
+}
+
+.rootCollapsed .group + .group {
+  padding-top: 16px;
+}
+
+.rootCollapsed .group + .group::before {
+  margin: 0 8px 16px;
+}
+
+.rootCollapsed .groupLabel {
+  display: none;
+}
+
+/* Double selector to beat Mantine UnstyledButton reset (padding: 0) */
+.itemCollapsed.itemCollapsed {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 100%;
+  padding: 8px 14px;
+  position: relative;
+  z-index: 1;
+  border-radius: 0;
+  transition: background 0.08s ease;
+  cursor: pointer;
+}
+
+.itemCollapsed:hover {
+  background: hsla(215, 82%, 62%, 0.08);
+}
+
+.itemCollapsed:hover .itemIcon {
+  color: var(--text-muted);
+}
+
+.itemCollapsed[data-active] {
+  background: linear-gradient(90deg, hsla(215, 82%, 62%, 0.18), hsla(215, 82%, 62%, 0.06));
+  box-shadow: inset 3px 0 0 var(--primary-default);
+}
+
+.itemCollapsed[data-active] .itemIcon {
+  color: var(--primary-light);
+}

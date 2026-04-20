@@ -7,27 +7,27 @@ import {
 import { wgsl } from 'lib/gpu/injection/wgslUtils'
 import {
   HKey,
-  HKeyValue,
+  type HKeyValue,
   StatKey,
-  StatKeyValue,
+  type StatKeyValue,
 } from 'lib/optimization/engine/config/keys'
 import { ElementTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
-  AdditionalHit,
-  BreakHit,
-  CritHit,
-  DotHit,
-  ElationHit,
-  HealHit,
-  HealTallyHit,
-  Hit,
-  ShieldHit,
-  SuperBreakHit,
+  type AdditionalHit,
+  type BreakHit,
+  type CritHit,
+  type DotHit,
+  type ElationHit,
+  type HealHit,
+  type HealTallyHit,
+  type Hit,
+  type ShieldHit,
+  type SuperBreakHit,
 } from 'types/hitConditionalTypes'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const cLevelConst = 20 + 80
@@ -140,7 +140,7 @@ export const CritDamageFunction: DamageFunction = {
     const elationAtkScaling = hit.elationAtkScaling
     const shouldRecord = hit.recorded !== false
 
-    const elementalDmgBoost = hit.damageElement == ElementTag.None
+    const elementalDmgBoost = hit.damageElement === ElementTag.None
       ? '0.0'
       : getValue(elementTagToStatKeyBoost[hit.damageElement])
 
@@ -213,6 +213,8 @@ export const DotDamageFunction: DamageFunction = {
     const ehrMulti = calculateEhrMultiFromHit(x, hit, hitIndex, context)
     const trueDmgMulti = 1 + x.getValue(StatKey.TRUE_DMG_MODIFIER, hitIndex) + (hit.trueDmgModifier ?? 0)
 
+    const dotTickCoefficientMulti = hit.dotTickCoefficient ?? 1
+
     const dmg = m.baseUniversalMulti
       * m.defMulti
       * m.resMulti
@@ -222,6 +224,7 @@ export const DotDamageFunction: DamageFunction = {
       * abilityMulti
       * ehrMulti
       * trueDmgMulti
+      * dotTickCoefficientMulti
 
     return dmg
   },
@@ -242,7 +245,7 @@ export const DotDamageFunction: DamageFunction = {
     const defScaling = hit.defScaling ?? 0
     const hitTrueDmgModifier = hit.trueDmgModifier ?? 0
 
-    const elementalDmgBoost = hit.damageElement == ElementTag.None
+    const elementalDmgBoost = hit.damageElement === ElementTag.None
       ? '0.0'
       : getValue(elementTagToStatKeyBoost[hit.damageElement])
 
@@ -250,6 +253,7 @@ export const DotDamageFunction: DamageFunction = {
     const dotBaseChance = hit.dotBaseChance
     const dotSplit = hit.dotSplit ?? 0
     const dotStacks = hit.dotStacks ?? 1
+    const dotTickCoefficientMulti = hit.dotTickCoefficient ?? 1
     const shouldRecord = hit.recorded !== false
 
     const enemyEffectRes = context.enemyEffectResistance
@@ -297,7 +301,8 @@ export const DotDamageFunction: DamageFunction = {
     * dmgBoostMulti
     * abilityMulti
     * ehrMulti
-    * trueDmgMulti;
+    * trueDmgMulti
+    * ${dotTickCoefficientMulti};
 
   ${shouldRecord ? 'comboDmg += damage;' : ''}
 
@@ -521,7 +526,7 @@ export const AdditionalDamageFunction: DamageFunction = {
     const defScaling = hit.defScaling ?? 0
     const hitTrueDmgModifier = hit.trueDmgModifier ?? 0
 
-    const elementalDmgBoost = hit.damageElement == ElementTag.None
+    const elementalDmgBoost = hit.damageElement === ElementTag.None
       ? '0.0'
       : getValue(elementTagToStatKeyBoost[hit.damageElement])
 
@@ -887,7 +892,7 @@ export const ElationDamageFunction: DamageFunction = {
   },
 }
 
-export const DamageFunctionRegistry: Record<DamageFunctionType, DamageFunction> = {
+const DamageFunctionRegistry: Record<DamageFunctionType, DamageFunction> = {
   [DamageFunctionType.Default]: DefaultDamageFunction,
   [DamageFunctionType.Crit]: CritDamageFunction,
   [DamageFunctionType.Dot]: DotDamageFunction,

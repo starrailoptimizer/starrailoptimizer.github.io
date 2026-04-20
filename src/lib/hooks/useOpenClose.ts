@@ -15,6 +15,8 @@ export enum OpenCloseIDs {
   MENU_SIDEBAR = 'MENU_SIDEBAR',
   SCORING_MODAL = 'SCORING_MODAL',
   SWITCH_RELICS_MODAL = 'SWITCH_RELICS_MODAL',
+  RELIC_SET_FILTER_MODAL = 'RELIC_SET_FILTER_MODAL',
+  CHANGELOG_MODAL = 'CHANGELOG_MODAL',
 }
 
 interface OpenCloseStates {
@@ -27,7 +29,7 @@ interface OpenCloseStates {
 
 // No rerenders
 // const { open: openScoringModal } = useOpenCloseActions(OpenCloseIDs.SCORING_MODAL)
-export function useOpenCloseActions(id: OpenCloseIDs) {
+function useOpenCloseActions(id: OpenCloseIDs) {
   return useMemo(() => ({
     open: () => openCloseStore.getState().setIsOpen(id, true),
     close: () => openCloseStore.getState().setIsOpen(id, false),
@@ -65,12 +67,7 @@ export function setClose(id: OpenCloseIDs) {
   openCloseStore.getState().setIsOpen(id, false)
 }
 
-export function toggleOpen(id: OpenCloseIDs) {
-  const currentState = openCloseStore.getState().state[id] ?? false
-  openCloseStore.getState().setIsOpen(id, !currentState)
-}
-
-export const openCloseStore = create<OpenCloseStates>((set) => ({
+const openCloseStore = create<OpenCloseStates>((set) => ({
   state: {
     [OpenCloseIDs.MENU_SIDEBAR]: true,
   } as Record<OpenCloseIDs, boolean>,

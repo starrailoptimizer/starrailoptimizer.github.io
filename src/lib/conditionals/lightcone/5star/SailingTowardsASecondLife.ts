@@ -1,6 +1,6 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import {
   ConditionalActivation,
@@ -16,18 +16,19 @@ import {
   DamageTag,
   SELF_ENTITY_INDEX,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.SailingTowardsASecondLife')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.SailingTowardsASecondLife')
   const { SOURCE_LC } = Source.lightCone(SailingTowardsASecondLife.id)
 
   const sValuesSpdBuff = [0.12, 0.14, 0.16, 0.18, 0.20]
@@ -44,14 +45,14 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'breakDmgDefShred',
       formItem: 'switch',
       text: t('Content.breakDmgDefShred.text'),
-      content: t('Content.breakDmgDefShred.content', { DefIgnore: TsUtils.precisionRound(100 * sValuesDefShred[s]) }),
+      content: t('Content.breakDmgDefShred.content', { DefIgnore: precisionRound(100 * sValuesDefShred[s]) }),
     },
     spdBuffConditional: {
       lc: true,
       id: 'spdBuffConditional',
       formItem: 'switch',
       text: t('Content.spdBuffConditional.text'),
-      content: t('Content.spdBuffConditional.content', { SpdBuff: TsUtils.precisionRound(100 * sValuesSpdBuff[s]) }),
+      content: t('Content.spdBuffConditional.content', { SpdBuff: precisionRound(100 * sValuesSpdBuff[s]) }),
     },
   }
 

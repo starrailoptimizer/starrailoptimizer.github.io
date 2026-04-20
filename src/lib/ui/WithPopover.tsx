@@ -1,13 +1,14 @@
 import {
   Popover,
-  Typography,
-} from 'antd'
-import React, {
-  ComponentType,
-  ReactNode,
+  Text,
+} from '@mantine/core'
+import {
+  type ComponentType,
+  type ReactNode,
+  useCallback,
+  useRef,
+  useState,
 } from 'react'
-
-const { Text } = Typography
 
 export type WithPopoverProps<T> = {
   title: string,
@@ -16,33 +17,49 @@ export type WithPopoverProps<T> = {
 
 function WithPopover<T>(WrappedComponent: ComponentType<T>): ComponentType<WithPopoverProps<T>> {
   const Wrapped = (props: WithPopoverProps<T>) => {
-    const [open, setOpen] = React.useState(false)
-    const content = (
-      <Text style={{ width: 400, display: 'block' }}>
-        <hr />
-        {props.content}
-      </Text>
-    )
+    const [open, setOpen] = useState(false)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+    const handleMouseEnter = useCallback(() => {
+      timeoutRef.current = setTimeout(() => setOpen(true), 400)
+    }, [])
+
+    const handleMouseLeave = useCallback(() => {
+      clearTimeout(timeoutRef.current)
+      setOpen(false)
+    }, [])
+
     return (
       <Popover
-        trigger='hover'
-        placement='left'
-        content={content}
-        title={props.title}
-        open={open}
-        mouseEnterDelay={0.4}
-        onOpenChange={setOpen}
+        position='left'
+        opened={open}
+        onChange={setOpen}
       >
-        <span style={{ width: '100%' }}>
-          <WrappedComponent {...props} />
-        </span>
+        <Popover.Target>
+          <span
+            style={{ width: '100%' }}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <WrappedComponent {...props} />
+          </span>
+        </Popover.Target>
+        <Popover.Dropdown data-testid='conditional-popover'>
+          {open && (
+            <>
+              <Text fw={600} mb={4} size='sm'>{props.title}</Text>
+              <Text component='div' size='sm' style={{ width: 400, display: 'block' }}>
+                <hr />
+                {props.content}
+              </Text>
+            </>
+          )}
+        </Popover.Dropdown>
       </Popover>
     )
   }
   Wrapped.displayName = 'WithPopoverWrapped'
-  // @ts-ignore
-  return Wrapped
+  return Wrapped as ComponentType<WithPopoverProps<T>>
 }
 
-WithPopover.displayName = 'WithPopover'
-export default WithPopover
+export { WithPopover }

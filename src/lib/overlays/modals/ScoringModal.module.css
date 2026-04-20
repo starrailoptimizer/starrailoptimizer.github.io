@@ -1,0 +1,32 @@
+.previewContainer {
+  overflow: hidden;
+}
+
+.partLabel {
+  margin-left: 5px;
+}
+
+.partMultiSelect :global(.mantine-Pill-root ~ .mantine-PillsInputField-field) {
+  width: 0;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.statIcon {
+  width: 25px;
+  height: 25px;
+  margin-right: 3px;
+}
+
+.statText {
+  line-height: 1.8;
+}
+.bottomDivider {
+  margin-top: 10px;
+  margin-bottom: 40px;
+}
+
+.footerActions {
+  margin-top: 16px;
+}

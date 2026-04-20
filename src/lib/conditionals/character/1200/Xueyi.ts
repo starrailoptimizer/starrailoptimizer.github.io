@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -29,7 +29,7 @@ import {
   ElementTag,
   SELF_ENTITY_INDEX,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
@@ -38,7 +38,7 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
 import { Fugue } from 'lib/conditionals/character/1200/Fugue'
 import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
@@ -55,17 +55,18 @@ import {
   START_ULT,
   WHOLE_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const XueyiEntities = createEnum('Xueyi')
@@ -78,7 +79,7 @@ export const XueyiAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Xueyi')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Xueyi')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -132,7 +133,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'toughnessReductionDmgBoost',
       formItem: 'slider',
       text: t('Content.toughnessReductionDmgBoost.text'),
-      content: t('Content.toughnessReductionDmgBoost.content', { ultBoostMax: TsUtils.precisionRound(100 * ultBoostMax) }),
+      content: t('Content.toughnessReductionDmgBoost.content', { ultBoostMax: precisionRound(100 * ultBoostMax) }),
       min: 0,
       max: ultBoostMax,
       percent: true,
@@ -141,7 +142,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'fuaHits',
       formItem: 'slider',
       text: t('Content.fuaHits.text'),
-      content: t('Content.fuaHits.content', { fuaScaling: TsUtils.precisionRound(100 * fuaScaling) }),
+      content: t('Content.fuaHits.content', { fuaScaling: precisionRound(100 * fuaScaling) }),
       min: 0,
       max: 3,
     },
@@ -293,7 +294,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_FUA,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.GeniusOfBrilliantStars, Sets.GeniusOfBrilliantStars],
     [Sets.PoetOfMourningCollapse, Sets.PoetOfMourningCollapse],
@@ -378,7 +378,7 @@ const display = {
     y: 900,
     z: 1,
   },
-  showcaseColor: '#3571e7',
+  showcaseColor: '#8e91f9',
 }
 
 export const Xueyi: CharacterConfig = {

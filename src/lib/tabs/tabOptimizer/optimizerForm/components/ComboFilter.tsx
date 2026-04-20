@@ -1,294 +1,257 @@
 import {
-  CheckOutlined,
-  CloseOutlined,
-  SettingOutlined,
-} from '@ant-design/icons'
-import {
+  ActionIcon,
   Button,
   Flex,
-  Form,
-  Input,
-  Popconfirm,
-  Radio,
-} from 'antd'
-import { FormInstance } from 'antd/es/form/hooks/useForm'
-import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
+  rem,
+  SegmentedControl,
+  Tooltip,
+} from '@mantine/core'
+import { modals } from '@mantine/modals'
+import { notifications } from '@mantine/notifications'
+import {
+  IconMinus,
+  IconPlus,
+  IconRefresh,
+  IconSettings,
+  IconWand,
+  IconWandOff,
+} from '@tabler/icons-react'
 import { ABILITY_LIMIT } from 'lib/constants/constants'
 import {
   OpenCloseIDs,
   setOpen,
 } from 'lib/hooks/useOpenClose'
 import { Hint } from 'lib/interactions/hint'
-import {
-  ComboType,
-  getDefaultComboTurnAbilities,
-} from 'lib/optimization/rotation/comboStateTransform'
+import { getDefaultComboTurnAbilities } from 'lib/optimization/rotation/comboStateTransform'
+import { ComboType } from 'lib/optimization/rotation/comboType'
+import type {
+  TurnAbilityName,
+} from 'lib/optimization/rotation/turnAbilityConfig'
 import {
   DEFAULT_BASIC,
   NULL_TURN_ABILITY_NAME,
-  TurnAbilityName,
   WHOLE_BASIC,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import DB from 'lib/state/db'
-import { ComboDrawer } from 'lib/tabs/tabOptimizer/combo/ComboDrawer'
-import InputNumberStyled from 'lib/tabs/tabOptimizer/optimizerForm/components/InputNumberStyled'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
 import {
   TurnAbilitySelector,
   TurnAbilitySelectorSimple,
 } from 'lib/tabs/tabOptimizer/optimizerForm/components/TurnAbilitySelector'
 import { optimizerTabDefaultGap } from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
-import { VerticalDivider } from 'lib/ui/Dividers'
 import { HeaderText } from 'lib/ui/HeaderText'
 import { TooltipImage } from 'lib/ui/TooltipImage'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { OptimizerForm } from 'types/form'
+import { useShallow } from 'zustand/react/shallow'
+import classes from './ComboFilter.module.css'
 
-const radioStyle = {
-  display: 'flex',
-  flex: 1,
-  justifyContent: 'center',
-  paddingInline: 0,
-}
+const controlSize = 28
 
-export const ComboFilters = () => {
+export function ComboFilters() {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
-  const { t: tCommon } = useTranslation('common')
-  const form = Form.useFormInstance<OptimizerForm>()
-  const comboType = Form.useWatch('comboType', form)
-  const characterId = Form.useWatch('characterId', form)
-  const characterEidolon = Form.useWatch('characterEidolon', form)
-  const comboOptions = useMemo(() => {
-    if (characterId == null || characterEidolon == null) return []
-
-    const characterConditionals: CharacterConditionalsController = CharacterConditionalsResolver.get({
-      characterId,
-      characterEidolon,
-    })
-
-    const actions = characterConditionals.actionDeclaration ? characterConditionals.actionDeclaration() : []
-
-    return actions.map((x) => ({
-      label: x,
-      value: x,
-    }))
-  }, [t, characterId, characterEidolon])
+  const comboType = useOptimizerRequestStore((s) => s.comboType)
 
   return (
-    <Flex vertical gap={optimizerTabDefaultGap}>
+    <Flex direction='column' gap={optimizerTabDefaultGap + 3}>
       <Flex justify='space-between' align='center'>
         <HeaderText>{t('Header') /* Rotation COMBO formula */}</HeaderText>
         <TooltipImage type={Hint.comboFilters()} />
       </Flex>
-      <Form.Item name='comboType'>
-        <Radio.Group
-          size='small'
-          buttonStyle='solid'
-          style={{ width: '100%' }}
+      <SegmentedControl
+        fullWidth
+        value={comboType}
+        onChange={(value) => useOptimizerRequestStore.getState().setComboType(value as ComboType)}
+        data={[
+          { label: t('ModeSelector.Simple'), value: ComboType.SIMPLE },
+          { label: t('ModeSelector.Advanced'), value: ComboType.ADVANCED },
+        ]}
+      />
+
+      <ComboBasicDefinition />
+
+      <Flex direction='column' gap={8} className={classes.advancedButtonContainer}>
+        <Button
+          variant='default'
+          onMouseDown={(e: React.MouseEvent) => {
+            if (e.button === 0) setOpen(OpenCloseIDs.COMBO_DRAWER)
+          }}
+          leftSection={<IconSettings size={16} stroke={1.5} />}
+          disabled={comboType === ComboType.SIMPLE}
         >
-          <Flex align='center'>
-            <Radio.Button style={radioStyle} value={ComboType.SIMPLE}>
-              {t('ModeSelector.Simple')}
-            </Radio.Button>
-            <Radio.Button style={radioStyle} value={ComboType.ADVANCED}>
-              {t('ModeSelector.Advanced')}
-            </Radio.Button>
-          </Flex>
-        </Radio.Group>
-      </Form.Item>
-
-      <ComboBasicDefinition comboOptions={comboOptions} />
-
-      <>
-        <Flex vertical gap={8} style={{ marginTop: 8 }}>
-          <Button
-            onClick={() => setOpen(OpenCloseIDs.COMBO_DRAWER)}
-            icon={<SettingOutlined />}
-            disabled={comboType == ComboType.SIMPLE}
-          >
-            {t('RotationButton')}
-          </Button>
-        </Flex>
-        <Form.Item name='comboStateJson' style={{ height: 0 }}>
-          <Input
-            placeholder='This is a fake hidden input to save combo data into the form'
-            style={{ display: 'none' }}
-          />
-        </Form.Item>
-        <ComboDrawer />
-      </>
+          {t('RotationButton')}
+        </Button>
+      </Flex>
     </Flex>
   )
 }
 
-function add(formInstance: FormInstance<OptimizerForm>) {
-  const form = formInstance.getFieldsValue()
-
-  for (let i = 1; i <= ABILITY_LIMIT + 2; i++) {
-    if (form.comboTurnAbilities?.[i] == null) {
-      formInstance.setFieldValue(['comboTurnAbilities', i], DEFAULT_BASIC)
+export function addAbility(abilities: TurnAbilityName[]): TurnAbilityName[] {
+  const result = [...abilities]
+  for (let i = 1; i <= ABILITY_LIMIT; i++) {
+    if (result[i] == null) {
+      result[i] = DEFAULT_BASIC
       break
     }
   }
+  return result
 }
 
-function minus(formInstance: FormInstance<OptimizerForm>) {
-  const form = formInstance.getFieldsValue()
-
-  for (let i = ABILITY_LIMIT + 2; i > 1; i--) {
-    if (form.comboTurnAbilities?.[i] != null) {
-      formInstance.setFieldValue(['comboTurnAbilities', i], null)
+export function removeAbility(abilities: TurnAbilityName[]): TurnAbilityName[] {
+  const result = [...abilities]
+  for (let i = ABILITY_LIMIT; i > 1; i--) {
+    if (result[i] != null) {
+      result.length = i
       break
     }
   }
+  return result
 }
 
-function resetClicked(formInstance: FormInstance<OptimizerForm>) {
-  const characterId = window.store.getState().optimizerTabFocusCharacter!
-  const characterMetadata = DB.getMetadata().characters[characterId]
+function add() {
+  const abilities = useOptimizerRequestStore.getState().comboTurnAbilities
+  useOptimizerRequestStore.getState().setComboTurnAbilities(addAbility(abilities))
+}
+
+function minus() {
+  const abilities = useOptimizerRequestStore.getState().comboTurnAbilities
+  useOptimizerRequestStore.getState().setComboTurnAbilities(removeAbility(abilities))
+}
+
+function resetClicked() {
+  const characterId = useOptimizerDisplayStore.getState().focusCharacterId!
+  const characterMetadata = getGameMetadata().characters[characterId]
 
   if (!characterMetadata) return
 
-  const defaultComboTurnAbilities = characterMetadata.scoringMetadata?.simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, WHOLE_BASIC]
-  const defaultComboDot = characterMetadata.scoringMetadata?.simulation?.comboDot ?? 0
+  const defaultComboTurnAbilities = [...(characterMetadata.scoringMetadata?.simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, WHOLE_BASIC])]
 
-  for (let i = 0; i <= ABILITY_LIMIT + 2; i++) {
-    formInstance.setFieldValue(['comboTurnAbilities', i], defaultComboTurnAbilities[i] ?? null)
-  }
-  formInstance.setFieldValue(['comboDot'], defaultComboDot)
-  formInstance.setFieldValue(['comboStateJson'], '{}')
+  useOptimizerRequestStore.getState().setComboTurnAbilities(defaultComboTurnAbilities)
+  useOptimizerRequestStore.getState().setComboStateJson('{}')
 }
 
-function ComboBasicDefinition(props: { comboOptions: { value: string, label: string }[] }) {
+function ComboBasicDefinition() {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
-  const { t: tSidebar } = useTranslation('optimizerTab', { keyPrefix: 'Sidebar' })
   const { t: tCommon } = useTranslation('common')
-  const formInstance = Form.useFormInstance<OptimizerForm>()
-  const comboType = Form.useWatch('comboType', formInstance)
-  const characterId = Form.useWatch('characterId', formInstance)
-  const characterEidolon = Form.useWatch('characterEidolon', formInstance)
+  const {
+    comboType,
+    characterId,
+    characterEidolon,
+    comboPreprocessor,
+    comboTurnAbilities,
+  } = useOptimizerRequestStore(
+    useShallow((s) => ({
+      comboType: s.comboType,
+      characterId: s.characterId,
+      characterEidolon: s.characterEidolon,
+      comboPreprocessor: s.comboPreprocessor,
+      comboTurnAbilities: s.comboTurnAbilities,
+    })),
+  )
 
   const {
-    comboTurnAbilities,
-    comboDot,
-  } = getDefaultComboTurnAbilities(characterId, characterEidolon)
+    comboTurnAbilities: defaultComboTurnAbilities,
+  } = getDefaultComboTurnAbilities(characterId!, characterEidolon)
 
-  const disabled = comboType == ComboType.SIMPLE
+  const disabled = comboType === ComboType.SIMPLE
 
   return (
-    <Flex style={{ height: 275 }}>
-      <Flex vertical flex={1} style={{ marginLeft: 2 }} gap={3}>
-        <HeaderText>{t('AbilityLabel') /* Abilities */}</HeaderText>
-
-        <Flex vertical flex={1} style={{ marginLeft: 2, display: comboType == ComboType.ADVANCED ? 'flex' : 'none' }} gap={3}>
+    <Flex className={classes.comboContainer}>
+      <Flex direction='column' flex={1} className={classes.abilitiesColumn} gap={3}>
+        <Flex direction='column' flex={1} className={classes.abilitiesColumn} style={{ display: comboType === ComboType.ADVANCED ? 'flex' : 'none' }} gap={3}>
           {Array.from({ length: ABILITY_LIMIT }, (_, i) => (
             <ComboOptionRowSelect
               key={i + 1}
               index={i + 1}
-              comboOptions={props.comboOptions}
               disabled={disabled}
             />
           ))}
         </Flex>
 
-        <Flex vertical flex={1} style={{ marginLeft: 2, display: comboType == ComboType.SIMPLE ? 'flex' : 'none' }} gap={3}>
-          {Array.from({ length: ABILITY_LIMIT }, (_, i) => <TurnAbilitySelectorSimple key={i + 1} value={comboTurnAbilities[i + 1]} index={i + 1} />)}
+        <Flex
+          direction='column'
+          flex={1}
+          className={`${classes.abilitiesColumn} ${classes.simpleAbilities}`}
+          style={{ display: comboType === ComboType.SIMPLE ? 'flex' : 'none' }}
+          gap={3}
+        >
+          {Array.from({ length: ABILITY_LIMIT }, (_, i) => <TurnAbilitySelectorSimple key={i + 1} value={defaultComboTurnAbilities[i + 1]} index={i + 1} />)}
         </Flex>
       </Flex>
 
-      <VerticalDivider width={10} />
-
-      <Flex vertical gap={20} flex={1} align='flex-start'>
-        <Flex vertical style={{ width: '100%' }} gap={5}>
-          <HeaderText>{t('RowControls.Header') /* Controls */}</HeaderText>
-          <Popconfirm
-            title={tCommon('Confirm')}
-            description={t('RowControls.ResetConfirm.Description')}
-            onConfirm={() => resetClicked(formInstance)}
-            okText={tCommon('Yes')}
-            cancelText={tCommon('Cancel')}
-            placement='bottomRight'
-          >
-            <Button size='small' variant='outlined' disabled={disabled}>
-              {tCommon('Reset')}
-            </Button>
-          </Popconfirm>
-          <Flex gap={5}>
-            <Button size='small' variant='outlined' style={{ flex: 1 }} onClick={() => add(formInstance)} disabled={disabled}>
-              {t('RowControls.Add')}
-            </Button>
-            <Button size='small' variant='outlined' style={{ flex: 1 }} onClick={() => minus(formInstance)} disabled={disabled}>
-              {t('RowControls.Remove')}
-            </Button>
-          </Flex>
+      <Flex direction='column' gap={controlSize / 2} w={controlSize}>
+        <Flex direction='column' gap={5}>
+          <Tooltip label={t('RowControls.ResetTooltip')} position='right' openDelay={300} withArrow>
+            <ActionIcon
+              variant='default'
+              w='100%'
+              h={controlSize}
+              disabled={disabled}
+              onClick={() =>
+                modals.openConfirmModal({
+                  title: tCommon('Confirm'),
+                  children: t('RowControls.ResetConfirm.Description'),
+                  labels: { confirm: tCommon('Yes'), cancel: tCommon('Cancel') },
+                  centered: true,
+                  onConfirm: () => resetClicked(),
+                })}
+            >
+              <IconRefresh size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={t('RowControls.AddTooltip')} position='right' openDelay={300} withArrow>
+            <ActionIcon variant='default' w='100%' h={controlSize} onClick={() => add()} disabled={disabled}>
+              <IconPlus size={16} />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label={t('RowControls.RemoveTooltip')} position='right' openDelay={300} withArrow>
+            <ActionIcon variant='default' w='100%' h={controlSize} onClick={() => minus()} disabled={disabled}>
+              <IconMinus size={16} />
+            </ActionIcon>
+          </Tooltip>
         </Flex>
 
-        <Flex vertical style={{ width: '100%' }} gap={5}>
-          <HeaderText>{t('RowControls.PresetsHeader') /*Presets*/}</HeaderText>
-          <Form.Item name='comboPreprocessor'>
-            <Radio.Group buttonStyle='solid' block size='small' disabled={disabled}>
-              <Radio.Button value={true}>
-                <CheckOutlined />
-              </Radio.Button>
-              <Radio.Button value={false}>
-                <CloseOutlined />
-              </Radio.Button>
-            </Radio.Group>
-          </Form.Item>
-        </Flex>
-
-        <Flex vertical gap={5}>
-          <HeaderText>{t('CounterLabels.Dot')}</HeaderText>
-          <NumberXInput name='comboDot' disabled={disabled} value={comboDot} />
-        </Flex>
+        <Tooltip label={t('RowControls.PresetsTooltip')} position='right' openDelay={300} withArrow>
+          <SegmentedControl
+            orientation='vertical'
+            fullWidth
+            disabled={disabled}
+            value={String(comboPreprocessor)}
+            onChange={(value) => {
+              const enabled = value === 'true'
+              useOptimizerRequestStore.getState().setComboPreprocessor(enabled)
+              notifications.show({
+                message: enabled ? t('Presets.Enabled') : t('Presets.Disabled'),
+                autoClose: 2000,
+              })
+            }}
+            styles={{
+              root: { padding: 0 },
+              label: {
+                padding: 0,
+                height: rem(controlSize),
+                width: rem(controlSize),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              },
+            }}
+            data={[
+              { label: <IconWand size={16} />, value: 'true' },
+              { label: <IconWandOff size={16} />, value: 'false' },
+            ]}
+          />
+        </Tooltip>
       </Flex>
     </Flex>
   )
 }
 
-function ComboOptionRowSelect(props: { index: number, disabled: boolean, comboOptions: { value: string, label: string }[] }) {
-  return (
-    <Form.Item
-      shouldUpdate={(prevValues: OptimizerForm, currentValues: OptimizerForm) => prevValues.comboTurnAbilities !== currentValues.comboTurnAbilities}
-      noStyle
-    >
-      {({ getFieldValue }) => {
-        const comboTurnAbilities: TurnAbilityName[] = getFieldValue('comboTurnAbilities') ?? []
-        const shouldRenderSegmented = comboTurnAbilities[props.index] != null || props.index < 2
+function ComboOptionRowSelect({ index, disabled }: { index: number, disabled: boolean }) {
+  const comboTurnAbilities = useOptimizerRequestStore((s) => s.comboTurnAbilities)
+  const shouldRenderSegmented = comboTurnAbilities[index] != null || index < 2
 
-        return shouldRenderSegmented
-          ? <TurnAbilitySelector formName={['comboTurnAbilities', props.index]} disabled={props.disabled} />
-          : null
-      }}
-    </Form.Item>
-  )
-}
-
-function NumberXInput(props: {
-  name: string,
-  disabled: boolean,
-  value?: number,
-}) {
-  const input = (
-    <InputNumberStyled
-      addonBefore='⨯'
-      size='small'
-      controls={true}
-      disabled={props.disabled}
-      value={props.disabled ? props.value : undefined}
-      style={{ width: '100%' }}
-      rootClassName='comboInputNumber'
-    />
-  )
-
-  if (props.disabled) {
-    return input
-  }
-
-  return (
-    <Form.Item name={props.name}>
-      {input}
-    </Form.Item>
-  )
+  return shouldRenderSegmented
+    ? <TurnAbilitySelector index={index} disabled={disabled} />
+    : null
 }

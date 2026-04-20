@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -16,18 +16,18 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
 import { Bronya } from 'lib/conditionals/character/1100/Bronya'
@@ -44,10 +44,11 @@ import {
   START_SKILL,
   WHOLE_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const JingliuEntities = createEnum('Jingliu')
@@ -59,7 +60,7 @@ export const JingliuAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Jingliu')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Jingliu')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -95,13 +96,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentEnhancedState',
       formItem: 'switch',
       text: t('Content.talentEnhancedState.text'),
-      content: t('Content.talentEnhancedState.content', { talentCrBuff: TsUtils.precisionRound(100 * talentCrBuff) }),
+      content: t('Content.talentEnhancedState.content', { talentCrBuff: precisionRound(100 * talentCrBuff) }),
     },
     talentHpDrainAtkBuff: {
       id: 'talentHpDrainAtkBuff',
       formItem: 'slider',
       text: t('Content.talentHpDrainAtkBuff.text'),
-      content: t('Content.talentHpDrainAtkBuff.content', { talentHpDrainAtkBuffMax: TsUtils.precisionRound(100 * talentHpDrainAtkBuffMax) }),
+      content: t('Content.talentHpDrainAtkBuff.content', { talentHpDrainAtkBuffMax: precisionRound(100 * talentHpDrainAtkBuffMax) }),
       min: 0,
       max: talentHpDrainAtkBuffMax,
       percent: true,
@@ -242,7 +243,6 @@ const simulation = (): SimulationMetadata => ({
     END_ULT,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     [Sets.HunterOfGlacialForest, Sets.HunterOfGlacialForest],
@@ -320,6 +320,7 @@ const display = {
     y: 930,
     z: 1,
   },
+  disableSpine: true,
   showcaseColor: '#3e65f2',
 }
 

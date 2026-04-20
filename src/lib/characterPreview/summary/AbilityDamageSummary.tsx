@@ -1,52 +1,50 @@
-import { Flex } from 'antd'
-import { defaultGap } from 'lib/constants/constantsUi'
-import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
-import { RunStatSimulationsResult } from 'lib/simulations/statSimulationTypes'
+import { usePromise } from 'hooks/usePromise'
+import {
+  AbilityKind,
+  toTurnAbility,
+} from 'lib/optimization/rotation/turnAbilityConfig'
+import type { SimulationScore } from 'lib/scoring/simScoringUtils'
+import type { RotationDamageStep } from 'lib/simulations/statSimulationTypes'
+import { toI18NVisual } from 'lib/utils/displayUtils'
 import { numberToLocaleString } from 'lib/utils/i18nUtils'
+import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
+import classes from './AbilityDamageSummary.module.css'
 
-type AbilityDamageSummaryProps = {
-  simResult: RunStatSimulationsResult,
+interface SynchronousAbilityDamageSummaryProps {
+  rotationDamage: RotationDamageStep[]
+}
+interface AsynchronousAbilityDamageSummaryProps {
+  promise: Promise<SimulationScore | null>
+  mode: 'Benchmark' | 'Perfect'
 }
 
-export function AbilityDamageSummary({ simResult }: AbilityDamageSummaryProps) {
-  const { t } = useTranslation('common', { keyPrefix: 'ShortDMGTypes' })
-
-  const actionDamage = simResult.actionDamage ?? {}
+export const AbilityDamageSummary = memo(function AbilityDamageSummary({
+  rotationDamage,
+}: SynchronousAbilityDamageSummaryProps) {
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
 
   return (
-    <Flex gap={defaultGap} justify='space-around'>
-      <Flex vertical gap={4} style={{ width: 230 }}>
-        <ScoringNumber label={String(t('Basic')) + ':'} number={actionDamage[AbilityKind.BASIC]} precision={1} />
-        <ScoringNumber label={String(t('Skill')) + ':'} number={actionDamage[AbilityKind.SKILL]} precision={1} />
-        <ScoringNumber label={String(t('Ult')) + ':'} number={actionDamage[AbilityKind.ULT]} precision={1} />
-        <ScoringNumber label={String(t('Fua')) + ':'} number={actionDamage[AbilityKind.FUA]} precision={1} />
-        <ScoringNumber label={String(t('Memo_Skill')) + ':'} number={actionDamage[AbilityKind.MEMO_SKILL]} precision={1} />
-        <ScoringNumber label={String(t('Memo_Talent')) + ':'} number={actionDamage[AbilityKind.MEMO_TALENT]} precision={1} />
-        <ScoringNumber label={String(t('Elation_Skill')) + ':'} number={actionDamage[AbilityKind.ELATION_SKILL]} precision={1} />
-        <ScoringNumber label={String(t('Unique')) + ':'} number={actionDamage[AbilityKind.UNIQUE]} precision={1} />
-        <ScoringNumber label={String(t('Dot')) + ':'} number={actionDamage[AbilityKind.DOT]} precision={1} />
-        <ScoringNumber label={String(t('Break')) + ':'} number={actionDamage[AbilityKind.BREAK]} precision={1} />
-      </Flex>
-    </Flex>
+    <div className={classes.zebraContainer}>
+      {rotationDamage.map((step, idx) => {
+        if (step.actionType === AbilityKind.NULL) return null
+        const label = toI18NVisual(toTurnAbility(step.actionName), t)
+        return (
+          <div key={idx} className={classes.row}>
+            <span className={classes.label}>{idx + 1}. {label}</span>
+            <span className={classes.label}>
+              {step.damage && numberToLocaleString(step.damage, 1)}
+            </span>
+          </div>
+        )
+      })}
+    </div>
   )
-}
+})
 
-function ScoringNumber(props: {
-  label: string,
-  number?: number,
-  precision?: number,
-  useGrouping?: boolean,
-}) {
-  const precision = props.precision ?? 1
-  const value = props.number ?? 0
-
-  if (value == 0) return <></>
-
-  return (
-    <Flex gap={15} justify='space-between'>
-      <pre style={{ margin: 0 }}>{props.label}</pre>
-      <pre style={{ margin: 0, textAlign: 'right' }}>{numberToLocaleString(value, precision, props.useGrouping)}</pre>
-    </Flex>
-  )
-}
+export const AsyncAbilityDamageSummary = memo(function AsyncAbilityDamageSummary({ promise, mode }: AsynchronousAbilityDamageSummaryProps) {
+  const output = usePromise(promise)
+  const rotationDamage = output?.[mode === 'Benchmark' ? 'benchmarkSim' : 'maximumSim']?.result?.rotationDamage
+  if (!rotationDamage) return null
+  return <AbilityDamageSummary rotationDamage={rotationDamage} />
+})

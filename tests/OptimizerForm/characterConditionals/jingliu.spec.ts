@@ -3,15 +3,14 @@ import {
   test,
 } from '@playwright/test'
 
-test('test', async ({ page }) => {
+test('Jingliu conditionals show correct popover text', async ({ page }) => {
   await page.goto('/#showcase')
   await page.getByText('Optimizer', { exact: true }).click()
+  await page.getByText('Character options').click()
 
   await page.locator('#OPTIMIZER').getByText('Enhanced state').hover()
-  const t1 = await page.locator('.ant-popover-content').getByText('When Jingliu has 2 stack(s)')
-  expect(t1).toBeTruthy()
+  await expect(page.getByTestId('conditional-popover').getByText('Spectral Transmigration')).toBeVisible()
 
-  await page.locator('#OPTIMIZER').getByText('HP drain ATK buff').click()
-  const t2 = await page.locator('.ant-popover-content').getByText('Jingliu\'s ATK increases by 540%')
-  expect(t2).toBeTruthy()
+  await page.locator('#OPTIMIZER').getByText('HP drain ATK buff').hover()
+  await expect(page.getByTestId('conditional-popover').getByText('ATK increases based on the total HP consumed')).toBeVisible()
 })

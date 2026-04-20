@@ -8,8 +8,8 @@ import { Hyacine } from 'lib/conditionals/character/1400/Hyacine'
 import { BuffPriority } from 'lib/conditionals/conditionalConstants'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   countTeamPath,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
@@ -39,7 +39,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_MEMO_SKILL,
@@ -54,17 +54,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const EvernightEntities = createEnum(
@@ -80,8 +81,8 @@ export const EvernightAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Evernight')
-  const tBuff = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Evernight')
+  const tBuff = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
   const { basic, skill, ult, talent, memoSkill, memoTalent } = AbilityEidolon.SKILL_BASIC_MEMO_TALENT_3_ULT_TALENT_MEMO_SKILL_5
   const {
     SOURCE_BASIC,
@@ -155,7 +156,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.memoTalentDmgBuff.text'),
       content: t('Content.memoTalentDmgBuff.content', {
-        MemoTalentDmgBuff: TsUtils.precisionRound(100 * memoTalentDmgBoost),
+        MemoTalentDmgBuff: precisionRound(100 * memoTalentDmgBoost),
       }),
     },
     traceCritBuffs: {
@@ -169,7 +170,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.skillMemoCdBuff.text'),
       content: t('Content.skillMemoCdBuff.content', {
-        SkillMemoCdBuff: TsUtils.precisionRound(100 * skillCdScaling),
+        SkillMemoCdBuff: precisionRound(100 * skillCdScaling),
       }),
     },
     talentMemoCdBuff: {
@@ -177,7 +178,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.talentMemoCdBuff.text'),
       content: t('Content.talentMemoCdBuff.content', {
-        TalentCdScaling: TsUtils.precisionRound(100 * talentCdScaling),
+        TalentCdScaling: precisionRound(100 * talentCdScaling),
       }),
     },
     memoriaStacks: {
@@ -185,9 +186,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('Content.memoriaStacks.text'),
       content: t('Content.memoriaStacks.content', {
-        MemoSkillScaling: TsUtils.precisionRound(100 * memoSkillScaling),
-        MemoSkillAdditionalScaling: TsUtils.precisionRound(100 * memoSkillAdditionalScaling),
-        MemoSkillEnhancedScaling: TsUtils.precisionRound(100 * memoSkillEnhancedScaling),
+        MemoSkillScaling: precisionRound(100 * memoSkillScaling),
+        MemoSkillAdditionalScaling: precisionRound(100 * memoSkillAdditionalScaling),
+        MemoSkillEnhancedScaling: precisionRound(100 * memoSkillEnhancedScaling),
       }),
       min: 0,
       max: 40,
@@ -197,8 +198,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.enhancedState.text'),
       content: t('Content.enhancedState.content', {
-        UltVulnScaling: TsUtils.precisionRound(100 * ultVulnScaling),
-        UltDmgBoostScaling: TsUtils.precisionRound(100 * ultDmgBoostScaling),
+        UltVulnScaling: precisionRound(100 * ultVulnScaling),
+        UltDmgBoostScaling: precisionRound(100 * ultDmgBoostScaling),
       }),
     },
     cyreneSpecialEffect: {
@@ -244,13 +245,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillMemoCdBuff',
       formItem: 'switch',
       text: t('TeammateContent.skillMemoCdBuff.text'),
-      content: t('TeammateContent.skillMemoCdBuff.content', { SkillCdScaling: TsUtils.precisionRound(100 * skillCdScaling) }),
+      content: t('TeammateContent.skillMemoCdBuff.content', { SkillCdScaling: precisionRound(100 * skillCdScaling) }),
     },
     evernightCombatCD: {
       id: 'evernightCombatCD',
       formItem: 'slider',
       text: t('TeammateContent.evernightCombatCD.text'),
-      content: t('TeammateContent.evernightCombatCD.content', { SkillCdScaling: TsUtils.precisionRound(100 * skillCdScaling) }),
+      content: t('TeammateContent.evernightCombatCD.content', { SkillCdScaling: precisionRound(100 * skillCdScaling) }),
       min: 0,
       max: 5.00,
       percent: true,
@@ -303,7 +304,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       // MEMO_SKILL scaling varies based on memoriaStacks
       const memoSkillHpScaling = r.memoriaStacks >= 16
         ? memoSkillEnhancedScaling * r.memoriaStacks
-        : memoSkillScaling + Math.floor(TsUtils.precisionRound(r.memoriaStacks / 4)) * memoSkillAdditionalScaling
+        : memoSkillScaling + Math.floor(precisionRound(r.memoriaStacks / 4)) * memoSkillAdditionalScaling
       const memoSkillToughness = r.memoriaStacks >= 16 ? 10 : 30
 
       return {
@@ -572,7 +573,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_MEMO_SKILL,
     DEFAULT_MEMO_SKILL,
   ],
-  comboDot: 0,
   deprioritizeBuffs: true,
   errRopeEidolon: 0,
   relicSets: [
@@ -651,11 +651,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 985,
-    y: 985,
-    z: 1.075,
+    x: 983,
+    y: 1009,
+    z: 1.15,
   },
-  showcaseColor: '#f2a8e5',
+  showcaseColor: '#e09dc0',
 }
 
 export const Evernight: CharacterConfig = {

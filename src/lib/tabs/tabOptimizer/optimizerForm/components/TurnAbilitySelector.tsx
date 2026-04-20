@@ -1,189 +1,127 @@
-import {
-  Cascader,
-  ConfigProvider,
-  Form,
-} from 'antd'
-import { TFunction } from 'i18next'
+import type { TFunction } from 'i18next'
 import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
-import { CharacterId } from 'types/character'
 import {
   AbilityKind,
   ALL_ABILITIES,
   ComboOptionsLabelMapping,
   createAbility,
-  NULL_TURN_ABILITY,
   NULL_TURN_ABILITY_NAME,
-  toTurnAbility,
-  TurnAbility,
-  TurnAbilityName,
+  type TurnAbility,
+  type TurnAbilityName,
   TurnMarker,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { updateAbilityRotation } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { useMemo } from 'react'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
+import { useComboDrawerStore } from 'lib/tabs/tabOptimizer/combo/useComboDrawerStore'
+import {
+  type CascaderData,
+  type CascaderGroup,
+  CascaderSelect,
+} from 'lib/ui/CascaderSelect'
+import { toI18NVisual } from 'lib/utils/displayUtils'
+import {
+  type CSSProperties,
+  useMemo,
+} from 'react'
 import { useTranslation } from 'react-i18next'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { OptimizerForm } from 'types/form'
+import { type CharacterId } from 'types/character'
+import type { CharacterConditionalsController } from 'types/conditionals'
 
-const { SHOW_CHILD } = Cascader
-
-const MARKER_LABELS: Record<TurnMarker, string> = {
-  [TurnMarker.DEFAULT]: 'Default',
-  [TurnMarker.START]: 'Start turn',
-  [TurnMarker.END]: 'End turn',
-  [TurnMarker.WHOLE]: 'Whole turn',
-}
-
-const cascaderTheme = {
-  components: {
-    Cascader: {
-      dropdownHeight: 220,
-      controlWidth: 100,
-      optionPadding: '2px 12px',
-      controlItemWidth: 150,
-    },
+const compactInputStyles = {
+  input: {
+    height: 18,
+    minHeight: 18,
+    fontSize: 12,
+    display: 'flex',
+    alignItems: 'center',
+    paddingBlock: 0,
   },
 }
 
-export interface AbilityOption {
-  value: string
-  label: string
-  children: AbilityOption[]
+function IndexLabel({ index }: { index: number }) {
+  return <span style={{ fontSize: 12, whiteSpace: 'nowrap', width: '100%', textAlign: 'left' }}>{`${index}.`}</span>
 }
 
-const start = '['
-const end = ']'
-
-export function toI18NVisual(ability: TurnAbility, t: TFunction<'optimizerTab', 'ComboFilter'>): string {
-  if (!ability || ability == NULL_TURN_ABILITY) return ''
-  const abilityKindVisual: string = t(`ComboOptions.${ComboOptionsLabelMapping[ability.kind]}`)
-
-  switch (ability.marker) {
-    case TurnMarker.START:
-      return `${start} ${abilityKindVisual}`
-    case TurnMarker.END:
-      return `${abilityKindVisual} ${end}`
-    case TurnMarker.WHOLE:
-      return `${start} ${abilityKindVisual} ${end}`
-    default:
-      return abilityKindVisual
+function mapKindToGroup(kind: string, groupLabel: string, t: TFunction<'optimizerTab', 'ComboFilter'>): CascaderGroup {
+  return {
+    label: groupLabel,
+    options: Object.values(TurnMarker).map((marker) => {
+      const turnAbility = createAbility(kind, marker)
+      return {
+        value: turnAbility.name,
+        label: toI18NVisual(turnAbility, t),
+      }
+    }),
   }
 }
 
-export function generateAbilityOptions(t: TFunction<'optimizerTab', 'ComboFilter'>, characterId?: string, characterEidolon?: number): AbilityOption[] {
-  // const t = i18next.getFixedT(null, 'optimizerTab', 'ComboFilter')
+// SKILL and ULT are always included in rotation options because rotations represent
+// full character turns (including buff skills / transformation ults) — not just damage actions.
+const ALWAYS_INCLUDED_KINDS: AbilityKind[] = [AbilityKind.SKILL, AbilityKind.ULT]
+
+function generateAbilityGroupedOptions(t: TFunction<'optimizerTab', 'ComboFilter'>, characterId?: string, characterEidolon?: number): CascaderData {
   if (characterId && characterEidolon != null) {
     const characterConditionals: CharacterConditionalsController = CharacterConditionalsResolver.get({
       characterId: characterId as CharacterId,
       characterEidolon: characterEidolon,
     })
-    const actions = characterConditionals.actionDeclaration ? characterConditionals.actionDeclaration() : []
-
-    return actions.map((x) => ({
-      label: x,
-      value: x,
-      children: Object.values(TurnMarker)
-        .map((marker) => {
-          const turnAbility = createAbility(x, marker)
-          return {
-            value: turnAbility.name,
-            label: toI18NVisual(turnAbility, t),
-            children: [],
-          }
-        }),
-    }))
+    const declared = characterConditionals.actionDeclaration ? characterConditionals.actionDeclaration() : []
+    const actions = [...new Set([...declared, ...ALWAYS_INCLUDED_KINDS])]
+    return actions.map((kind) => mapKindToGroup(kind, kind, t))
   }
 
-  return ALL_ABILITIES.map((kind) => ({
-    value: `${kind}`,
-    label: t(`ComboOptions.${ComboOptionsLabelMapping[kind]}`),
-    children: Object.values(TurnMarker)
-      .map((marker) => {
-        const turnAbility = createAbility(kind, marker)
-        return {
-          value: turnAbility.name,
-          label: toI18NVisual(turnAbility, t),
-          children: [],
-        }
-      }),
-  }))
+  return ALL_ABILITIES.map((kind) => mapKindToGroup(kind, t(`ComboOptions.${ComboOptionsLabelMapping[kind]}`), t))
 }
 
-export function TurnAbilitySelector({ formName, disabled }: { formName: (string | number)[], disabled: boolean }) {
+export function TurnAbilitySelector({ index, disabled }: { index: number, disabled: boolean }) {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
-  const form = Form.useFormInstance<OptimizerForm>()
-  const characterId = Form.useWatch('characterId', form)
-  const characterEidolon = Form.useWatch('characterEidolon', form)
-  const options = useMemo(() => generateAbilityOptions(t, characterId, characterEidolon), [t, characterId, characterEidolon])
+  const characterId = useOptimizerRequestStore((s) => s.characterId)
+  const characterEidolon = useOptimizerRequestStore((s) => s.characterEidolon)
+  const value = useOptimizerRequestStore((s) => s.comboTurnAbilities[index])
+  const options = useMemo(() => generateAbilityGroupedOptions(t, characterId, characterEidolon), [t, characterId, characterEidolon])
+
+  function handleChange(selectedValue: string | null) {
+    if (!selectedValue) return
+    const store = useOptimizerRequestStore.getState()
+    const abilities = [...store.comboTurnAbilities]
+    abilities[index] = selectedValue as TurnAbilityName
+    store.setComboTurnAbilities(abilities)
+  }
 
   return (
-    <ConfigProvider theme={cascaderTheme}>
-      <Form.Item
-        name={formName}
-        getValueFromEvent={(value: [AbilityKind, TurnAbilityName]) => value?.[1] || null}
-        getValueProps={(value: TurnAbilityName) => ({
-          value: value ? [toTurnAbility(value).kind, value] : undefined,
-        })}
-        noStyle
-      >
-        <Cascader<AbilityOption>
-          className='turn-ability-cascader-filter'
-          options={options}
-          displayRender={(labels: string[]) => {
-            return `${formName[1]}.  ${labels[1]}`
-          }}
-          expandTrigger='hover'
-          placeholder='Ability'
-          showCheckedStrategy={SHOW_CHILD}
-          size='small'
-          style={{ width: '100%', height: 18 }}
-          variant='borderless'
-          allowClear={false}
-          changeOnSelect={true}
-          disabled={disabled}
-          onChange={(value: string[]) => {
-            if (value && value.length == 1) {
-              form.setFieldValue(
-                // @ts-ignore Using formName as path
-                formName,
-                createAbility(value[0] as AbilityKind, TurnMarker.DEFAULT).name,
-              )
-            }
-          }}
-        />
-      </Form.Item>
-    </ConfigProvider>
+    <CascaderSelect
+      data={options}
+      value={value || null}
+      placeholder='Ability'
+      variant='unstyled'
+      leftSection={<IndexLabel index={index} />}
+      leftSectionWidth={24}
+      styles={compactInputStyles}
+      disabled={disabled}
+      onChange={handleChange}
+    />
   )
 }
 
 export function TurnAbilitySelectorSimple({ value, index }: { value: TurnAbilityName, index: number }) {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
-  const options = useMemo(() => generateAbilityOptions(t), [t])
+  const options = useMemo(() => generateAbilityGroupedOptions(t), [t])
 
   if (value == null) {
-    return <></>
+    return null
   }
 
   return (
-    <ConfigProvider theme={cascaderTheme}>
-      <Cascader<AbilityOption>
-        className='turn-ability-cascader-filter'
-        options={options}
-        // @ts-ignore
-        value={value}
-        displayRender={(labels: string[]) => {
-          const turnAbility = toTurnAbility(value)
-
-          return `${index}. ${toI18NVisual(turnAbility, t)}`
-        }}
-        expandTrigger='hover'
-        placeholder='Ability'
-        showCheckedStrategy={SHOW_CHILD}
-        size='small'
-        style={{ width: '100%', height: 18 }}
-        variant='borderless'
-        disabled={true}
-      />
-    </ConfigProvider>
+    <CascaderSelect
+      data={options}
+      value={value}
+      placeholder='Ability'
+      variant='unstyled'
+      leftSection={<IndexLabel index={index} />}
+      leftSectionWidth={24}
+      styles={compactInputStyles}
+      disabled={true}
+      onChange={() => {}}
+    />
   )
 }
 
@@ -194,59 +132,32 @@ export function ControlledTurnAbilitySelector({
 }: {
   index: number,
   value: TurnAbilityName,
-  style?: React.CSSProperties,
+  style?: CSSProperties,
 }) {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ComboFilter' })
-  const form = Form.useFormInstance<OptimizerForm>()
-  const characterId = Form.useWatch('characterId', form)
-  const characterEidolon = Form.useWatch('characterEidolon', form)
-  const options = useMemo(() => generateAbilityOptions(t, characterId, characterEidolon), [t, characterId, characterEidolon])
+  const characterId = useOptimizerRequestStore((s) => s.characterId)
+  const characterEidolon = useOptimizerRequestStore((s) => s.characterEidolon)
+  const options = useMemo(() => generateAbilityGroupedOptions(t, characterId, characterEidolon), [t, characterId, characterEidolon])
+
+  function handleChange(selectedValue: string | null) {
+    if (!selectedValue) return
+    useComboDrawerStore.getState().setAbilityRotation(index, selectedValue as TurnAbilityName)
+  }
+
+  function handleClear() {
+    useComboDrawerStore.getState().setAbilityRotation(index, NULL_TURN_ABILITY_NAME)
+  }
 
   return (
-    <ConfigProvider theme={cascaderTheme}>
-      <Cascader
-        style={style}
-        className='turn-ability-cascader-drawer'
-        options={options}
-        displayRender={(labels: string[]) => {
-          const turnAbilityName = labels[0] as TurnAbilityName
-          const turnAbility = toTurnAbility(turnAbilityName)
-
-          return toI18NVisual(turnAbility, t)
-        }}
-        expandTrigger='hover'
-        placeholder='Ability'
-        showCheckedStrategy={SHOW_CHILD}
-        size='small'
-        allowClear
-        value={[value]}
-        changeOnSelect={true}
-        onChange={(value) => {
-          if (!value || !value.length) return
-          if (value.length == 1) {
-            updateAbilityRotation(index, createAbility(value[0] as AbilityKind, TurnMarker.DEFAULT).name)
-            return
-          }
-
-          updateAbilityRotation(index, value[1] as TurnAbilityName)
-        }}
-        onClear={() => {
-          updateAbilityRotation(index, NULL_TURN_ABILITY_NAME)
-        }}
-      />
-    </ConfigProvider>
+    <CascaderSelect
+      style={style}
+      data={options}
+      value={value || null}
+      placeholder='Ability'
+      styles={{ input: { fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }}
+      clearable
+      onClear={handleClear}
+      onChange={handleChange}
+    />
   )
 }
-
-// Helper function to find the marker for a given ability name
-function findMarkerForAbility(abilityName: TurnAbilityName): TurnMarker {
-  for (const marker of Object.values(TurnMarker)) {
-    const ability = ALL_ABILITIES.find((a) => {
-      const fullAbility = createAbility(a, marker)
-      return fullAbility.name === abilityName
-    })
-    if (ability) return marker
-  }
-  return TurnMarker.DEFAULT
-}
-

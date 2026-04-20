@@ -1,5 +1,11 @@
 import i18next from 'i18next'
-import { StatsValues } from 'lib/constants/constants'
+import type {
+  DefaultNamespace,
+  KeyPrefix,
+  Namespace,
+  TFunction,
+} from 'i18next'
+import type { StatsValues } from 'lib/constants/constants'
 
 export const languages = {
   de_DE: {
@@ -101,8 +107,6 @@ export function numberToLocaleString(number: number, decimals: number = 0, useGr
 
 const GROUPED = { maximumFractionDigits: 0, minimumFractionDigits: 0, useGrouping: true }
 const GROUPED_0 = { maximumFractionDigits: 1, minimumFractionDigits: 1, useGrouping: true }
-const GROUPED_00 = { maximumFractionDigits: 2, minimumFractionDigits: 2, useGrouping: true }
-const GROUPED_000 = { maximumFractionDigits: 3, minimumFractionDigits: 3, useGrouping: true }
 
 const UNGROUPED = { maximumFractionDigits: 0, minimumFractionDigits: 0, useGrouping: false }
 const UNGROUPED_0 = { maximumFractionDigits: 1, minimumFractionDigits: 1, useGrouping: false }
@@ -113,8 +117,6 @@ const UNGROUPED_000 = { maximumFractionDigits: 3, minimumFractionDigits: 3, useG
 
 export const localeNumberComma = (n: number) => n.toLocaleString(currentLocale(), GROUPED)
 export const localeNumberComma_0 = (n: number) => n.toLocaleString(currentLocale(), GROUPED_0)
-export const localeNumberComma_00 = (n: number) => n.toLocaleString(currentLocale(), GROUPED_00)
-export const localeNumberComma_000 = (n: number) => n.toLocaleString(currentLocale(), GROUPED_000)
 
 export const localeNumber = (n: number) => n.toLocaleString(currentLocale(), UNGROUPED)
 export const localeNumber_0 = (n: number) => n.toLocaleString(currentLocale(), UNGROUPED_0)
@@ -128,4 +130,28 @@ export function currentLocale() {
 
 export function isStatsValues(key: string): key is StatsValues {
   return i18next.exists(`common:Stats.${key}`)
+}
+
+// Formats a number as compact thousands, e.g. 12345 → "12K".
+// Lives here instead of DamageSplitsChart to avoid pulling recharts into components that only need this formatter.
+export function renderThousandsK(n: number) {
+  return `${Math.floor(Number(n) / 1000)}${i18next.t('common:ThousandsSuffix')}`
+}
+
+const getEmptyT = <
+  Ns extends Namespace | null = DefaultNamespace,
+  TKPrefix extends KeyPrefix<ActualNs> = undefined,
+  ActualNs extends Namespace = Ns extends null ? DefaultNamespace : Ns,
+>(): TFunction<ActualNs, TKPrefix> => {
+  return (() => {
+    return ''
+  }) as TFunction<ActualNs, TKPrefix>
+}
+
+export function wrappedFixedT(withContent: boolean) {
+  return {
+    get: withContent
+      ? i18next.getFixedT
+      : getEmptyT,
+  }
 }

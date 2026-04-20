@@ -1,55 +1,20 @@
 import {
   Constants,
-  MainStats,
   Parts,
+} from 'lib/constants/constants'
+import type {
+  MainStats,
   StatsValues,
   SubStats,
 } from 'lib/constants/constants'
 import { RelicAugmenter } from 'lib/relics/relicAugmenter'
-import DB from 'lib/state/db'
-import { Utils } from 'lib/utils/utils'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
-import { DBMetadataSets } from 'types/metadata'
-import { Relic } from 'types/relic'
-
-// FIXME MED
-
-/*
-
- Sample data:
-
- "id": 1309,
- "level": 80,
- "name": "Robin",
- "element": "physical",
- "rarity": 5,
- "rank": 0,
- "equip": {
- "id": 22002,
- "level": 70,
- "rank": 5,
- "rarity": 4
- },
- "relics": [{
- "id": 61141,
- "level": 15,
- "pos": 1,
- "rarity": 5,
- "main_property": {
- "property_type": 27,
- "value": "705",
- "times": 0
- },
- "properties": [{
- "property_type": 29,
- "value": "33",
- "times": 2
-
- ...
- }]
- }, {
- */
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { uuid } from 'lib/utils/miscUtils'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
+import type { DBMetadataSets } from 'types/metadata'
+import type { Relic } from 'types/relic'
 
 type HoyolabRelic = {
   id: number,
@@ -122,8 +87,44 @@ type HoyolabCharacter = {
   lightConeSuperimposition: number,
 }
 
+/*
+
+ Sample data:
+
+ "id": 1309,
+ "level": 80,
+ "name": "Robin",
+ "element": "physical",
+ "rarity": 5,
+ "rank": 0,
+ "equip": {
+ "id": 22002,
+ "level": 70,
+ "rank": 5,
+ "rarity": 4
+ },
+ "relics": [{
+ "id": 61141,
+ "level": 15,
+ "pos": 1,
+ "rarity": 5,
+ "main_property": {
+ "property_type": 27,
+ "value": "705",
+ "times": 0
+ },
+ "properties": [{
+ "property_type": 29,
+ "value": "33",
+ "times": 2
+
+ ...
+ }]
+ }, {
+ */
+
 export function hoyolabParser(json: HoyolabData) {
-  const relicData = DB.getMetadata().relics.relicSets
+  const relicData = getGameMetadata().relics.relicSets
 
   const output: HoyolabOutput = {
     metadata: {
@@ -178,7 +179,7 @@ export function hoyolabParser(json: HoyolabData) {
         enhance: relic.level,
         equippedBy: characterId as CharacterId,
         grade: relic.rarity,
-        id: Utils.randomId(),
+        id: uuid(),
         part: getSlot(relic.pos),
         set: getSet(relic.id, relicData),
         main: {
@@ -200,9 +201,9 @@ export function hoyolabParser(json: HoyolabData) {
 
 function readValue(value: string) {
   if (value.endsWith('%')) {
-    return Utils.precisionRound(parseFloat(value.slice(0, value.length - 1)))
+    return precisionRound(parseFloat(value.slice(0, value.length - 1)))
   }
-  return Utils.precisionRound(parseFloat(value))
+  return precisionRound(parseFloat(value))
 }
 
 type TrailblazerMetadata = { trailblazer: string, current_trailblazer_path: string }
@@ -264,14 +265,15 @@ function getSlot(id: number) {
 
 function getSet(id: number, relicData: Record<string, DBMetadataSets>) {
   const setId = id.toString().substring(1, 4)
-  if (tidOverrides[id as keyof typeof tidOverrides]) {
-    return relicData[tidOverrides[id as keyof typeof tidOverrides].set].name
+  const override = tidOverrides[id]
+  if (override) {
+    return relicData[override.set].name
   }
 
   return relicData[setId].name
 }
 
-const tidOverrides = {
+const tidOverrides: Record<number, { set: string, part: string, main: string }> = {
   55001: { set: '101', part: '3', main: '436' },
   55002: { set: '101', part: '4', main: '441' },
   55003: { set: '102', part: '3', main: '434' },

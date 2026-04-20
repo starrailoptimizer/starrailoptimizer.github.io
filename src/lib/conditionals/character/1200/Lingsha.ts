@@ -5,8 +5,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -28,22 +28,23 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import { precisionRound } from 'lib/utils/mathUtils'
 export const LingshaEntities = createEnum('Lingsha', 'Fuyuan')
 export const LingshaAbilities: AbilityKind[] = [
   AbilityKind.BASIC,
@@ -57,7 +58,7 @@ export const LingshaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Lingsha')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Lingsha')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -121,7 +122,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.befogState.text'),
       content: t('Content.befogState.content', {
-        BefogVulnerability: TsUtils.precisionRound(100 * ultBreakVulnerability),
+        BefogVulnerability: precisionRound(100 * ultBreakVulnerability),
       }),
     },
     e1DefShred: {
@@ -407,9 +408,9 @@ const display = {
   imageCenter: {
     x: 1110,
     y: 1000,
-    z: 1.1,
+    z: 1.2,
   },
-  showcaseColor: '#ffeef5',
+  showcaseColor: '#debfd8',
 }
 
 export const Lingsha: CharacterConfig = {

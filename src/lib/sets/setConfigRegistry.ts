@@ -1,18 +1,19 @@
 import {
   ConditionalDataType,
-  SetKey,
-  Sets,
+  type SetKey,
+  type Sets,
+  type TwoPieceStatTag,
 } from 'lib/constants/constants'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import { type DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
-  SetConditional,
+  type OptimizerAction,
+  type OptimizerContext,
+  type SetConditional,
 } from 'types/optimizer'
 import {
-  SetConfig,
+  type SetConfig,
   SetType,
-  TeammateOption,
+  type TeammateOption,
 } from 'types/setConfig'
 
 // ── Typed config imports for type derivation ──
@@ -22,6 +23,7 @@ import { BelobogOfTheArchitects } from './ornaments/BelobogOfTheArchitects'
 import { BoneCollectionsSereneDemesne } from './ornaments/BoneCollectionsSereneDemesne'
 import { BrokenKeel } from './ornaments/BrokenKeel'
 import { CelestialDifferentiator } from './ornaments/CelestialDifferentiator'
+import { CityOfConvergingStars } from './ornaments/CityOfConvergingStars'
 import { DuranDynastyOfRunningWolves } from './ornaments/DuranDynastyOfRunningWolves'
 import { FirmamentFrontlineGlamoth } from './ornaments/FirmamentFrontlineGlamoth'
 import { FleetOfTheAgeless } from './ornaments/FleetOfTheAgeless'
@@ -32,6 +34,7 @@ import { IzumoGenseiAndTakamaDivineRealm } from './ornaments/IzumoGenseiAndTakam
 import { LushakaTheSunkenSeas } from './ornaments/LushakaTheSunkenSeas'
 import { PanCosmicCommercialEnterprise } from './ornaments/PanCosmicCommercialEnterprise'
 import { PenaconyLandOfTheDreams } from './ornaments/PenaconyLandOfTheDreams'
+import { PunklordeStageZero } from './ornaments/PunklordeStageZero'
 import { RevelryByTheSea } from './ornaments/RevelryByTheSea'
 import { RutilantArena } from './ornaments/RutilantArena'
 import { SigoniaTheUnclaimedDesolation } from './ornaments/SigoniaTheUnclaimedDesolation'
@@ -39,8 +42,6 @@ import { SpaceSealingStation } from './ornaments/SpaceSealingStation'
 import { SprightlyVonwacq } from './ornaments/SprightlyVonwacq'
 import { TaliaKingdomOfBanditry } from './ornaments/TaliaKingdomOfBanditry'
 import { TengokuLivestream } from './ornaments/TengokuLivestream'
-import { PunklordeStageZero } from './ornaments/PunklordeStageZero'
-import { CityOfConvergingStars } from './ornaments/CityOfConvergingStars'
 import { TheWondrousBananAmusementPark } from './ornaments/TheWondrousBananAmusementPark'
 import { BandOfSizzlingThunder } from './relics/BandOfSizzlingThunder'
 import { ChampionOfStreetwiseBoxing } from './relics/ChampionOfStreetwiseBoxing'
@@ -109,30 +110,30 @@ const ALL_RELIC_CONFIGS = [
 const ALL_ORNAMENT_CONFIGS = [
   SpaceSealingStation,
   FleetOfTheAgeless,
-  PanCosmicCommercialEnterprise,
   BelobogOfTheArchitects,
-  CelestialDifferentiator,
+  PanCosmicCommercialEnterprise,
   InertSalsotto,
-  TaliaKingdomOfBanditry,
+  CelestialDifferentiator,
   SprightlyVonwacq,
-  RutilantArena,
+  TaliaKingdomOfBanditry,
   BrokenKeel,
-  FirmamentFrontlineGlamoth,
+  RutilantArena,
   PenaconyLandOfTheDreams,
-  SigoniaTheUnclaimedDesolation,
+  FirmamentFrontlineGlamoth,
   IzumoGenseiAndTakamaDivineRealm,
-  DuranDynastyOfRunningWolves,
+  SigoniaTheUnclaimedDesolation,
   ForgeOfTheKalpagniLantern,
-  LushakaTheSunkenSeas,
+  DuranDynastyOfRunningWolves,
   TheWondrousBananAmusementPark,
-  BoneCollectionsSereneDemesne,
+  LushakaTheSunkenSeas,
   GiantTreeOfRaptBrooding,
-  ArcadiaOfWovenDreams,
+  BoneCollectionsSereneDemesne,
   RevelryByTheSea,
-  AmphoreusTheEternalLand,
+  ArcadiaOfWovenDreams,
   TengokuLivestream,
-  PunklordeStageZero,
+  AmphoreusTheEternalLand,
   CityOfConvergingStars,
+  PunklordeStageZero,
 ] as const
 
 const ALL_CONFIGS = [...ALL_RELIC_CONFIGS, ...ALL_ORNAMENT_CONFIGS] as const
@@ -181,7 +182,9 @@ const boolFields: IndexedField[] = []
 const intFields: IndexedField[] = []
 export const teammateRelicOptions: TeammateOption[] = []
 export const teammateOrnamentOptions: TeammateOption[] = []
-export const setToId = {} as Record<Sets, RelicSetIngameId>
+export const setToId = Object.fromEntries(
+  ALL_CONFIGS.map((c) => [c.id, c.info.ingameId]),
+) as Record<Sets, RelicSetIngameId>
 
 for (const config of setConfigRegistry.values()) {
   const setName = config.id
@@ -194,9 +197,6 @@ for (const config of setConfigRegistry.values()) {
   } else {
     ornamentConfigs.push({ index: config.info.index, config })
   }
-
-  // ID mapping
-  setToId[setName] = config.info.ingameId as RelicSetIngameId
 
   // Conditional i18n keys
   if (config.display.conditionalI18nKey) {
@@ -246,7 +246,7 @@ export const orderedSetConditionalFields = [
   ...intFields.map((e) => e.field),
 ]
 
-type ToNameMap<T extends readonly { setKey: string; id: string }[]> = {
+type ToNameMap<T extends readonly { setKey: string, id: string }[]> = {
   readonly [C in T[number] as C['setKey']]: C['id']
 }
 
@@ -260,8 +260,10 @@ export const SetsOrnaments = Object.fromEntries(
 ) as ToNameMap<typeof ALL_ORNAMENT_CONFIGS>
 export type SetsOrnaments = typeof SetsOrnaments[keyof typeof SetsOrnaments]
 
-export const SetsRelicsNames = Object.values(SetsRelics) as SetsRelics[]
-export const SetsOrnamentsNames = Object.values(SetsOrnaments) as SetsOrnaments[]
+// All index-derived exports use info.index order (via the sorted config arrays)
+// as single source of truth, so *SetToIndex, *Names, and *IndexToSetConfig all agree.
+export const SetsRelicsNames = relicConfigs.map((c) => c.config.id) as SetsRelics[]
+export const SetsOrnamentsNames = ornamentConfigs.map((c) => c.config.id) as SetsOrnaments[]
 
 export const RelicSetToIndex = Object.fromEntries(
   SetsRelicsNames.map((name, i) => [name, i]),
@@ -272,10 +274,10 @@ export const OrnamentSetToIndex = Object.fromEntries(
 ) as Record<SetsOrnaments, number>
 
 export const RelicSetKeyToIndex: Record<string, number> = Object.fromEntries(
-  Object.keys(SetsRelics).map((key, i) => [key, i]),
+  relicConfigs.map((c, i) => [c.config.setKey, i]),
 )
 export const OrnamentSetKeyToIndex: Record<string, number> = Object.fromEntries(
-  Object.keys(SetsOrnaments).map((key, i) => [key, i]),
+  ornamentConfigs.map((c, i) => [c.config.setKey, i]),
 )
 
 export const RelicSetCount = ALL_RELIC_CONFIGS.length
@@ -333,4 +335,23 @@ export function generateSetConditionalsInitializer(setConditionals: SetCondition
   return orderedSetConditionalFields
     .map((f) => `${record[f.fieldName]},${debug ? ` // ${f.fieldName}` : ''}`)
     .join('\n    ')
+}
+
+function buildStatTagToSets(): Partial<Record<TwoPieceStatTag, SetsRelics[]>> {
+  const result: Partial<Record<TwoPieceStatTag, SetsRelics[]>> = {}
+
+  for (const config of relicIndexToSetConfig) {
+    const tag = config.info.twoPieceStatTag
+    if (tag) {
+      if (!result[tag]) result[tag] = []
+      result[tag]!.push(config.id as SetsRelics)
+    }
+  }
+  return result
+}
+
+export const STAT_TAG_TO_SETS = buildStatTagToSets()
+
+export function relics2pByStats(...tags: TwoPieceStatTag[]): SetsRelics[] {
+  return tags.flatMap((tag) => STAT_TAG_TO_SETS[tag] ?? [])
 }

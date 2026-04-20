@@ -1,171 +1,487 @@
 import {
-  ColDef,
-  GetRowIdParams,
-  GridOptions,
-  IRowNode,
-} from 'ag-grid-community'
-import { AgGridReact } from 'ag-grid-react'
+  closestCenter,
+  defaultDropAnimationSideEffects,
+  DndContext,
+  type DragEndEvent,
+  DragOverlay,
+  type DragStartEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
+import type { DropAnimation } from '@dnd-kit/core'
 import {
-  Flex,
-  Typography,
-} from 'antd'
+  restrictToParentElement,
+  restrictToVerticalAxis,
+} from '@dnd-kit/modifiers'
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import {
+  ActionIcon,
+  Tooltip,
+} from '@mantine/core'
+import { useMergedRef } from '@mantine/hooks'
+import { modals } from '@mantine/modals'
+import {
+  IconPencil,
+  IconX,
+} from '@tabler/icons-react'
 import i18next from 'i18next'
+import { DEFAULT_CONFIG } from 'lib/characterPreview/color/colorPipelineConfig'
+import { oklchCharacterListColor } from 'lib/characterPreview/color/colorUtilsOklch'
+import { getCharacterConfig } from 'lib/conditionals/resolver/characterConfigRegistry'
+import { AppPages } from 'lib/constants/appPages'
+import { PartsArray } from 'lib/constants/constants'
+import { useCharacterModalStore } from 'lib/overlays/modals/characterModalStore'
 import { Assets } from 'lib/rendering/assets'
-import DB from 'lib/state/db'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { SaveState } from 'lib/state/saveState'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import {
+  getCharacterById,
+  useCharacterStore,
+} from 'lib/stores/character/characterStore'
 import { CharacterTabController } from 'lib/tabs/tabCharacters/characterTabController'
 import { useCharacterTabStore } from 'lib/tabs/tabCharacters/useCharacterTabStore'
+import { switchToCharacter } from 'lib/tabs/tabOptimizer/optimizerForm/optimizerFormActions'
+import { showImageOnLoad } from 'lib/utils/frontendUtils'
+import { afterPaint } from 'lib/utils/frontendUtils'
 import {
+  OverlayScrollbarsComponent,
+  type OverlayScrollbarsComponentRef,
+} from 'overlayscrollbars-react'
+import React, {
+  memo,
+  startTransition,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
+  useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Character } from 'types/character'
+import type {
+  Character,
+  CharacterId,
+} from 'types/character'
+import classes from './CharacterGrid.module.css'
 
-const { Text } = Typography
+const noop = () => {}
+const DROP_ANIMATION_DURATION = 200
 
-const defaultColDef: ColDef<Character> = {
-  sortable: false,
-  cellStyle: { display: 'flex' },
+// --- Equip dot indicator ---
+
+const EQUIP_DOT_COLORS = { partial: '#b89040', empty: '#903040', size: 5 }
+
+function EquipDotInline({ characterId }: { characterId: CharacterId }) {
+  // Read equipped directly from store to bypass stale-prop issues caused by
+  // Mantine's flushSync in the relic modal save path. Without this, the
+  // CharacterRowContent memo can see stale fiber state and skip re-rendering
+  // EquipDotInline after an equipment change.
+  const equipped = useCharacterStore((s) => s.charactersById[characterId]?.equipped)
+
+  const count = PartsArray.filter((p) => equipped?.[p]).length
+  if (count === 6) return null
+
+  const color = count === 0 ? EQUIP_DOT_COLORS.empty : EQUIP_DOT_COLORS.partial
+
+  return (
+    <span
+      className={classes.equipDot}
+      style={{
+        background: color,
+        width: EQUIP_DOT_COLORS.size,
+        height: EQUIP_DOT_COLORS.size,
+      }}
+    />
+  )
 }
 
-const gridOptions: GridOptions<Character> = {
-  rowHeight: 46,
-  rowDragManaged: true,
-  animateRows: true,
-  suppressDragLeaveHidesColumns: true,
-  suppressScrollOnNewData: true,
+const dropAnimationConfig: DropAnimation = {
+  duration: DROP_ANIMATION_DURATION,
+  easing: 'ease',
+  sideEffects: defaultDropAnimationSideEffects({
+    styles: { active: { opacity: '0' } },
+  }),
 }
+
+// Progressive image loading: set src on the first visible rows immediately,
+// then trickle one-by-one to avoid concurrent requests competing for bandwidth.
+const INITIAL_LOAD_COUNT = 12
+const TRICKLE_DELAY = 50
 
 export function CharacterGrid() {
-  const { t } = useTranslation('charactersTab', { keyPrefix: 'GridHeaders' })
-  const { t: tGameData } = useTranslation('gameData', { keyPrefix: 'Characters' })
+  const gridRef = useRef<HTMLDivElement>(null)
+  const osRef = useCallback((instance: OverlayScrollbarsComponentRef<'div'> | null) => {
+    ;(gridRef as React.MutableRefObject<HTMLDivElement | null>).current = instance?.getElement() ?? null
+  }, [])
+  const characters = useCharacterStore((s) => s.characters)
   const filters = useCharacterTabStore((s) => s.filters)
-  const characters = useCharacterTabStore((s) => s.characters)
+  const focusCharacter = useCharacterTabStore((s) => s.focusCharacter)
 
-  const gridRef = useRef<AgGridReact<Character> | null>(null)
-  window.characterGrid = gridRef
+  const [localFocus, setLocalFocus] = useState<CharacterId | null>(null)
+  const [activeId, setActiveId] = useState<CharacterId | null>(null)
 
-  const columnDefs: ColDef<Character>[] = useMemo(() => [
-    {
-      field: 'id',
-      headerName: t('Icon'), // Icon
-      cellRenderer: cellImageRenderer,
-      width: 52,
-    },
-    {
-      field: 'rank',
-      headerName: t('Priority'), // Priority
-      cellRenderer: cellRankRenderer,
-      width: 60,
-      rowDrag: true,
-    },
-    {
-      field: 'equipped',
-      headerName: t('Character'), // Character
-      flex: 1,
-      cellRenderer: cellNameRenderer,
-      // because character.equipped is an object the grid needs a valueFormatter even if in this case its useless
-      valueFormatter: () => '',
-    },
-  ], [t])
+  useEffect(() => {
+    setLocalFocus(null)
+  }, [focusCharacter])
 
-  const isExternalFilterPresent = useCallback(() => {
-    return filters.element.length + filters.path.length + filters.name.length > 0
-  }, [filters])
+  const displayFocus = localFocus ?? focusCharacter
 
-  const doesExternalFilterPass = useCallback((node: IRowNode<Character>) => {
-    const data = node.data
-    if (!data) return false
-    const character = DB.getMetadata().characters[data.id]!
-    if (filters.element.length && !filters.element.includes(character.element)) return false
-    if (filters.path.length && !filters.path.includes(character.path)) return false
-    return tGameData(`${character.id}.LongName`).toLowerCase().includes(filters.name)
-  }, [filters, tGameData])
+  const tGameData = useMemo(() => i18next.getFixedT(null, 'gameData', 'Characters'), [])
 
-  return (
-    <AgGridReact
-      ref={gridRef}
-      rowData={characters}
-      gridOptions={gridOptions}
-      getRowId={(params: GetRowIdParams<Character>) => params.data.id}
-      columnDefs={columnDefs}
-      defaultColDef={defaultColDef}
-      headerHeight={24}
-      onCellClicked={CharacterTabController.cellClickedListener}
-      onCellDoubleClicked={CharacterTabController.cellDoubleClickedListener}
-      onRowDragEnd={CharacterTabController.onRowDragEnd}
-      onRowDragLeave={CharacterTabController.onRowDragLeave}
-      navigateToNextCell={CharacterTabController.navigateToNextCell}
-      isExternalFilterPresent={isExternalFilterPresent}
-      doesExternalFilterPass={doesExternalFilterPass}
-      rowSelection='single'
-    />
+  const filteredCharacters = useMemo(() => {
+    if (filters.element.length + filters.path.length + filters.name.length === 0) {
+      return characters
+    }
+    return characters.filter((char) => {
+      const meta = getGameMetadata().characters[char.id]
+      if (filters.element.length && !filters.element.includes(meta.element)) return false
+      if (filters.path.length && !filters.path.includes(meta.path)) return false
+      return tGameData(`${meta.id}.LongName`).toLowerCase().includes(filters.name)
+    })
+  }, [characters, filters, tGameData])
+
+  const rankMap = useMemo(
+    () => new Map(characters.map((c, i) => [c.id, i])),
+    [characters],
   )
-}
 
-function cellRankRenderer(params: IRowNode<Character>) {
-  const rank = params.data?.rank
-  if (rank == undefined) return <></>
-
-  return (
-    <Text style={{ height: '100%' }}>
-      {rank + 1}
-    </Text>
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 3 } }),
   )
-}
 
-function cellNameRenderer(params: IRowNode<Character>) {
-  const t = i18next.getFixedT(null, 'gameData', 'Characters')
-  const data = params.data!
-  const characterNameString = t(`${data.id}.LongName`)
+  function handleDragStart(event: DragStartEvent) {
+    setActiveId(event.active.id as CharacterId)
+    gridRef.current?.setAttribute('data-dragging-active', '')
+  }
 
-  // Separate the path parens for multipath characters or handle dots so they render on separate lines if overflow
-  const nameSections = characterNameString.includes(' (')
-    ? characterNameString.split(' (')
-      .map((section) => section.trim())
-      .map((section, index) => index === 1 ? ` (${section} ` : section)
-    : characterNameString.split(/ - |•/) // some languages use a dash instead of a dot
-      .map((section) => section.trim())
+  function handleDragEnd(event: DragEndEvent) {
+    gridRef.current?.removeAttribute('data-dragging-active')
 
-  const nameSectionRender = nameSections
-    .map((section, index) => <span key={index} style={{ display: 'inline-block' }}>{section}</span>)
+    // Suppress row transitions for one paint so reordered rows snap into place
+    // instead of animating from stale positions (the "float from top" glitch)
+    const container = gridRef.current
+    if (container) {
+      container.setAttribute('data-suppress-transition', 'true')
+      afterPaint(() => container.removeAttribute('data-suppress-transition'))
+    }
 
-  const equippedNumber = data.equipped ? Object.values(data.equipped).filter((x) => x != undefined).length : 0
-  let color = '#81d47e'
-  if (equippedNumber < 6) color = 'rgb(229, 135, 66)'
-  if (equippedNumber < 1) color = '#d72f2f'
+    // Clear activeId after drop animation so the overlay content stays rendered
+    setTimeout(() => setActiveId(null), DROP_ANIMATION_DURATION)
+
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+
+    const newIndex = characters.findIndex((c) => c.id === over.id)
+    if (newIndex === -1) return
+
+    useCharacterStore.getState().insertCharacter(active.id as CharacterId, newIndex)
+    SaveState.delayedSave()
+  }
+
+  function handleDragCancel() {
+    gridRef.current?.removeAttribute('data-dragging-active')
+    setTimeout(() => setActiveId(null), DROP_ANIMATION_DURATION)
+  }
+
+  const handleRowClick = useCallback((characterId: CharacterId) => {
+    setLocalFocus(characterId)
+    startTransition(() => useCharacterTabStore.getState().setFocusCharacter(characterId))
+  }, [])
+
+  const handleRowDoubleClick = useCallback((characterId: CharacterId) => {
+    useGlobalStore.getState().setActiveKey(AppPages.OPTIMIZER)
+    switchToCharacter(characterId)
+  }, [])
+
+  const handleEdit = useCallback((characterId: CharacterId) => {
+    useCharacterModalStore.getState().openOverlay({
+      initialCharacter: getCharacterById(characterId) ?? null,
+      onOk: CharacterTabController.onCharacterModalOk,
+    })
+  }, [])
+
+  const handleRemove = useCallback((characterId: CharacterId) => {
+    const t = i18next.getFixedT(null, 'charactersTab')
+    modals.openConfirmModal({
+      title: i18next.t('common:Confirm'),
+      children: t('Messages.DeleteWarning', { charId: characterId }),
+      labels: { confirm: i18next.t('common:Confirm'), cancel: i18next.t('common:Cancel') },
+      centered: true,
+      onConfirm: () => CharacterTabController.removeCharacter(characterId),
+    })
+  }, [])
+
+  const itemIds = useMemo(() => filteredCharacters.map((c) => c.id), [filteredCharacters])
 
   return (
-    <Flex align='center' justify='flex-start' style={{ height: '100%', width: '100%' }}>
-      <Text
-        style={{
-          margin: 'auto',
-          padding: '0px 5px',
-          textAlign: 'center',
-          overflow: 'hidden',
-          whiteSpace: 'break-spaces',
-          textWrap: 'wrap',
-          fontSize: 14,
-          width: '100%',
-          lineHeight: '18px',
-        }}
+    <OverlayScrollbarsComponent
+      ref={osRef}
+      className={classes.gridContainer}
+      data-container-border='true'
+      options={{ scrollbars: { autoHide: 'move', autoHideDelay: 500 } }}
+      tabIndex={0}
+    >
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={handleDragCancel}
       >
-        {nameSectionRender}
-      </Text>
-      <div style={{ display: 'block', width: 3, height: '100%', backgroundColor: color, zIndex: 2 }} />
-    </Flex>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          {filteredCharacters.map((character, i) => (
+            <SortableCharacterRow
+              key={character.id}
+              character={character}
+              rank={rankMap.get(character.id) ?? 0}
+              isFocused={character.id === displayFocus}
+              loadDelay={i < INITIAL_LOAD_COUNT ? 0 : (i - INITIAL_LOAD_COUNT + 1) * TRICKLE_DELAY}
+              onClick={handleRowClick}
+              onDoubleClick={handleRowDoubleClick}
+              onEdit={handleEdit}
+              onRemove={handleRemove}
+            />
+          ))}
+        </SortableContext>
+        <DragOverlay dropAnimation={dropAnimationConfig} modifiers={[restrictToVerticalAxis]}>
+          {activeId && getCharacterById(activeId) && (
+            <DragOverlayRow
+              character={getCharacterById(activeId)!}
+              rank={rankMap.get(activeId) ?? 0}
+            />
+          )}
+        </DragOverlay>
+      </DndContext>
+    </OverlayScrollbarsComponent>
   )
 }
 
-function cellImageRenderer(params: IRowNode<Character>) {
-  const data = params.data!
-  const characterIconSrc = Assets.getCharacterAvatarById(data.id)
+type CharacterRowProps = {
+  character: Character,
+  rank: number,
+  isFocused: boolean,
+  loadDelay: number,
+  onClick: (id: CharacterId) => void,
+  onDoubleClick: (id: CharacterId) => void,
+  onEdit: (id: CharacterId) => void,
+  onRemove: (id: CharacterId) => void,
+}
+
+const SortableCharacterRow = memo(
+  function SortableCharacterRow({ character, rank, isFocused, loadDelay, onClick, onDoubleClick, onEdit, onRemove }: CharacterRowProps) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+      id: character.id,
+      animateLayoutChanges: () => false,
+    })
+    const scrollRef = useRef<HTMLDivElement>(null)
+
+    // Per-row staggered image loading — replaces parent-level trickle to avoid parent re-renders
+    const [loadImages, setLoadImages] = useState(loadDelay === 0)
+    useEffect(() => {
+      if (loadDelay === 0) return
+      const timer = setTimeout(() => setLoadImages(true), loadDelay)
+      return () => clearTimeout(timer)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // mount-only: delay is captured from initial render
+
+    useEffect(() => {
+      if (isFocused) {
+        scrollRef.current?.scrollIntoView({ block: 'nearest' })
+      }
+    }, [isFocused])
+
+    const mergedRef = useMergedRef(setNodeRef, scrollRef)
+
+    const showcaseColor = getCharacterConfig(character.id)?.display.showcaseColor
+
+    const backgroundColor = useMemo(
+      () => showcaseColor ? oklchCharacterListColor(showcaseColor, true, DEFAULT_CONFIG) : undefined,
+      [showcaseColor],
+    )
+
+    const rootStyle: React.CSSProperties = {
+      transform: CSS.Translate.toString(transform),
+      transition: transform ? transition : undefined,
+      opacity: isDragging ? 0.4 : undefined,
+    }
+
+    const frameStyle: React.CSSProperties = { backgroundColor }
+
+    return (
+      <div
+        ref={mergedRef}
+        className={classes.root}
+        data-selected={isFocused}
+        data-scrim-mode='frosted'
+        style={rootStyle}
+        onClick={() => onClick(character.id)}
+        onDoubleClick={() => onDoubleClick(character.id)}
+        {...attributes}
+        {...listeners}
+      >
+        <div className={classes.frame} style={frameStyle}>
+          <CharacterRowContent
+            character={character}
+            rank={rank}
+            loadImages={loadImages}
+            onEdit={onEdit}
+            onRemove={onRemove}
+          />
+        </div>
+      </div>
+    )
+  },
+  (prev, next) => {
+    return prev.character.id === next.character.id
+      && prev.rank === next.rank
+      && prev.character.form === next.character.form
+      && prev.character.equipped === next.character.equipped
+      && prev.isFocused === next.isFocused
+  },
+)
+
+function DragOverlayRow({ character, rank }: {
+  character: Character,
+  rank: number,
+}) {
+  const showcaseColor = getCharacterConfig(character.id)?.display.showcaseColor
+
+  const frameStyle: React.CSSProperties = {
+    backgroundColor: showcaseColor ? oklchCharacterListColor(showcaseColor, true, DEFAULT_CONFIG) : undefined,
+  }
 
   return (
-    <img
-      src={characterIconSrc}
-      style={{ flex: '0 0 auto', maxWidth: '100%', width: 48 }}
-    />
+    <div
+      className={classes.root}
+      data-dragging='true'
+      data-scrim-mode='frosted'
+      style={{ cursor: 'grabbing' }}
+    >
+      <div className={classes.frame} style={frameStyle}>
+        <CharacterRowContent
+          character={character}
+          rank={rank}
+          loadImages={true}
+          onEdit={noop}
+          onRemove={noop}
+        />
+      </div>
+    </div>
   )
 }
+
+const CharacterRowContent = memo(function CharacterRowContent({ character, rank, loadImages, onEdit, onRemove }: {
+  character: Character,
+  rank: number,
+  loadImages: boolean,
+  onEdit: (id: CharacterId) => void,
+  onRemove: (id: CharacterId) => void,
+}) {
+  const { t } = useTranslation('common')
+  const { t: tGameData } = useTranslation('gameData', { keyPrefix: 'Characters' })
+  const longName = tGameData(`${character.id}.LongName`) as string
+  const characterName = longName.includes('(') ? longName : tGameData(`${character.id}.Name`)
+
+  // Form data for eidolon/LC
+  const eidolon = character.form?.characterEidolon ?? 0
+  const lightConeId = character.form?.lightCone
+  const superimposition = lightConeId ? character.form.lightConeSuperimposition : 0
+
+  return (
+    <>
+      {/* Portrait background */}
+      <div className={classes.portraitBg}>
+        <img
+          src={loadImages ? Assets.getCharacterPreviewById(character.id) : undefined}
+          alt=''
+          draggable={false}
+          decoding='async'
+          style={getCharacterConfig(character.id)?.display.gridPortraitOffset
+            ? { marginTop: -(getCharacterConfig(character.id)?.display.gridPortraitOffset ?? 0) }
+            : undefined}
+        />
+      </div>
+
+      {/* Scrim gradient */}
+      <div className={classes.scrim} data-scrim-mode='frosted' />
+
+      {/* Right-side frosted strip for LC area */}
+      <div className={classes.lcStrip} />
+
+      {/* Content */}
+      <div className={classes.inner}>
+        {/* Rank / drag grip — grip replaces rank on hover */}
+        <div className={classes.rankGripSlot}>
+          <span className={classes.rank}>{rank + 1}</span>
+          <div className={classes.dragGrip}>
+            <span className={classes.gripLine} />
+            <span className={classes.gripLine} />
+            <span className={classes.gripLine} />
+          </div>
+        </div>
+
+        {/* Name + subtitle (E/S badges) */}
+        <div
+          className={classes.info}
+          data-name-shadow='true'
+        >
+          <div className={classes.name}>{characterName}</div>
+          <div className={classes.subtitle}>
+            <span className={classes.subtitleBadge}>{t('EidolonNShort', { eidolon })}</span>
+            <span className={classes.subtitleBadge}>{t('SuperimpositionNShort', { superimposition })}</span>
+            <EquipDotInline characterId={character.id} />
+          </div>
+        </div>
+
+        {/* Light cone icon */}
+        {lightConeId && (
+          <div className={classes.lcWrap} data-lc-style='shadow'>
+            <img src={loadImages ? Assets.getLightConeIconById(lightConeId) : undefined} alt='' draggable={false} decoding='async' onLoad={showImageOnLoad} />
+          </div>
+        )}
+      </div>
+
+      {/* Hover action buttons — overlay on the left */}
+      <div className={classes.actions}>
+        <Tooltip label='Edit' position='top' withArrow>
+          <ActionIcon
+            size={24}
+            variant='subtle'
+            className={classes.actionBtn}
+            onClick={(e) => {
+              e.stopPropagation()
+              onEdit(character.id)
+            }}
+          >
+            <IconPencil size={12} />
+          </ActionIcon>
+        </Tooltip>
+        <Tooltip label='Remove' position='top' withArrow>
+          <ActionIcon
+            size={24}
+            variant='subtle'
+            className={classes.actionBtn}
+            onClick={(e) => {
+              e.stopPropagation()
+              onRemove(character.id)
+            }}
+          >
+            <IconX size={12} />
+          </ActionIcon>
+        </Tooltip>
+      </div>
+    </>
+  )
+}, (prev, next) => {
+  return prev.character.id === next.character.id
+    && prev.rank === next.rank
+    && prev.character.form === next.character.form
+    && prev.loadImages === next.loadImages
+})

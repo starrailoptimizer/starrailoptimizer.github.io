@@ -3,8 +3,8 @@ import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
 import { RuanMei } from 'lib/conditionals/character/1300/RuanMei'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -22,7 +22,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_DOT,
@@ -35,23 +35,22 @@ import {
 } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import {
-  RELICS_2P_BREAK_EFFECT_SPEED,
-  SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
-} from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { SPREAD_RELICS_4P_GENERAL_CONDITIONALS } from 'lib/scoring/scoringConstants'
+import { relics2pByStats } from 'lib/sets/setConfigRegistry'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const LukaEntities = createEnum('Luka')
@@ -64,7 +63,8 @@ export const LukaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Luka')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Luka')
+  const tDot = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.DotTickCoefficient')
   const { basic, skill, ult } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -90,6 +90,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
   const dotScaling = skill(e, 3.38, 3.718)
 
   const defaults = {
+    dotTickCoefficient: 1,
     basicEnhanced: true,
     targetUltDebuffed: true,
     e1TargetBleeding: true,
@@ -112,7 +113,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'targetUltDebuffed',
       formItem: 'switch',
       text: t('Content.targetUltDebuffed.text'),
-      content: t('Content.targetUltDebuffed.content', { targetUltDebuffDmgTakenValue: TsUtils.precisionRound(100 * targetUltDebuffDmgTakenValue) }),
+      content: t('Content.targetUltDebuffed.content', { targetUltDebuffDmgTakenValue: precisionRound(100 * targetUltDebuffDmgTakenValue) }),
     },
     basicEnhancedExtraHits: {
       id: 'basicEnhancedExtraHits',
@@ -121,6 +122,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       content: t('Content.basicEnhancedExtraHits.content'),
       min: 0,
       max: 3,
+    },
+    dotTickCoefficient: {
+      id: 'dotTickCoefficient',
+      formItem: 'slider',
+      text: tDot('Text'),
+      content: tDot('Content'),
+      min: 0,
+      max: 5,
+      percent: true,
     },
     e1TargetBleeding: {
       id: 'e1TargetBleeding',
@@ -201,6 +211,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
               .damageElement(ElementTag.Physical)
               .atkScaling(dotScaling)
               .dotBaseChance(1.00)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
           ],
         },
@@ -270,11 +281,10 @@ const simulation = (): SimulationMetadata => ({
     END_DOT,
     DEFAULT_DOT,
   ],
-  comboDot: 5,
   relicSets: [
     [Sets.PrisonerInDeepConfinement, Sets.PrisonerInDeepConfinement],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
-    RELICS_2P_BREAK_EFFECT_SPEED,
+    relics2pByStats(Stats.BE, Stats.SPD_P),
   ],
   ornamentSets: [
     Sets.TaliaKingdomOfBanditry,
@@ -352,7 +362,12 @@ const display = {
     y: 1000,
     z: 1,
   },
-  showcaseColor: '#5d8ce2',
+  spineCenter: {
+    x: 1016,
+    y: 1027,
+    z: 1.08,
+  },
+  showcaseColor: '#bc81e3',
 }
 
 export const Luka: CharacterConfig = {

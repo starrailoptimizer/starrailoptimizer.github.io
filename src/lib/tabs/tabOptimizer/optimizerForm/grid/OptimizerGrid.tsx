@@ -1,79 +1,86 @@
-import {
+import type {
   CellClickedEvent,
-  GetLocaleTextParams,
   IRowNode,
   NavigateToNextCellParams,
-  PaginationNumberFormatterParams,
 } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
 import {
-  Flex,
-  theme,
-} from 'antd'
+  useGridLocale,
+  useGridLocaleRebuild,
+} from 'lib/hooks/useGridLocale'
 import { arrowKeyGridNavigation } from 'lib/interactions/arrowKeyGridNavigation'
-import { OptimizerDisplayDataStatSim } from 'lib/optimization/bufferPacker'
+import type { OptimizerDisplayDataStatSim } from 'lib/optimization/bufferPacker'
+import {
+  AbilityKind,
+  AbilityMeta,
+} from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { AbilityKind, AbilityMeta } from 'lib/optimization/rotation/turnAbilityConfig'
 import { Gradient } from 'lib/rendering/gradient'
 import { Renderer } from 'lib/rendering/renderer'
-import { getGridTheme } from 'lib/rendering/theme'
-import DB from 'lib/state/db'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { gridStore } from 'lib/stores/gridStore'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
 import {
   DIGITS_5,
   getBasicColumnDefs,
   getCombatColumnDefs,
   getMemoBasicColumnDefs,
   getMemoCombatColumnDefs,
-  OptimizerGridColumnDef,
+  type OptimizerGridColumnDef,
   optimizerGridDefaultColDef,
   optimizerGridOptions,
+  optimizerRowSelection,
 } from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
-import { cardShadowNonInset } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
 import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { isRemembrance } from 'lib/tabs/tabOptimizer/Sidebar'
-import { useOptimizerTabStore } from 'lib/tabs/tabOptimizer/useOptimizerTabStore'
-import { localeNumber } from 'lib/utils/i18nUtils'
-import React, {
+import { isRemembrance } from 'lib/tabs/tabOptimizer/sidebar/MemoViewSelect'
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
-
-const { useToken } = theme
 
 const defaultHiddenColumns = [
   SortOption.OHB,
 ]
 
-export const GRID_DIMENSIONS = {
-  WIDTH: 1227,
+const GRID_DIMENSIONS = {
+  WIDTH: 1302,
   HEIGHT: 600,
   MIN_HEIGHT: 300,
 }
 
+const GRID_PLACEHOLDER_STYLE = { width: GRID_DIMENSIONS.WIDTH, height: GRID_DIMENSIONS.HEIGHT } as const
+const GRID_CONTAINER_STYLE = {
+  width: GRID_DIMENSIONS.WIDTH,
+  minHeight: GRID_DIMENSIONS.MIN_HEIGHT,
+  height: GRID_DIMENSIONS.HEIGHT,
+  resize: 'vertical' as const,
+  overflow: 'hidden' as const,
+  boxShadow: 'var(--shadow-card-flat)',
+}
+
 export function OptimizerGrid() {
-  console.log('======================================================================= RENDER OptimizerGrid')
-
-  const { token } = useToken()
-  const { t, i18n } = useTranslation('optimizerTab', { keyPrefix: 'Grid' })
+  const { getLocaleText, paginationNumberFormatter } = useGridLocale('optimizerTab', 'Grid')
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'Grid' })
+  const { gridDestroyed } = useGridLocaleRebuild()
   const optimizerGrid = useRef<AgGridReact<OptimizerDisplayDataStatSim> | null>(null)
-  const [gridDestroyed, setGridDestroyed] = useState(false)
-  const optimizerTabFocusCharacter = window.store((s) => s.optimizerTabFocusCharacter)
-  const gridLanguage = useRef(i18n.resolvedLanguage)
+  const optimizerTabFocusCharacter = useOptimizerDisplayStore((s) => s.focusCharacterId)
 
-  const context = useOptimizerTabStore((s) => s.context)
+  const context = useOptimizerDisplayStore((s) => s.context)
 
-  window.optimizerGrid = optimizerGrid
+  useEffect(() => {
+    gridStore.setOptimizerGrid(optimizerGrid)
+  }, [optimizerGrid])
 
   const datasource = useMemo(() => {
     return OptimizerTabController.getDataSource()
   }, [])
 
-  const statDisplay = window.store((s) => s.statDisplay)
-  const memoDisplay = window.store((s) => s.memoDisplay)
+  const statDisplay = useOptimizerRequestStore((s) => s.statDisplay)
+  const memoDisplay = useOptimizerRequestStore((s) => s.memoDisplay)
   const showMemo = memoDisplay === 'memo' && isRemembrance(optimizerTabFocusCharacter)
 
   const columnDefs = useMemo(() => {
@@ -82,7 +89,7 @@ export function OptimizerGrid() {
       : (showMemo ? getMemoBasicColumnDefs(t) : getBasicColumnDefs(t))
 
     if (optimizerTabFocusCharacter) {
-      const scoringMetadata = DB.getMetadata().characters[optimizerTabFocusCharacter].scoringMetadata
+      const scoringMetadata = getGameMetadata().characters[optimizerTabFocusCharacter].scoringMetadata
       const hiddenColumns = new Set([...(scoringMetadata.hiddenColumns ?? []), ...defaultHiddenColumns])
       const addedColumns = new Set(scoringMetadata.addedColumns ?? [])
 
@@ -105,9 +112,10 @@ export function OptimizerGrid() {
           columnDefinitions.push({
             field: action.actionName as any,
             valueFormatter: Renderer.floor,
+            cellStyle: Gradient.getOptimizerColumnGradient,
             minWidth: DIGITS_5,
             flex: 12,
-            headerName: t(`Headers.Basic.${action.actionType}`),
+            headerName: t(`Headers.Basic.${action.actionType}` as any) as string,
           })
         }
       }
@@ -119,8 +127,6 @@ export function OptimizerGrid() {
     return columnDefinitions
   }, [optimizerTabFocusCharacter, statDisplay, memoDisplay, context, t])
 
-  optimizerGridOptions.datasource = datasource
-
   const navigateToNextCell = useCallback((params: NavigateToNextCellParams) => {
     return arrowKeyGridNavigation(
       params,
@@ -129,66 +135,35 @@ export function OptimizerGrid() {
     )
   }, [])
 
-  useEffect(() => {
-    // locale updates require the grid to be destroyed and reconstructed in order to take effect
-    if (i18n.resolvedLanguage !== gridLanguage.current) {
-      setGridDestroyed(true)
-      gridLanguage.current = i18n.resolvedLanguage
-      setTimeout(() => setGridDestroyed(false), 100)
-    }
-  }, [i18n.resolvedLanguage])
-
-  const getLocaleText = useCallback((param: GetLocaleTextParams<OptimizerDisplayDataStatSim>) => {
-    const localeLookup: Partial<Record<typeof param['key'], string>> = {
-      to: t('To'),
-      pageSizeSelectorLabel: t('PageSelectorLabel'),
-      of: t('Of'),
-      page: t('Page'),
-      loadingOoo: t('Loading'),
-    }
-    return localeLookup[param.key] ?? param.defaultValue
-  }, [t])
-
-  const paginationNumberFormatter = useCallback((param: PaginationNumberFormatterParams<OptimizerDisplayDataStatSim>) => {
-    return localeNumber(param.value)
-  }, [i18n.resolvedLanguage])
-
   const onCellClicked = useCallback((event: CellClickedEvent<OptimizerDisplayDataStatSim>) => {
     return OptimizerTabController.cellClicked(event.node)
   }, [])
 
   return (
-    <Flex>
-      {gridDestroyed && <div style={{ width: GRID_DIMENSIONS.WIDTH, height: GRID_DIMENSIONS.HEIGHT }} />}
+    <>
+      {gridDestroyed && <div style={GRID_PLACEHOLDER_STYLE} />}
       {!gridDestroyed && (
         <div
           id='optimizerGridContainer'
           className='ag-theme-balham-dark'
-          style={{
-            width: GRID_DIMENSIONS.WIDTH,
-            minHeight: GRID_DIMENSIONS.MIN_HEIGHT,
-            height: GRID_DIMENSIONS.HEIGHT,
-            resize: 'vertical',
-            overflow: 'hidden',
-            boxShadow: cardShadowNonInset,
-            ...getGridTheme(token),
-          }}
+          style={GRID_CONTAINER_STYLE}
         >
           <AgGridReact
             animateRows={false}
             columnDefs={columnDefs}
             defaultColDef={optimizerGridDefaultColDef}
             gridOptions={optimizerGridOptions}
-            headerHeight={24}
+            datasource={datasource}
+            headerHeight={36}
             onCellClicked={onCellClicked}
             ref={optimizerGrid}
             paginationNumberFormatter={paginationNumberFormatter}
             getLocaleText={getLocaleText}
             navigateToNextCell={navigateToNextCell}
-            rowSelection='single'
+            rowSelection={optimizerRowSelection}
           />
         </div>
       )}
-    </Flex>
+    </>
   )
 }

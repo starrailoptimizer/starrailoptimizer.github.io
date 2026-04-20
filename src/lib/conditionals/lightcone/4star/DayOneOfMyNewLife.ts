@@ -1,22 +1,23 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { SuperImpositionLevel } from 'types/lightCone'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.DayOneOfMyNewLife')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.DayOneOfMyNewLife')
   const { SOURCE_LC } = Source.lightCone(DayOneOfMyNewLife.id)
 
   const sValues = [0.08, 0.09, 0.10, 0.11, 0.12]
@@ -35,7 +36,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'dmgResBuff',
       formItem: 'switch',
       text: t('Content.dmgResBuff.text'),
-      content: t('Content.dmgResBuff.content', { ResBuff: TsUtils.precisionRound(100 * sValues[s]) }),
+      content: t('Content.dmgResBuff.content', { ResBuff: precisionRound(100 * sValues[s]) }),
     },
   }
 

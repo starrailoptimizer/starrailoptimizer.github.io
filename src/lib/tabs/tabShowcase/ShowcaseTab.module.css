@@ -1,0 +1,143 @@
+.landingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 24px;
+}
+
+.loadingContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 150px;
+  gap: 16px;
+}
+
+.loadedContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 1100px;
+  margin-bottom: 100px;
+}
+
+.outerWrapper {
+  width: 1407px;
+  display: flex;
+  justify-content: space-around;
+}
+
+.formRow {
+  margin: 10px;
+  width: 1100px;
+}
+
+.uidInput {
+  width: 150px;
+}
+
+.submitButton {
+  width: 150px;
+}
+
+
+.portraitContainer {
+  cursor: pointer;
+}
+
+.portraitContainerSelected {
+  cursor: pointer;
+}
+
+.portraitImage {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: border-color 0.12s ease;
+}
+
+.portraitContainerSelected .portraitImage {
+  border-color: rgba(255, 255, 255, 0.50);
+}
+
+.cardArea {
+  position: relative;
+}
+
+.simSidebar {
+  position: absolute;
+  right: 100%;
+  top: 0;
+  margin-right: 12px;
+}
+
+.simSidebarPanel {
+  background: var(--layer-0);
+  border-radius: var(--radius-md);
+  padding: 10px 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 96px;
+  gap: 4px;
+}
+
+.toggleButton {
+  height: 40px;
+  width: 80px;
+  border-radius: var(--radius-md);
+}
+
+.customPresetIcon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.5);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.customPresetIcon:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.presetImage {
+  height: 100%;
+  width: 100%;
+  border-radius: 50%;
+  outline: var(--showcase-outline-light);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+
+.downtimeWarning {
+  color: #ffaa4f;
+}
+
+.landingTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.landingSubtitle {
+  font-size: 13px;
+  color: var(--text-secondary);
+  max-width: 400px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.loadingText {
+  font-size: 16px;
+  color: var(--text-secondary);
+}

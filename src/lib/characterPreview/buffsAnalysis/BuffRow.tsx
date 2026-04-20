@@ -1,4 +1,3 @@
-import { Flex } from 'antd'
 import {
   ABILITY_COLORS,
   DAMAGE_TAG_ENTRIES,
@@ -13,24 +12,21 @@ import {
 import {
   DesignContext,
   ellipsisStyle,
+  FilterChangeContext,
   FilterContext,
   getSourceLabelStyle,
 } from 'lib/characterPreview/buffsAnalysis/designContext'
 import { buffMatchesFilter } from 'lib/characterPreview/buffsAnalysis/FilterBar'
-import { Buff } from 'lib/optimization/basicStatsArray'
+import type { Buff } from 'lib/optimization/basicStatsArray'
 import {
   BUFF_ABILITY,
   BUFF_TYPE,
 } from 'lib/optimization/buffSource'
-import React, {
-  ReactElement,
-  useContext,
-  useMemo,
-} from 'react'
+import type { ReactElement } from 'react'
+import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
 
-export function BuffRow(props: { buff: Buff, isLast: boolean }) {
-  const { buff, isLast } = props
+export function BuffRow({ buff, isLast }: { buff: Buff, isLast: boolean }) {
   const options = useContext(DesignContext)
   const activeFilter = useContext(FilterContext)
   const dimmed = !buffMatchesFilter(buff, activeFilter)
@@ -81,17 +77,17 @@ export function BuffRow(props: { buff: Buff, isLast: boolean }) {
   const borderBottomStyle = isLast ? undefined : `1px solid ${options.borderColor}`
 
   return (
-    <Flex
-      align='center'
-      gap={6}
+    <div
       style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
         padding: `0 ${options.rowPaddingX}px`,
         height: options.rowHeight,
         lineHeight: `${options.rowHeight}px`,
         borderBottom: borderBottomStyle,
         background: rowBackground,
         opacity: dimmed ? 0.15 : 1,
-        transition: 'opacity 0.15s',
       }}
     >
       <span style={{ minWidth: 60, textWrap: 'nowrap', fontSize: options.fontSize }}>{value}</span>
@@ -111,25 +107,31 @@ export function BuffRow(props: { buff: Buff, isLast: boolean }) {
       >
         {sourceLabel}
       </span>
-    </Flex>
+    </div>
   )
 }
 
-function DamageTagPills(props: { damageTags?: number }) {
-  const pills = useMemo(() => {
-    if (props.damageTags == null) {
-      return [renderPill('ALL', ABILITY_COLORS.ALL, 'ALL')]
-    }
+function DamageTagPills({ damageTags }: { damageTags?: number }) {
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'ExpandedDataPanel.DamageTags' })
+  const onFilterChange = useContext(FilterChangeContext)
+  const selectedFilter = useContext(FilterContext)
 
-    const result: ReactElement[] = []
-    for (const entry of DAMAGE_TAG_ENTRIES) {
-      if ((props.damageTags & entry.tag) !== 0) {
-        result.push(renderPill(String(entry.tag), entry.color, entry.label))
-      }
+  if (damageTags == null) {
+    return (
+      <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexShrink: 0 }}>
+        {renderPill('ALL', ABILITY_COLORS.ALL, t('ALL'), { onClick: () => onFilterChange?.(null) })}
+      </div>
+    )
+  }
+
+  const pills: ReactElement[] = []
+  for (const entry of DAMAGE_TAG_ENTRIES) {
+    if ((damageTags & entry.tag) !== 0) {
+      const active = selectedFilter != null && (entry.tag & selectedFilter) !== 0
+      pills.push(renderPill(String(entry.tag), entry.color, t(entry.key), { onClick: () => onFilterChange?.(entry.tag), active }))
     }
-    return result
-  }, [props.damageTags])
+  }
 
   if (pills.length === 0) return null
-  return <Flex gap={2} wrap='wrap' style={{ flexShrink: 0 }}>{pills}</Flex>
+  return <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap', flexShrink: 0 }}>{pills}</div>
 }

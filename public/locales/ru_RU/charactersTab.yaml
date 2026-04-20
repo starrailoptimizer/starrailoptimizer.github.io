@@ -27,10 +27,8 @@ CharacterMenu:
       SortByScore: Отсортировать персонажей по оценке сборки
       MoveToTop: Переместить персонажа на самый верх
 SearchPlaceholder: Поиск
-GridHeaders:
-  Icon: Иконка
-  Priority: Приор.
-  Character: Персонаж
+GridDensityOptions:
+  default: По-умолчанию
 Messages:
   RemoveSuccess: Персонаж успешно удален
   UnequipSuccess: Реликвии персонажа успешно сняты
@@ -40,6 +38,8 @@ Messages:
   SaveSuccess: 'Сборка {{name}} успешно сохранена'
   UnequipWarning: 'Вы уверены, что хотите снять реликвии с $t(gameData:Characters.{{charId}}.Name)?'
   DeleteWarning: 'Вы уверены, что хотите удалить $t(gameData:Characters.{{charId}}.Name)?'
+  NoBuilds: 'Попытка перезаписать сборку {{name}}, но $t(gameData:Characters.{{charId}}.Name) не имеет сохраненных сборок'
+  NoMatchingBuild: 'Попытка перезаписать сборку {{name}}, но такой сборки нет'
   BuildAlreadyExists: 'Сборка с названием {{name}} уже существует'
   ImageUploadFailed: Не удалось загрузить изображение
   InvalidFile: Недопустимый файл изображения
@@ -89,7 +89,6 @@ CharacterPreview:
     TitleBenchmark: 'Эталонная СКР {{spd}}'
     Score: 'Оценка урона {{score}}% {{grade}}'
   AlgorithmSlider:
-    Title: 'Способ оценки:'
     Labels:
       CombatScore: В бою
       CombatScoreTBD: В бою (недоступно)
@@ -129,25 +128,21 @@ CharacterPreview:
       FUA: Бонусная атака
       MEMO_SKILL: Навыкᴹ
       MEMO_TALENT: Талантᴹ
-      DOTS: 'Доты'
       BREAKS: 'Урон пробитием'
     CombatResults:
-      Header: Значения урона в бою
-      Primary: 'Основная способность:'
-      Character: 'Урон в текущей сборке:'
-      Benchmark: 'Урон сборки 100%:'
-      Baseline: 'Урон сборки 0%:'
-      Maximum: 'Урон сборки 200%:'
-      Score: 'Оценка урона %:'
+      Character: Персонаж
+      Benchmark: Сборка для теста
       Abilities:
-        BASIC: БАЗОВЫЙ УРОН
+        BASIC: Баз атака
         SKILL: Навык
         ULT: Ультимейт
-        FUA: УРОН ДАЗОВОЙ АТАКИ
-        DOT: ДОТ УРОН
-        BREAK: УРОН ПРОБИТИЕМ
+        FUA: Бонус атака
+        DOT: ДОТ'ы
+        BREAK: Пробитие
         MEMO_SKILL: Урон Навыкаᴹ
         MEMO_TALENT: Урон талантаᴹ
+        ELATION_SKILL: Урон навыка Радости
+        UNIQUE: Уникальный урон
         COMBO: СУММАРНЫЙ УРОН
     CombatBuffs:
       Header: Баффы в бою
@@ -155,21 +150,18 @@ CharacterPreview:
   ScoringColumn:
     Character:
       Header: 'Текущая сборка ({{score}}%)'
-      BasicStats: Cтаты персонажа
       CombatStats: Статы <1>с командой в бою</1>
       Substats: Распределение статов в сборке
       Mainstats: Основные статы реликвий
       Abilities: Урон способностей персонажа
     Benchmark:
       Header: 'Тестовая сборка ({{score}}%)'
-      BasicStats: Тестовые статы персонажа (100%)
       CombatStats: Тестовые статы (100%) <1>с командой в бою</1> 
       Substats: Распределение статов в сборке 100%
       Mainstats: Основные статы реликвий в сборке 100%
       Abilities: Урон способностей в сборке 100%
     Perfect:
       Header: 'Идеальная сборка ({{score}}%)'
-      BasicStats: Тестовые статы персонажа (200%)
       CombatStats: Тестовые статы (200%) <1>с командой в бою</1> 
       Substats: Распределение статов в сборке 200%
       Mainstats: Основные статы реликвий в сборке 200%

@@ -1,30 +1,120 @@
 import {
-  ImportOutlined,
-  UploadOutlined,
-} from '@ant-design/icons'
-import {
   Button,
   Flex,
-  Steps,
-  Typography,
-  Upload,
-} from 'antd'
-import DB from 'lib/state/db'
+  Timeline,
+} from '@mantine/core'
+import {
+  IconFileImport,
+  IconUpload,
+} from '@tabler/icons-react'
+import type { TFunction } from 'i18next'
+import * as persistenceService from 'lib/services/persistenceService'
 import { SaveState } from 'lib/state/saveState'
 import {
   importerTabButtonWidth,
   importerTabSpinnerMs,
 } from 'lib/tabs/tabImport/importerTabUiConstants'
-import { useState } from 'react'
+import {
+  useRef,
+  useState,
+} from 'react'
+import type { RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { HsrOptimizerSaveFormat } from 'types/store'
-
-const { Text } = Typography
+import type { HsrOptimizerSaveFormat } from 'types/store'
+import classes from './LoadDataSubmenu.module.css'
 
 enum Stages {
   LOAD_FILE = 0,
   CONFIRM_DATA = 1,
   FINISHED = 2,
+}
+
+type LoadDataTranslate = TFunction<'importSaveTab', 'LoadData'>
+
+function UploadFileStage(props: {
+  loading: boolean,
+  fileInputRef: RefObject<HTMLInputElement | null>,
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  onUploadClick: () => void,
+  t: LoadDataTranslate,
+}) {
+  return (
+    <Flex className={classes.stageContainer}>
+      <Flex direction='column' gap={10}>
+        <div>
+          {props.t('Stage1.Label') /* Load your optimizer data from a file. */}
+        </div>
+        <input
+          type='file'
+          accept='.json'
+          ref={props.fileInputRef}
+          style={{ display: 'none' }}
+          onChange={props.onFileChange}
+        />
+        <Button
+          w={importerTabButtonWidth}
+          leftSection={<IconUpload size={16} />}
+          loading={props.loading}
+          onClick={props.onUploadClick}
+          variant='default'
+        >
+          {props.t('Stage1.ButtonText') /* Load save data */}
+        </Button>
+      </Flex>
+    </Flex>
+  )
+}
+
+function ConfirmDataStage(props: {
+  currentSave: HsrOptimizerSaveFormat | undefined,
+  currentStage: Stages,
+  loading: boolean,
+  onConfirm: () => void,
+  t: LoadDataTranslate,
+}) {
+  const isVisible = props.currentStage >= Stages.CONFIRM_DATA
+  const displayStyle = { display: isVisible ? 'flex' : 'none' }
+
+  if (!props.currentSave?.relics || !props.currentSave.characters) {
+    return (
+      <Flex className={classes.stageContainer}>
+        <Flex direction='column' gap={10} style={displayStyle}>
+          {
+            /* Invalid save file, please try a different file. Did you mean to use the Relic scanner import tab? */
+            props.t('Stage2.ErrorMsg')
+          }
+        </Flex>
+      </Flex>
+    )
+  }
+
+  return (
+    <Flex className={classes.stageContainer}>
+      <Flex direction='column' gap={10} style={displayStyle}>
+        <div>
+          {
+            /* File contains {n relics} and {m characters}. Replace your current data with the uploaded data? */
+            props.t('Stage2.Label', { relicCount: props.currentSave.relics.length, characterCount: props.currentSave.characters.length })
+          }
+        </div>
+        <Button w={importerTabButtonWidth} leftSection={<IconFileImport size={16} />} onClick={props.onConfirm} loading={props.loading}>
+          {props.t('Stage2.ButtonText') /* Use uploaded data */}
+        </Button>
+      </Flex>
+    </Flex>
+  )
+}
+
+function CompletedStage(props: { currentStage: Stages, t: LoadDataTranslate }) {
+  return (
+    <Flex className={classes.stageContainer}>
+      <Flex direction='column' gap={10} style={{ display: props.currentStage >= Stages.FINISHED ? 'flex' : 'none' }}>
+        <div>
+          {props.t('Stage3.SuccessMessage') /* Done! */}
+        </div>
+      </Flex>
+    </Flex>
+  )
 }
 
 export function LoadDataSubmenu() {
@@ -33,44 +123,42 @@ export function LoadDataSubmenu() {
   const [loading1, setLoading1] = useState(false)
   const [loading2, setLoading2] = useState(false)
   const { t } = useTranslation('importSaveTab', { keyPrefix: 'LoadData' })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  function beforeUpload(file: File): Promise<boolean> {
-    return new Promise(() => {
-      const reader = new FileReader()
-      reader.readAsText(file)
-      reader.onload = () => {
-        const fileUploadText = String(reader.result)
-        const json = JSON.parse(fileUploadText)
+  function beforeUpload(file: File) {
+    const reader = new FileReader()
+    reader.readAsText(file)
+    reader.onload = () => {
+      const fileUploadText = String(reader.result)
+      const json = JSON.parse(fileUploadText)
 
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-        if (json.fileType || json.source) {
-          // Invalid save file
-          setLoading1(true)
-
-          setTimeout(() => {
-            setLoading1(false)
-            setCurrentSave(undefined)
-            setCurrentStage(Stages.CONFIRM_DATA)
-          }, importerTabSpinnerMs)
-          return
-        }
-
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (json.fileType || json.source) {
+        // Invalid save file
         setLoading1(true)
 
         setTimeout(() => {
           setLoading1(false)
-          setCurrentSave(json as HsrOptimizerSaveFormat)
+          setCurrentSave(undefined)
           setCurrentStage(Stages.CONFIRM_DATA)
         }, importerTabSpinnerMs)
+        return
       }
-      return false
-    })
+
+      setLoading1(true)
+
+      setTimeout(() => {
+        setLoading1(false)
+        setCurrentSave(json as HsrOptimizerSaveFormat)
+        setCurrentStage(Stages.CONFIRM_DATA)
+      }, importerTabSpinnerMs)
+    }
   }
 
   function loadConfirmed() {
     setLoading2(true)
     setTimeout(() => {
-      DB.setStore(currentSave!, false)
+      persistenceService.loadSaveData(currentSave!, false)
 
       setTimeout(() => {
         setCurrentStage(Stages.FINISHED)
@@ -80,94 +168,44 @@ export function LoadDataSubmenu() {
     }, importerTabSpinnerMs)
   }
 
-  function LoadDataContentUploadFile() {
-    return (
-      <Flex style={{ minHeight: 100 }}>
-        <Flex vertical gap={10}>
-          <Text>
-            {t('Stage1.Label') /* Load your optimizer data from a file. */}
-          </Text>
-          <Upload
-            accept='.json'
-            name='file'
-            beforeUpload={beforeUpload}
-          >
-            <Button
-              style={{ width: importerTabButtonWidth }}
-              icon={<UploadOutlined />}
-              loading={loading1}
-              onClick={() => setCurrentStage(Stages.LOAD_FILE)}
-            >
-              {t('Stage1.ButtonText') /* Load save data */}
-            </Button>
-          </Upload>
-        </Flex>
-      </Flex>
-    )
-  }
-
-  function ConfirmLoadData() {
-    if (!currentSave?.relics || !currentSave.characters) {
-      return (
-        <Flex style={{ minHeight: 100 }}>
-          <Flex vertical gap={10} style={{ display: currentStage >= Stages.CONFIRM_DATA ? 'flex' : 'none' }}>
-            {
-              /* Invalid save file, please try a different file. Did you mean to use the Relic scanner import tab? */
-              t('Stage2.ErrorMsg')
-            }
-          </Flex>
-        </Flex>
-      )
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (file) {
+      beforeUpload(file)
     }
-    return (
-      <Flex style={{ minHeight: 100 }}>
-        <Flex vertical gap={10} style={{ display: currentStage >= Stages.CONFIRM_DATA ? 'flex' : 'none' }}>
-          <Text>
-            {
-              /* File contains {n relics} and {m characters}. Replace your current data with the uploaded data? */
-              t('Stage2.Label', { relicCount: currentSave.relics.length, characterCount: currentSave.characters.length })
-            }
-          </Text>
-          <Button style={{ width: importerTabButtonWidth }} icon={<ImportOutlined />} type='primary' onClick={loadConfirmed} loading={loading2}>
-            {t('Stage2.ButtonText') /* Use uploaded data */}
-          </Button>
-        </Flex>
-      </Flex>
-    )
+    e.target.value = ''
   }
 
-  function LoadCompleted() {
-    return (
-      <Flex style={{ minHeight: 100 }}>
-        <Flex vertical gap={10} style={{ display: currentStage >= Stages.FINISHED ? 'flex' : 'none' }}>
-          <Text>
-            {t('Stage3.SuccessMessage') /* Done! */}
-          </Text>
-        </Flex>
-      </Flex>
-    )
+  function handleUploadClick() {
+    setCurrentStage(Stages.LOAD_FILE)
+    fileInputRef.current?.click()
   }
 
   return (
     <Flex gap={5}>
-      <Steps
-        direction='vertical'
-        current={currentStage}
-        items={[
-          {
-            title: '',
-            description: LoadDataContentUploadFile(),
-          },
-          {
-            title: '',
-            description: ConfirmLoadData(),
-          },
-          {
-            title: '',
-            description: LoadCompleted(),
-          },
-        ]}
-      />
+      <Timeline active={currentStage} bulletSize={24} lineWidth={2}>
+        <Timeline.Item>
+          <UploadFileStage
+            loading={loading1}
+            fileInputRef={fileInputRef}
+            onFileChange={handleFileChange}
+            onUploadClick={handleUploadClick}
+            t={t}
+          />
+        </Timeline.Item>
+        <Timeline.Item>
+          <ConfirmDataStage
+            currentSave={currentSave}
+            currentStage={currentStage}
+            loading={loading2}
+            onConfirm={loadConfirmed}
+            t={t}
+          />
+        </Timeline.Item>
+        <Timeline.Item>
+          <CompletedStage currentStage={currentStage} t={t} />
+        </Timeline.Item>
+      </Timeline>
     </Flex>
   )
 }

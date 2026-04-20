@@ -1,27 +1,22 @@
-import {
-  Flex,
-  theme,
-} from 'antd'
 import { BuffRow } from 'lib/characterPreview/buffsAnalysis/BuffRow'
 import {
   DesignContext,
-  TEXT_DIM,
   getCardStyle,
   getIconStyle,
+  TEXT_DIM,
   TEXT_SECONDARY,
 } from 'lib/characterPreview/buffsAnalysis/designContext'
-import {
-  SetKey,
-  Sets,
-} from 'lib/constants/constants'
-import { Buff } from 'lib/optimization/basicStatsArray'
+import type { SetKey } from 'lib/constants/constants'
+import { Sets } from 'lib/constants/constants'
+import type { Buff } from 'lib/optimization/basicStatsArray'
 import { BUFF_TYPE } from 'lib/optimization/buffSource'
 import { Assets } from 'lib/rendering/assets'
 import { setToId } from 'lib/sets/setConfigRegistry'
-import React, { useContext } from 'react'
+import type { ReactNode } from 'react'
+import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
 
 function getBuffSourceIcon(id: string, buffType: BUFF_TYPE) {
   if (buffType === BUFF_TYPE.PRIMARY || buffType === BUFF_TYPE.CHARACTER) return Assets.getCharacterAvatarById(id)
@@ -31,22 +26,21 @@ function getBuffSourceIcon(id: string, buffType: BUFF_TYPE) {
   return Assets.getBlank()
 }
 
-export function CardShell(props: { avatarSrc: string; children: React.ReactNode }) {
+export function CardShell({ avatarSrc, children }: { avatarSrc: string, children: ReactNode }) {
   const options = useContext(DesignContext)
-  const { token } = theme.useToken()
+  const token = { colorBgContainer: 'var(--layer-2)' }
   return (
-    <Flex align='center' gap={0} style={getCardStyle(options, token)}>
-      <img src={props.avatarSrc} style={getIconStyle(options)} />
-      <Flex vertical gap={0} style={{ flex: 1, overflow: 'hidden' }}>
-        {props.children}
-      </Flex>
-    </Flex>
+    <div style={{ display: 'flex', alignItems: 'center', ...getCardStyle(options, token) }}>
+      <img src={avatarSrc} style={getIconStyle(options)} />
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
   )
 }
 
-export function BuffGroup(props: { id: string, buffs: Buff[], buffType: BUFF_TYPE }) {
+export function BuffGroup({ id, buffs, buffType }: { id: string, buffs: Buff[], buffType: BUFF_TYPE }) {
   const { t: tGameData } = useTranslation('gameData')
-  const { id, buffs, buffType } = props
 
   const src = getBuffSourceIcon(id, buffType)
   let name: string
@@ -68,7 +62,7 @@ export function BuffGroup(props: { id: string, buffs: Buff[], buffType: BUFF_TYP
   )
 }
 
-export function CardHeader(props: { label: string }) {
+export function CardHeader({ label }: { label: string }) {
   const options = useContext(DesignContext)
   return (
     <span
@@ -88,7 +82,7 @@ export function CardHeader(props: { label: string }) {
         marginBottom: 2,
       }}
     >
-      {props.label}
+      {label}
     </span>
   )
 }

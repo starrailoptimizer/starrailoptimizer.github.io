@@ -1,37 +1,35 @@
 import {
-  IRowNode,
-  NavigateToNextCellParams,
-  RowClickedEvent,
-  RowDoubleClickedEvent,
-  SelectionChangedEvent,
+  type IRowNode,
+  type NavigateToNextCellParams,
+  type RowDoubleClickedEvent,
+  type SelectionChangedEvent,
 } from 'ag-grid-community'
 import i18next from 'i18next'
 import { arrowKeyGridNavigation } from 'lib/interactions/arrowKeyGridNavigation'
 import { Message } from 'lib/interactions/message'
-import { RelicModalController } from 'lib/overlays/modals/relicModalController'
-import { ScoredRelic } from 'lib/relics/scoreRelics'
-import DB from 'lib/state/db'
+import { RelicModalController } from 'lib/overlays/modals/relicModal/relicModalController'
+import { useRelicModalStore } from 'lib/overlays/modals/relicModal/relicModalStore'
+import { type ScoredRelic } from 'lib/relics/scoreRelics'
+import * as equipmentService from 'lib/services/equipmentService'
 import { SaveState } from 'lib/state/saveState'
-import useRelicsTabStore from 'lib/tabs/tabRelics/useRelicsTabStore'
-import { Relic } from 'types/relic'
+import { gridStore } from 'lib/stores/gridStore'
+import { getRelicById } from 'lib/stores/relic/relicStore'
+import { useRelicsTabStore } from 'lib/tabs/tabRelics/useRelicsTabStore'
+import type { Relic } from 'types/relic'
 
 export const RelicsTabController = {
   nodeClickedCallback(node: IRowNode<ScoredRelic>) {
     node.setSelected(true, true)
   },
 
-  onRowClicked(e: RowClickedEvent<ScoredRelic>) {
-    const relic = e.data
-    if (!relic) return
-    useRelicsTabStore.getState().setSelectedRelicsIds([relic.id])
-  },
-
   onRowDoubleClicked(e: RowDoubleClickedEvent<ScoredRelic>) {
     const relic = e.data
     if (!relic) return
-    const { setSelectedRelicsIds, setRelicModalOpen } = useRelicsTabStore.getState()
-    setSelectedRelicsIds([relic.id])
-    setRelicModalOpen(true)
+    useRelicsTabStore.getState().setSelectedRelicsIds([relic.id])
+    useRelicModalStore.getState().openOverlay({
+      selectedRelic: relic,
+      onOk: RelicsTabController.onRelicModalOk,
+    })
   },
 
   onSelectionChanged(e: SelectionChangedEvent<ScoredRelic>) {
@@ -39,30 +37,27 @@ export const RelicsTabController = {
   },
 
   navigateToNextCell(params: NavigateToNextCellParams<ScoredRelic>) {
-    return arrowKeyGridNavigation(params, window.relicsGrid, RelicsTabController.nodeClickedCallback)
+    return arrowKeyGridNavigation(params, gridStore.getRelicsGrid()!, RelicsTabController.nodeClickedCallback)
   },
 
   editClicked() {
-    const { selectedRelicId, setRelicModalOpen } = useRelicsTabStore.getState()
+    const { selectedRelicId } = useRelicsTabStore.getState()
     const t = i18next.getFixedT(null, 'relicsTab', 'Messages')
-    if (!selectedRelicId) return Message.error(t('NoRelicSelected') /* No relic selected */)
-    setRelicModalOpen(true)
+    if (!selectedRelicId) return Message.error(t('NoRelicSelected'))
+    const relic = getRelicById(selectedRelicId)
+    if (!relic) return
+    useRelicModalStore.getState().openOverlay({
+      selectedRelic: relic,
+      onOk: RelicsTabController.onRelicModalOk,
+    })
   },
 
   addClicked() {
-    const { setSelectedRelicsIds, setRelicModalOpen } = useRelicsTabStore.getState()
-    setSelectedRelicsIds([])
-    setRelicModalOpen(true)
-  },
-
-  deleteClicked(isOpen: boolean) {
-    const { selectedRelicsIds, setDeleteConfirmOpen } = useRelicsTabStore.getState()
-    const t = i18next.getFixedT(null, 'relicsTab', 'Messages')
-    if (!selectedRelicsIds.length) {
-      setDeleteConfirmOpen(false)
-      return Message.error(t('NoRelicSelected'))
-    }
-    setDeleteConfirmOpen(isOpen)
+    useRelicsTabStore.getState().setSelectedRelicsIds([])
+    useRelicModalStore.getState().openOverlay({
+      selectedRelic: null,
+      onOk: RelicsTabController.onRelicModalOk,
+    })
   },
 
   deleteConfirmed() {
@@ -70,7 +65,7 @@ export const RelicsTabController = {
     const t = i18next.getFixedT(null, 'relicsTab', 'Messages')
     if (!selectedRelicsIds.length) return Message.error(t('NoRelicSelected'))
     setSelectedRelicsIds([])
-    selectedRelicsIds.forEach((id) => DB.deleteRelic(id))
+    selectedRelicsIds.forEach((id) => equipmentService.removeRelic(id))
     SaveState.delayedSave()
     Message.success(t('DeleteRelicSuccess'))
   },
@@ -79,16 +74,23 @@ export const RelicsTabController = {
     const { selectedRelicId, setSelectedRelicsIds } = useRelicsTabStore.getState()
     const t = i18next.getFixedT(null, 'relicsTab', 'Messages')
     if (selectedRelicId) {
-      // edit relic
-      const oldRelic = DB.getRelicById(selectedRelicId)
+      const oldRelic = getRelicById(selectedRelicId)
       if (!oldRelic) return
       RelicModalController.onEditOk(oldRelic, relic)
     } else {
-      // add new relic
-      DB.setRelic(relic)
+      equipmentService.upsertRelicWithEquipment(relic)
       setSelectedRelicsIds([relic.id])
       SaveState.delayedSave()
-      Message.success(t('AddRelicSuccess') /* Successfully added relic */)
+      Message.success(t('AddRelicSuccess'))
+
+      setTimeout(() => {
+        const api = gridStore.relicsGridApi()
+        if (!api) return
+        const node = api.getRowNode(relic.id)
+        if (!node) return
+        node.setSelected(true, true)
+        api.ensureNodeVisible(node)
+      }, 0)
     }
   },
 }

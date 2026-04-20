@@ -2,11 +2,11 @@ import i18next from 'i18next'
 import { runDpsScoreBenchmarkOrchestrator } from 'lib/simulations/orchestrator/runDpsScoreBenchmarkOrchestrator'
 import {
   generateTestSingleRelicsByPart,
-  TestInput,
+  type TestInput,
 } from 'lib/simulations/tests/simTestUtils'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Character } from 'types/character'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { clone } from 'lib/utils/objectUtils'
+import { type Character } from 'types/character'
 import { expect } from 'vitest'
 
 export async function expectDpsScoreResultsToMatch(
@@ -23,7 +23,7 @@ export async function expectDpsScoreResultsToMatch(
     },
   } as Character
 
-  const simulationMetadata = TsUtils.clone(DB.getMetadata().characters[input.character.characterId].scoringMetadata.simulation!)
+  const simulationMetadata = clone(getGameMetadata().characters[input.character.characterId].scoringMetadata.simulation!)
   const showcaseTemporaryOptions = { spdBenchmark: spdBenchmark }
   const singleRelicByPart = generateTestSingleRelicsByPart(input.sets, input.mains, input.stats)
   simulationMetadata.teammates[0] = input.teammate0
@@ -43,7 +43,7 @@ export async function expectDpsScoreResultsToMatch(
   try {
     expect(simScore.percent).toBeCloseTo(percent, 5)
   } catch (error: unknown) {
-    // @ts-ignore
+    // @ts-expect-error - Error type narrowing in test assertion
     const message = error.message
     throw new Error(`
 ${i18next.t(`gameData:Characters.${input.character.characterId}.LongName`)} BENCHMARK

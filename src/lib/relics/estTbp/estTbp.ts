@@ -1,16 +1,25 @@
-import { MainStats, Parts, Stats, SubStats, } from 'lib/constants/constants'
-import { getRollQualityDistribution, thresholdProbability, } from 'lib/relics/estTbp/convolution'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Relic } from 'types/relic'
+import {
+  type MainStats,
+  type Parts,
+  Stats,
+  SubStats,
+} from 'lib/constants/constants'
+import {
+  getRollQualityDistribution,
+  thresholdProbability,
+} from 'lib/relics/estTbp/convolution'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { clone } from 'lib/utils/objectUtils'
+import type { Relic } from 'types/relic'
 
 export function scoreTbp(preRelic: Relic, weights: { [stat: string]: number }): number {
-  const relic = TsUtils.clone(preRelic)
+  const relic = clone(preRelic)
   relic.previewSubstats.forEach((s) => {
     relic.enhance += 3
     relic.substats.push(s)
   })
   // Round away the floating point errors from weight products
-  const scoreToBeat = TsUtils.precisionRound(simpleSubstatScoreOfRelic(relic, weights))
+  const scoreToBeat = precisionRound(simpleSubstatScoreOfRelic(relic, weights))
 
   const pMain = probabilityOfCorrectSet()
     * probabilityOfCorrectSlot(relic.part)
@@ -244,8 +253,4 @@ export function* combinations<T>(l: Array<T>, k: number): Generator<Array<T>> {
 export function* combinationsWithReplacement<T>(l: Array<T>, k: number): Generator<Array<T>> {
   if (k < 1) return yield []
   for (const [i, x] of l.entries()) for (const set of combinationsWithReplacement(l.slice(i), k - 1)) yield [x, ...set]
-}
-
-export function debugEstTbp() {
-  // Since EstTbp only runs in workers, Webpack will remove it from the main browser unless imported somewhere
 }

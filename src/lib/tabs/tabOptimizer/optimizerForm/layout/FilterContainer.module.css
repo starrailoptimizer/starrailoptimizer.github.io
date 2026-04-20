@@ -1,0 +1,12 @@
+.container :global(.mantine-Accordion-control:hover) {
+  background-color: var(--layer-0);
+}
+
+.container {
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--layer-1);
+  box-shadow: var(--shadow-card-flat);
+  border: var(--border-subtle);
+  width: 1302px;
+}

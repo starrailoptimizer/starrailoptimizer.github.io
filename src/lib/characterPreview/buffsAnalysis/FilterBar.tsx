@@ -1,12 +1,12 @@
-import { Flex } from 'antd'
 import {
   ABILITY_COLORS,
   DAMAGE_TAG_ENTRIES,
 } from 'lib/characterPreview/buffsAnalysis/abilityColors'
 import { PILL_SIZE } from 'lib/characterPreview/buffsAnalysis/designContext'
-import { Buff } from 'lib/optimization/basicStatsArray'
-import { DamageTag } from 'lib/optimization/engine/config/tag'
-import React from 'react'
+import type { Buff } from 'lib/optimization/basicStatsArray'
+import type { DamageTag } from 'lib/optimization/engine/config/tag'
+import { useTranslation } from 'react-i18next'
+import classes from './FilterBar.module.css'
 
 export function computeRelevantTags(allBuffs: Buff[]): Set<DamageTag> {
   const tags = new Set<DamageTag>()
@@ -31,39 +31,40 @@ export function buffMatchesFilter(buff: Buff, filter: DamageTag | null): boolean
   return (buff.damageTags & filter) !== 0
 }
 
-export function FilterBar(props: {
+export function FilterBar({ selectedFilter, onFilterChange, relevantTags }: {
   selectedFilter: DamageTag | null,
   onFilterChange: (f: DamageTag | null) => void,
   relevantTags: Set<DamageTag>,
 }) {
-  const visibleEntries = DAMAGE_TAG_ENTRIES.filter((e) => props.relevantTags.has(e.tag))
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'ExpandedDataPanel.DamageTags' })
+  const visibleEntries = DAMAGE_TAG_ENTRIES.filter((e) => relevantTags.has(e.tag))
 
   return (
-    <Flex justify='center' style={{ padding: '4px 0' }}>
-      <Flex gap={4} wrap='wrap' justify='center'>
+    <div style={{ display: 'flex', justifyContent: 'center' }} className={classes.filterBarOuter}>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'center' }}>
         <FilterButton
-          label='ALL'
+          label={t('ALL')}
           color={ABILITY_COLORS.ALL}
-          isActive={props.selectedFilter === null}
-          onClick={() => props.onFilterChange(null)}
+          isActive={selectedFilter === null}
+          onClick={() => onFilterChange(null)}
         />
         {visibleEntries.map(
           (entry) => (
             <FilterButton
               key={entry.tag}
-              label={entry.label}
+              label={t(entry.key)}
               color={entry.color}
-              isActive={props.selectedFilter === entry.tag}
-              onClick={() => props.onFilterChange(entry.tag)}
+              isActive={selectedFilter === entry.tag}
+              onClick={() => onFilterChange(entry.tag)}
             />
           ),
         )}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 }
 
-function FilterButton(props: {
+function FilterButton({ label, color, isActive, onClick }: {
   label: string,
   color: string,
   isActive: boolean,
@@ -71,22 +72,18 @@ function FilterButton(props: {
 }) {
   return (
     <span
-      onClick={props.onClick}
+      onClick={onClick}
+      className={classes.filterButton}
       style={{
         padding: PILL_SIZE.padding,
-        borderRadius: 3,
         fontSize: PILL_SIZE.fontSize,
-        fontWeight: 600,
         lineHeight: PILL_SIZE.lineHeight,
-        cursor: 'pointer',
-        border: `1px solid ${props.color}`,
-        color: props.isActive ? '#141414' : props.color,
-        backgroundColor: props.isActive ? props.color : 'transparent',
-        userSelect: 'none',
-        transition: 'all 0.15s',
+        border: `1px solid ${color}`,
+        color: isActive ? '#141414' : color,
+        backgroundColor: isActive ? color : 'transparent',
       }}
     >
-      {props.label}
+      {label}
     </span>
   )
 }

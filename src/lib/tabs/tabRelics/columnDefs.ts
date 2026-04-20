@@ -1,11 +1,16 @@
 import {
-  ColDef,
-  ValueGetterParams,
+  type ColDef,
+  type ValueGetterParams,
 } from 'ag-grid-community'
-import { TFunction } from 'i18next'
+import type { TFunction } from 'i18next'
 import { Stats } from 'lib/constants/constants'
-import { ScoredRelic } from 'lib/relics/scoreRelics'
+import { type ScoredRelic } from 'lib/relics/scoreRelics'
 import { Gradient } from 'lib/rendering/gradient'
+import {
+  AnySetCellRenderer,
+  CharacterIconCellRenderer,
+  GradeCellRenderer,
+} from 'lib/rendering/gridRenderers'
 import { Renderer } from 'lib/rendering/renderer'
 
 export function generateValueColumnOptions(t: TFunction<'relicsTab', 'RelicGrid'>) {
@@ -181,19 +186,20 @@ export function generateBaselineColDefs(t: TFunction<'relicsTab', 'RelicGrid'>):
       field: 'equippedBy',
       headerName: t('Headers.EquippedBy'),
       width: 40,
-      cellRenderer: Renderer.characterIcon,
+      cellRenderer: CharacterIconCellRenderer,
     },
     {
       field: 'set',
       headerName: t('Headers.Set'),
       width: 40,
-      cellRenderer: Renderer.anySet,
+      cellRenderer: AnySetCellRenderer,
     },
     {
-      field: 'grade',
       headerName: '★',
       width: 30,
-      cellRenderer: Renderer.renderGradeCell,
+      cellRenderer: GradeCellRenderer,
+      // Unique identifier so AG Grid detects changes to grade/initialRolls/verified
+      valueGetter: (p) => p.data ? p.data.grade + (p.data.initialRolls ?? 3) * 10 + (p.data.verified ? 100 : 0) : 0,
     },
     {
       field: 'enhance',

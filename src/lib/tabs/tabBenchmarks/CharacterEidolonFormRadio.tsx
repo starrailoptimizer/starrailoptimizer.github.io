@@ -1,35 +1,25 @@
-import {
-  Form as AntDForm,
-  Radio,
-} from 'antd'
-import React from 'react'
+import { SegmentedControl } from '@mantine/core'
+import type { UseFormReturnType } from '@mantine/form'
+import { type BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
 import { useTranslation } from 'react-i18next'
 
-export function CharacterEidolonFormRadio() {
+export function CharacterEidolonFormRadio(props: { form: UseFormReturnType<BenchmarkForm> }) {
   const { t } = useTranslation('modals', { keyPrefix: 'EditCharacter' })
 
   return (
-    <AntDForm.Item name='characterEidolon'>
-      <Radio.Group
-        value={0}
-        buttonStyle='solid'
-        style={{ width: '100%', display: 'flex' }}
-      >
-        <RadioButton text={t('EidolonButton', { eidolon: 0 })} value={0} />
-        <RadioButton text={t('EidolonButton', { eidolon: 1 })} value={1} />
-        <RadioButton text={t('EidolonButton', { eidolon: 2 })} value={2} />
-        <RadioButton text={t('EidolonButton', { eidolon: 3 })} value={3} />
-        <RadioButton text={t('EidolonButton', { eidolon: 4 })} value={4} />
-        <RadioButton text={t('EidolonButton', { eidolon: 5 })} value={5} />
-        <RadioButton text={t('EidolonButton', { eidolon: 6 })} value={6} />
-      </Radio.Group>
-    </AntDForm.Item>
+    <SegmentedControl
+      fullWidth
+      data={[
+        { label: t('EidolonButton', { eidolon: 0 }), value: '0' },
+        { label: t('EidolonButton', { eidolon: 1 }), value: '1' },
+        { label: t('EidolonButton', { eidolon: 2 }), value: '2' },
+        { label: t('EidolonButton', { eidolon: 3 }), value: '3' },
+        { label: t('EidolonButton', { eidolon: 4 }), value: '4' },
+        { label: t('EidolonButton', { eidolon: 5 }), value: '5' },
+        { label: t('EidolonButton', { eidolon: 6 }), value: '6' },
+      ]}
+      value={String(props.form.values.characterEidolon ?? 0)}
+      onChange={(val) => props.form.setFieldValue('characterEidolon', Number(val))}
+    />
   )
-}
-
-export function RadioButton(props: {
-  text: string,
-  value: number,
-}) {
-  return <Radio.Button value={props.value} style={{ flex: 1, padding: 'unset', textAlign: 'center' }}>{props.text}</Radio.Button>
 }

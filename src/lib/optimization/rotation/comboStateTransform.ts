@@ -3,42 +3,42 @@ import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightCo
 import {
   ConditionalDataType,
 } from 'lib/constants/constants'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import { type DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import { initializeComboState } from 'lib/optimization/combo/comboInitializers'
+import type {
+  ComboConditionalCategory,
+  ComboConditionals,
+  ComboSelectConditional,
+  ComboState,
+} from 'lib/optimization/combo/comboTypes'
+import { newTransformStateActions } from 'lib/optimization/rotation/actionTransform'
+import { ComboType } from 'lib/optimization/rotation/comboType'
+import {
+  DEFAULT_BASIC,
+  getAbilityKind,
+  NULL_TURN_ABILITY_NAME,
+  type TurnAbilityName,
+} from 'lib/optimization/rotation/turnAbilityConfig'
 import {
   getTeammateOption,
   orderedSetConditionalFields,
   setConfigRegistry,
 } from 'lib/sets/setConfigRegistry'
-import { newTransformStateActions } from 'lib/optimization/rotation/actionTransform'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { type CharacterId } from 'types/character'
 import {
-  AbilityKind,
-  DEFAULT_BASIC,
-  getAbilityKind,
-  NULL_TURN_ABILITY_NAME,
-  TurnAbilityName,
-} from 'lib/optimization/rotation/turnAbilityConfig'
-import DB from 'lib/state/db'
-import {
-  ComboConditionalCategory,
-  ComboConditionals,
-  ComboSelectConditional,
-  ComboState,
-  initializeComboState,
-} from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { CharacterId } from 'types/character'
-import {
-  CharacterConditionalsController,
-  ConditionalValueMap,
-  LightConeConditionalsController,
+  type CharacterConditionalsController,
+  type ConditionalValueMap,
+  type LightConeConditionalsController,
 } from 'types/conditionals'
 import {
-  Form,
-  OptimizerForm,
+  type Form,
+  type OptimizerForm,
 } from 'types/form'
 import {
-  OptimizerAction,
-  OptimizerContext,
-  SetConditional,
+  type OptimizerAction,
+  type OptimizerContext,
+  type SetConditional,
 } from 'types/optimizer'
 
 export function transformComboState(request: Form, context: OptimizerContext) {
@@ -85,7 +85,8 @@ export function defineAction(
     ? 'Rotation' + actionIndex
     : 'Default' + actionIndex
 
-  const conditionalIndex = rotation ?  actionIndex : 0
+  const conditionalIndex = rotation ? actionIndex : 0
+  action.conditionalIndex = conditionalIndex
 
   action.characterConditionals = transformConditionals(conditionalIndex, comboState.comboCharacter.characterConditionals)
   action.lightConeConditionals = transformConditionals(conditionalIndex, comboState.comboCharacter.lightConeConditionals)
@@ -116,15 +117,11 @@ export function defineAction(
   return action
 }
 
-function calculateActionHits() {
-}
-
 export function precomputeConditionals(action: OptimizerAction, comboState: ComboState, context: OptimizerContext) {
   const characterConditionals: CharacterConditionalsController = CharacterConditionalsResolver.get(comboState.comboCharacter.metadata)
   const lightConeConditionals: LightConeConditionalsController = LightConeConditionalsResolver.get(comboState.comboCharacter.metadata)
 
   const container = action.precomputedStats
-
 
   lightConeConditionals.initializeConfigurationsContainer?.(container, action, context)
   characterConditionals.initializeConfigurationsContainer?.(container, action, context)
@@ -140,8 +137,8 @@ export function precomputeConditionals(action: OptimizerAction, comboState: Comb
     const teammateAction = {
       actorId: teammate.metadata.characterId,
       actorEidolon: teammate.metadata.characterEidolon,
-      characterConditionals: transformConditionals(action.actionIndex, teammate.characterConditionals),
-      lightConeConditionals: transformConditionals(action.actionIndex, teammate.lightConeConditionals),
+      characterConditionals: transformConditionals(action.conditionalIndex, teammate.characterConditionals),
+      lightConeConditionals: transformConditionals(action.conditionalIndex, teammate.lightConeConditionals),
       config: action.config,
     } as OptimizerAction
 
@@ -178,8 +175,8 @@ function precomputeTeammates(action: OptimizerAction, comboState: ComboState, co
     const teammateAction = {
       actorId: teammate.metadata.characterId,
       actorEidolon: teammate.metadata.characterEidolon,
-      characterConditionals: transformConditionals(action.actionIndex, teammate.characterConditionals),
-      lightConeConditionals: transformConditionals(action.actionIndex, teammate.lightConeConditionals),
+      characterConditionals: transformConditionals(action.conditionalIndex, teammate.characterConditionals),
+      lightConeConditionals: transformConditionals(action.conditionalIndex, teammate.lightConeConditionals),
       config: action.config,
     } as OptimizerAction
 
@@ -203,7 +200,7 @@ function precomputeTeammates(action: OptimizerAction, comboState: ComboState, co
     for (const [key, value] of [...Object.entries(teammateRequest.relicSetConditionals), ...Object.entries(teammateRequest.ornamentSetConditionals)]) {
       if (value.type == ConditionalDataType.BOOLEAN) {
         const booleanComboConditional = value
-        if (!booleanComboConditional.activations[action.actionIndex]) {
+        if (!booleanComboConditional.activations[action.conditionalIndex]) {
           continue
         }
       } else {
@@ -241,39 +238,37 @@ export function transformConditionals(actionIndex: number, conditionals: ComboCo
 function transformConditional(category: ComboConditionalCategory, actionIndex: number) {
   if (category.type == ConditionalDataType.BOOLEAN) {
     const booleanCategory = category
-    return booleanCategory.activations[actionIndex]
-  } else {
-    const partitionCategory = category as ComboSelectConditional
-    for (let i = 0; i < partitionCategory.partitions.length; i++) {
-      const partition = partitionCategory.partitions[i]
-      if (partition.activations[actionIndex]) {
-        return partition.value
-      }
+    return booleanCategory.activations[actionIndex] ?? false
+  }
+
+  const partitionCategory = category as ComboSelectConditional
+  for (let i = 0; i < partitionCategory.partitions.length; i++) {
+    const partition = partitionCategory.partitions[i]
+    if (partition.activations[actionIndex]) {
+      return partition.value
     }
   }
 
-  return 0
+  return partitionCategory.partitions[0]?.value ?? 0
 }
 
 function transformSetConditionals(actionIndex: number, conditionals: ComboConditionals): SetConditional {
   const result: Record<string, boolean | number> = {}
   for (const field of orderedSetConditionalFields) {
     const comboEntry = conditionals[field.setKey]
+    if (!comboEntry) {
+      result[field.fieldName] = 0
+      continue
+    }
     result[field.fieldName] = transformConditional(comboEntry, actionIndex)
   }
   return result as SetConditional
 }
 
-export enum ComboType {
-  SIMPLE = 'simple',
-  ADVANCED = 'advanced',
-}
-
 export function getDefaultComboTurnAbilities(characterId: CharacterId, characterEidolon: number) {
-  const simulation = DB.getMetadata().characters[characterId]?.scoringMetadata?.simulation
+  const simulation = getGameMetadata().characters[characterId]?.scoringMetadata?.simulation
   return {
-    comboTurnAbilities: simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, DEFAULT_BASIC],
-    comboDot: simulation?.comboDot ?? 0,
+    comboTurnAbilities: [...(simulation?.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, DEFAULT_BASIC])],
   }
 }
 
@@ -284,7 +279,6 @@ export function getComboTypeAbilities(form: OptimizerForm) {
 
   return {
     comboTurnAbilities: form.comboTurnAbilities ?? [NULL_TURN_ABILITY_NAME, DEFAULT_BASIC],
-    comboDot: form.comboDot ?? 0,
   }
 }
 
@@ -300,8 +294,4 @@ function overrideSetConditionals(setConditionals: SetConditional, context: Optim
     }
   }
   return setConditionals
-}
-
-export function countDotAbilities(actions: OptimizerAction[]) {
-  return actions.filter((x) => x.actionType == AbilityKind.DOT).length
 }

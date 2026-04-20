@@ -1,88 +1,74 @@
-import { TsUtils } from 'lib/utils/TsUtils'
-import React, {
+import {
+  type CSSProperties,
   useEffect,
+  useRef,
   useState,
 } from 'react'
 
-interface LoadingBlurredImageProps extends React.ImgHTMLAttributes<string> {
+interface LoadingBlurredImageProps {
   src: string
-  style: React.CSSProperties
-  callback?: (img: string) => void
+  style: CSSProperties
 }
 
-type ImageProperties = {
-  src: string,
-  style: React.CSSProperties,
+function isImageCached(src: string): boolean {
+  const img = new Image()
+  img.src = src
+  return img.complete && img.naturalWidth > 0
 }
 
-export const LoadingBlurredImage: React.FC<LoadingBlurredImageProps> = ({ src, style, callback }) => {
-  // @ts-ignore
-  const [storedImg, setStoredImg] = useState<ImageProperties>({})
-  // @ts-ignore
-  const [pendingImage, setPendingImage] = useState<ImageProperties>({})
+export function LoadingBlurredImage({ src, style }: LoadingBlurredImageProps) {
+  // Capture the latest style in a ref so the onload callback always applies
+  // the position that was current when the image finished loading
+  const styleRef = useRef(style)
+  styleRef.current = style
 
-  const [finishedLoading, setFinishedLoading] = useState<boolean>(false)
-  const [blur, setBlur] = useState<boolean>(true)
+  // Initialize without blur if the image is already browser-cached
+  const cached = isImageCached(src)
+  const [storedSrc, setStoredSrc] = useState<string | undefined>(() => cached ? src : undefined)
+  const [storedStyle, setStoredStyle] = useState<CSSProperties>(style)
+  const [blur, setBlur] = useState<boolean>(() => !cached)
 
   useEffect(() => {
-    if (src == storedImg.src && TsUtils.objectHash(style) == TsUtils.objectHash(storedImg.style)) {
-      // Do nothing as its already loaded
+    // Already loaded this src — nothing to do
+    if (src === storedSrc) {
+      setStoredStyle(styleRef.current)
       return
     }
 
-    if (src == pendingImage.src && TsUtils.objectHash(style) == TsUtils.objectHash(pendingImage.style)) {
-      // Do nothing as its already pending
+    // Check if browser has it cached — skip blur entirely
+    if (isImageCached(src)) {
+      setStoredSrc(src)
+      setStoredStyle(styleRef.current)
+      setBlur(false)
       return
     }
 
+    // Not cached — show blur, keep old style/position until new image loads
     setBlur(true)
-    setPendingImage({
-      src: src,
-      style: style,
-    })
 
     const img = new Image()
     img.src = src
-
-    if (img.complete || img.naturalWidth > 0) {
-      // Pulled from cache
-      setFinishedLoading(true)
-      return
-    }
-
-    setFinishedLoading(false)
-
-    // We have to load the pending image before it can be stored
     img.onload = () => {
-      setFinishedLoading(true)
+      setStoredSrc(src)
+      setStoredStyle(styleRef.current)
+      setBlur(false)
     }
-  }, [storedImg, src, style])
 
-  useEffect(() => {
-    if (finishedLoading) {
-      setTimeout(() => {
-        setBlur(false)
-      }, 20)
-
-      setStoredImg({
-        src: pendingImage.src,
-        style: pendingImage.style,
-      })
-
-      setFinishedLoading(false)
-
-      if (callback) {
-        callback(pendingImage.src)
-      }
+    return () => {
+      img.onload = null
     }
-  }, [finishedLoading])
+  }, [src])
+
+  // During blur (src transition), freeze position so old image doesn't jump.
+  // Otherwise use live style so scoring-type changes recenter immediately.
+  const effectiveStyle = blur ? storedStyle : style
 
   return (
     <img
-      src={storedImg.src}
+      src={storedSrc}
       loading='eager'
       style={{
-        ...storedImg.style,
+        ...effectiveStyle,
         filter: blur ? 'blur(6px)' : 'none',
         transition: blur ? '' : 'filter 0.35s cubic-bezier(.41,.65,.39,.99)',
       }}

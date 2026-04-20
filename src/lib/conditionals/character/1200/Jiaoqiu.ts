@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -26,22 +26,24 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { ScoringMetadata } from 'types/metadata'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type ScoringMetadata } from 'types/metadata'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
+import { precisionRound } from 'lib/utils/mathUtils'
 export const JiaoqiuEntities = createEnum('Jiaoqiu')
 export const JiaoqiuAbilities: AbilityKind[] = [
   AbilityKind.BASIC,
@@ -52,7 +54,7 @@ export const JiaoqiuAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Jiaoqiu')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Jiaoqiu')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -103,9 +105,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('Content.ashenRoastStacks.text'),
       content: t('Content.ashenRoastStacks.content', {
-        AshenRoastInitialVulnerability: TsUtils.precisionRound(100 * talentVulnerabilityBase),
-        AshenRoastAdditionalVulnerability: TsUtils.precisionRound(100 * talentVulnerabilityScaling),
-        AshenRoastDotMultiplier: TsUtils.precisionRound(100 * talentDotScaling),
+        AshenRoastInitialVulnerability: precisionRound(100 * talentVulnerabilityBase),
+        AshenRoastAdditionalVulnerability: precisionRound(100 * talentVulnerabilityScaling),
+        AshenRoastDotMultiplier: precisionRound(100 * talentDotScaling),
       }),
       min: 0,
       max: maxAshenRoastStacks,
@@ -115,9 +117,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.ultFieldActive.text'),
       content: t('Content.ultFieldActive.content', {
-        UltScaling: TsUtils.precisionRound(100 * ultScaling),
-        UltVulnerability: TsUtils.precisionRound(100 * ultVulnerabilityScaling),
-        ZoneDebuffChance: TsUtils.precisionRound(100 * ult(e, 0.6, 0.62)),
+        UltScaling: precisionRound(100 * ultScaling),
+        UltVulnerability: precisionRound(100 * ultVulnerabilityScaling),
+        ZoneDebuffChance: precisionRound(100 * ult(e, 0.6, 0.62)),
       }),
     },
     ehrToAtkBoost: {
@@ -273,7 +275,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
           action,
           context,
           SOURCE_TRACE,
-          (convertibleValue) => Math.min(2.40, 0.60 * Math.floor((convertibleValue - 0.80) / 0.15)) * context.baseATK,
+          (convertibleValue) => Math.min(2.40, 0.60 * floorSafe((convertibleValue - 0.80) / 0.15)) * context.baseATK,
         )
       },
       gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -286,7 +288,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
           this,
           action,
           context,
-          `min(2.40, 0.60 * floor((convertibleValue - 0.80) / 0.15)) * baseATK`,
+          `min(2.40, 0.60 * floorSafe((convertibleValue - 0.80) / 0.15)) * baseATK`,
           `${wgslTrue(r.ehrToAtkBoost)} && ${containerActionVal(SELF_ENTITY_INDEX, StatKey.EHR, config)} > 0.80`,
         )
       },
@@ -337,7 +339,7 @@ const display = {
     y: 900,
     z: 1.1,
   },
-  showcaseColor: '#fff4f8',
+  showcaseColor: '#f2d0cb',
 }
 
 export const Jiaoqiu: CharacterConfig = {

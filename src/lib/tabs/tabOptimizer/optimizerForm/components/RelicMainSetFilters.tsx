@@ -1,12 +1,11 @@
-import { SettingOutlined } from '@ant-design/icons'
 import {
   Button,
-  Cascader,
-  ConfigProvider,
+  CloseButton,
   Flex,
-  Form,
-  Select,
-} from 'antd'
+  Group,
+  PillsInput,
+} from '@mantine/core'
+import { IconSettings } from '@tabler/icons-react'
 import {
   Constants,
   Parts,
@@ -17,188 +16,272 @@ import {
 } from 'lib/hooks/useOpenClose'
 import { Hint } from 'lib/interactions/hint'
 import { Assets } from 'lib/rendering/assets'
-import { OrnamentSetTagRenderer } from 'lib/tabs/tabOptimizer/optimizerForm/components/OrnamentSetTagRenderer'
-import GenerateOrnamentsOptions from 'lib/tabs/tabOptimizer/optimizerForm/components/OrnamentsOptions'
-import { RelicSetTagRenderer } from 'lib/tabs/tabOptimizer/optimizerForm/components/RelicSetTagRenderer'
-import GenerateSetsOptions from 'lib/tabs/tabOptimizer/optimizerForm/components/SetsOptions'
+import type { MainStatPart } from 'lib/stores/optimizerForm/optimizerFormTypes'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
 import {
   optimizerTabDefaultGap,
   panelWidth,
 } from 'lib/tabs/tabOptimizer/optimizerForm/grid/optimizerGridColumns'
 import { HeaderText } from 'lib/ui/HeaderText'
+import { MultiSelectPills } from 'lib/ui/MultiSelectPills'
 import { TooltipImage } from 'lib/ui/TooltipImage'
-import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import iconClasses from 'style/icons.module.css'
+import inputClasses from 'style/inputs.module.css'
+import classes from './RelicMainSetFilters.module.css'
 
-const { SHOW_CHILD } = Cascader
+function handleMainStatChange(field: MainStatPart, val: string[]) {
+  useOptimizerRequestStore.getState().setMainStats(field, val)
+}
 
-export default function RelicMainSetFilters() {
-  const { t } = useTranslation(['optimizerTab', 'common'])
+const mainStatStyle = { width: panelWidth }
+
+function MainStatBody() {
+  const { t } = useTranslation('common')
+  const value = useOptimizerRequestStore((s) => s.mainBody)
+  return (
+    <MultiSelectPills
+      clearable
+      size='xs'
+      className={inputClasses.compactPadding}
+      style={mainStatStyle}
+      placeholder={t('Parts.Body')}
+      leftSectionWidth={25}
+      leftSection={<img className={classes.partIcon} style={{ marginLeft: 5 }} src={Assets.getPart(Parts.Body)} />}
+      value={value}
+      onChange={(val) => handleMainStatChange('mainBody', val)}
+      renderOption={(option) => (
+        <Flex align='center' gap={10}>
+          <img src={Assets.getStatIcon(option.value, true)} className={iconClasses.icon22} />
+          {option.label}
+        </Flex>
+      )}
+      data={[
+        { value: Constants.Stats.HP_P, label: t('ShortStats.HP%') },
+        { value: Constants.Stats.ATK_P, label: t('ShortStats.ATK%') },
+        { value: Constants.Stats.DEF_P, label: t('ShortStats.DEF%') },
+        { value: Constants.Stats.CR, label: t('ShortStats.CRIT Rate') },
+        { value: Constants.Stats.CD, label: t('ShortStats.CRIT DMG') },
+        { value: Constants.Stats.EHR, label: t('ShortStats.Effect Hit Rate') },
+        { value: Constants.Stats.OHB, label: t('ShortStats.Outgoing Healing Boost') },
+      ]}
+    />
+  )
+}
+
+function MainStatFeet() {
+  const { t } = useTranslation('common')
+  const value = useOptimizerRequestStore((s) => s.mainFeet)
+  return (
+    <MultiSelectPills
+      clearable
+      size='xs'
+      className={inputClasses.compactPadding}
+      style={mainStatStyle}
+      placeholder={t('Parts.Feet')}
+      leftSectionWidth={25}
+      leftSection={<img className={classes.partIcon} style={{ marginLeft: 5 }} src={Assets.getPart(Parts.Feet)} />}
+      value={value}
+      onChange={(val) => handleMainStatChange('mainFeet', val)}
+      renderOption={(option) => (
+        <Flex align='center' gap={10}>
+          <img src={Assets.getStatIcon(option.value, true)} className={iconClasses.icon22} />
+          {option.label}
+        </Flex>
+      )}
+      data={[
+        { value: Constants.Stats.HP_P, label: t('ShortStats.HP%') },
+        { value: Constants.Stats.ATK_P, label: t('ShortStats.ATK%') },
+        { value: Constants.Stats.DEF_P, label: t('ShortStats.DEF%') },
+        { value: Constants.Stats.SPD, label: t('ShortStats.SPD') },
+      ]}
+    />
+  )
+}
+
+function MainStatPlanarSphere() {
+  const { t } = useTranslation('common')
+  const value = useOptimizerRequestStore((s) => s.mainPlanarSphere)
+  return (
+    <MultiSelectPills
+      clearable
+      size='xs'
+      className={inputClasses.compactPadding}
+      style={mainStatStyle}
+      placeholder={t('Parts.PlanarSphere')}
+      maxDropdownHeight={400}
+      leftSectionWidth={25}
+      leftSection={<img className={classes.partIcon} style={{ marginLeft: 5 }} src={Assets.getPart(Parts.PlanarSphere)} />}
+      value={value}
+      onChange={(val) => handleMainStatChange('mainPlanarSphere', val)}
+      renderOption={(option) => (
+        <Flex align='center' gap={10}>
+          <img src={Assets.getStatIcon(option.value, true)} className={iconClasses.icon22} />
+          {option.label}
+        </Flex>
+      )}
+      data={[
+        { value: Constants.Stats.HP_P, label: t('ShortStats.HP%') },
+        { value: Constants.Stats.ATK_P, label: t('ShortStats.ATK%') },
+        { value: Constants.Stats.DEF_P, label: t('ShortStats.DEF%') },
+        { value: Constants.Stats.Physical_DMG, label: t('ShortStats.Physical DMG Boost') },
+        { value: Constants.Stats.Fire_DMG, label: t('ShortStats.Fire DMG Boost') },
+        { value: Constants.Stats.Ice_DMG, label: t('ShortStats.Ice DMG Boost') },
+        { value: Constants.Stats.Lightning_DMG, label: t('ShortStats.Lightning DMG Boost') },
+        { value: Constants.Stats.Wind_DMG, label: t('ShortStats.Wind DMG Boost') },
+        { value: Constants.Stats.Quantum_DMG, label: t('ShortStats.Quantum DMG Boost') },
+        { value: Constants.Stats.Imaginary_DMG, label: t('ShortStats.Imaginary DMG Boost') },
+      ]}
+    />
+  )
+}
+
+function MainStatLinkRope() {
+  const { t } = useTranslation('common')
+  const value = useOptimizerRequestStore((s) => s.mainLinkRope)
+  return (
+    <MultiSelectPills
+      clearable
+      size='xs'
+      className={inputClasses.compactPadding}
+      style={mainStatStyle}
+      placeholder={t('Parts.LinkRope')}
+      leftSectionWidth={25}
+      leftSection={<img className={classes.partIcon} style={{ marginLeft: 5 }} src={Assets.getPart(Parts.LinkRope)} />}
+      value={value}
+      onChange={(val) => handleMainStatChange('mainLinkRope', val)}
+      renderOption={(option) => (
+        <Flex align='center' gap={10}>
+          <img src={Assets.getStatIcon(option.value, true)} className={iconClasses.icon22} />
+          {option.label}
+        </Flex>
+      )}
+      data={[
+        { value: Constants.Stats.HP_P, label: t('ShortStats.HP%') },
+        { value: Constants.Stats.ATK_P, label: t('ShortStats.ATK%') },
+        { value: Constants.Stats.DEF_P, label: t('ShortStats.DEF%') },
+        { value: Constants.Stats.BE, label: t('ShortStats.Break Effect') },
+        { value: Constants.Stats.ERR, label: t('ShortStats.Energy Regeneration Rate') },
+      ]}
+    />
+  )
+}
+
+const relicBoxIcon = Assets.getDefaultRelic()
+
+function RelicSetFilterRow() {
+  const display = useOptimizerRequestStore((s) => s.setFilters)
+  const hasSelection = display.fourPiece.length > 0 || display.twoPieceCombos.length > 0
+  const totalCount = display.fourPiece.length + display.twoPieceCombos.length
+
+  const handleRemove = (e: React.MouseEvent, name: string) => {
+    e.stopPropagation()
+    const current = useOptimizerRequestStore.getState().setFilters
+    useOptimizerRequestStore.getState().setSetFilters({
+      ...current,
+      fourPiece: current.fourPiece.filter((s) => s !== name),
+    })
+  }
 
   return (
-    <Flex vertical gap={optimizerTabDefaultGap}>
+    <PillsInput
+      size='xs'
+      style={mainStatStyle}
+      leftSectionWidth={32}
+      leftSection={<img src={relicBoxIcon} style={{ width: 20, marginLeft: 6 }} />}
+      onClick={() => setOpen(OpenCloseIDs.RELIC_SET_FILTER_MODAL)}
+      styles={{ input: { cursor: 'pointer', paddingLeft: 38, paddingTop: 0, paddingBottom: 0, display: 'flex', alignItems: 'center', gap: 10 } }}
+    >
+      {hasSelection
+        ? (
+          <Group gap={10} wrap='nowrap' align='center' style={{ overflow: 'hidden', flex: 1 }}>
+            {display.fourPiece.slice(0, 2).map((name) => (
+              <Group key={name} gap={4} wrap='nowrap' align='center' style={{ marginBottom: 1 }}>
+                <img src={Assets.getSetImage(name)} style={{ width: 20, height: 20 }} />
+                <img src={Assets.getSetImage(name)} style={{ width: 20, height: 20 }} />
+                <CloseButton size={14} variant='subtle' onClick={(e) => handleRemove(e, name)} />
+              </Group>
+            ))}
+            {totalCount > 2 && <span style={{ fontSize: 12, color: 'var(--mantine-color-dimmed)', marginLeft: 'auto' }}>+{totalCount - 2}</span>}
+          </Group>
+        )
+        : <span style={{ fontSize: 14, fontWeight: 'normal', cursor: 'pointer', marginBottom: 1, color: 'var(--mantine-color-default-color)' }}>Relic set filters</span>}
+    </PillsInput>
+  )
+}
+
+function OrnamentSetFilterRow() {
+  const display = useOptimizerRequestStore((s) => s.setFilters)
+  const hasSelection = display.ornaments.length > 0
+
+  const handleRemove = (e: React.MouseEvent, name: string) => {
+    e.stopPropagation()
+    const current = useOptimizerRequestStore.getState().setFilters
+    useOptimizerRequestStore.getState().setSetFilters({
+      ...current,
+      ornaments: current.ornaments.filter((s) => s !== name),
+    })
+  }
+
+  return (
+    <PillsInput
+      size='xs'
+      style={mainStatStyle}
+      leftSectionWidth={32}
+      leftSection={<img src={relicBoxIcon} style={{ width: 20, marginLeft: 6 }} />}
+      onClick={() => setOpen(OpenCloseIDs.RELIC_SET_FILTER_MODAL)}
+      styles={{ input: { cursor: 'pointer', paddingLeft: 38, paddingTop: 0, paddingBottom: 0, display: 'flex', alignItems: 'center', gap: 10 } }}
+    >
+      {hasSelection
+        ? (
+          <Group gap={10} wrap='nowrap' align='center' style={{ overflow: 'hidden', flex: 1 }}>
+            {display.ornaments.slice(0, 3).map((name) => (
+              <Group key={name} gap={4} wrap='nowrap' align='center' style={{ marginBottom: 1 }}>
+                <img src={Assets.getSetImage(name)} style={{ width: 20, height: 20 }} />
+                <CloseButton size={14} variant='subtle' onClick={(e) => handleRemove(e, name)} />
+              </Group>
+            ))}
+            {display.ornaments.length > 3 && (
+              <span style={{ fontSize: 12, color: 'var(--mantine-color-dimmed)', marginLeft: 'auto' }}>+{display.ornaments.length - 3}</span>
+            )}
+          </Group>
+        )
+        : <span style={{ fontSize: 14, fontWeight: 'normal', cursor: 'pointer', marginBottom: 1, color: 'var(--mantine-color-default-color)' }}>Ornament set filters</span>}
+    </PillsInput>
+  )
+}
+
+export function RelicMainSetFilters() {
+  const { t } = useTranslation('optimizerTab')
+
+  return (
+    <Flex direction='column' gap={optimizerTabDefaultGap}>
       <Flex justify='space-between' align='center'>
         <HeaderText>{t('MainStats') /* Main stats */}</HeaderText>
         <TooltipImage type={Hint.mainStats()} />
       </Flex>
-      <Flex vertical gap={7}>
-        <Form.Item name='mainBody'>
-          <Select
-            mode='multiple'
-            allowClear
-            style={{
-              width: panelWidth,
-            }}
-            placeholder={t('common:Parts.Body')}
-            optionLabelProp='label'
-            maxTagCount='responsive'
-            suffixIcon={<img style={{ width: 16 }} src={Assets.getPart(Parts.Body)} />}
-          >
-            <Select.Option value={Constants.Stats.HP_P} label={t('common:ShortStats.HP%')}>{t('common:Stats.HP%')}</Select.Option>
-            <Select.Option value={Constants.Stats.ATK_P} label={t('common:ShortStats.ATK%')}>{t('common:Stats.ATK%')}</Select.Option>
-            <Select.Option value={Constants.Stats.DEF_P} label={t('common:ShortStats.DEF%')}>{t('common:Stats.DEF%')}</Select.Option>
-            <Select.Option value={Constants.Stats.CR} label={t('common:ShortStats.CRIT Rate')}>{t('common:Stats.CRIT Rate')}</Select.Option>
-            <Select.Option value={Constants.Stats.CD} label={t('common:ShortStats.CRIT DMG')}>{t('common:Stats.CRIT DMG')}</Select.Option>
-            <Select.Option value={Constants.Stats.EHR} label={t('common:ShortStats.Effect Hit Rate')}>{t('common:Stats.Effect Hit Rate')}</Select.Option>
-            <Select.Option value={Constants.Stats.OHB} label={t('common:ShortStats.Outgoing Healing Boost')}>
-              {t('common:Stats.Outgoing Healing Boost')}
-            </Select.Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item name='mainFeet'>
-          <Select
-            mode='multiple'
-            allowClear
-            style={{
-              width: panelWidth,
-            }}
-            placeholder={t('common:Parts.Feet')}
-            optionLabelProp='label'
-            maxTagCount='responsive'
-            suffixIcon={<img style={{ width: 16 }} src={Assets.getPart(Parts.Feet)} />}
-          >
-            <Select.Option value={Constants.Stats.HP_P} label={t('common:ShortStats.HP%')}>{t('common:Stats.HP%')}</Select.Option>
-            <Select.Option value={Constants.Stats.ATK_P} label={t('common:ShortStats.ATK%')}>{t('common:Stats.ATK%')}</Select.Option>
-            <Select.Option value={Constants.Stats.DEF_P} label={t('common:ShortStats.DEF%')}>{t('common:Stats.DEF%')}</Select.Option>
-            <Select.Option value={Constants.Stats.SPD} label={t('common:ShortStats.SPD')}>{t('common:Stats.SPD')}</Select.Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item name='mainPlanarSphere'>
-          <Select
-            mode='multiple'
-            allowClear
-            style={{
-              width: panelWidth,
-            }}
-            placeholder={t('common:Parts.PlanarSphere')}
-            optionLabelProp='label'
-            listHeight={400}
-            maxTagCount='responsive'
-            suffixIcon={<img style={{ width: 16 }} src={Assets.getPart(Parts.PlanarSphere)} />}
-          >
-            <Select.Option value={Constants.Stats.HP_P} label={t('common:ShortStats.HP%')}>{t('common:Stats.HP%')}</Select.Option>
-            <Select.Option value={Constants.Stats.ATK_P} label={t('common:ShortStats.ATK%')}>{t('common:Stats.ATK%')}</Select.Option>
-            <Select.Option value={Constants.Stats.DEF_P} label={t('common:ShortStats.DEF%')}>{t('common:Stats.DEF%')}</Select.Option>
-            <Select.Option value={Constants.Stats.Physical_DMG} label={t('common:ShortStats.Physical DMG Boost')}>
-              {t('common:Stats.Physical DMG Boost')}
-            </Select.Option>
-            <Select.Option value={Constants.Stats.Fire_DMG} label={t('common:ShortStats.Fire DMG Boost')}>{t('common:Stats.Fire DMG Boost')}</Select.Option>
-            <Select.Option value={Constants.Stats.Ice_DMG} label={t('common:ShortStats.Ice DMG Boost')}>{t('common:Stats.Ice DMG Boost')}</Select.Option>
-            <Select.Option value={Constants.Stats.Lightning_DMG} label={t('common:ShortStats.Lightning DMG Boost')}>
-              {t('common:Stats.Lightning DMG Boost')}
-            </Select.Option>
-            <Select.Option value={Constants.Stats.Wind_DMG} label={t('common:ShortStats.Wind DMG Boost')}>{t('common:Stats.Wind DMG Boost')}</Select.Option>
-            <Select.Option value={Constants.Stats.Quantum_DMG} label={t('common:ShortStats.Quantum DMG Boost')}>
-              {t('common:Stats.Quantum DMG Boost')}
-            </Select.Option>
-            <Select.Option value={Constants.Stats.Imaginary_DMG} label={t('common:ShortStats.Imaginary DMG Boost')}>
-              {t('common:Stats.Imaginary DMG Boost')}
-            </Select.Option>
-          </Select>
-        </Form.Item>
-
-        <Form.Item name='mainLinkRope'>
-          <Select
-            mode='multiple'
-            allowClear
-            style={{
-              width: panelWidth,
-            }}
-            placeholder={t('common:Parts.LinkRope')}
-            optionLabelProp='label'
-            maxTagCount='responsive'
-            suffixIcon={<img style={{ width: 16 }} src={Assets.getPart(Parts.LinkRope)} />}
-          >
-            <Select.Option value={Constants.Stats.HP_P} label={t('common:ShortStats.HP%')}>{t('common:Stats.HP%')}</Select.Option>
-            <Select.Option value={Constants.Stats.ATK_P} label={t('common:ShortStats.ATK%')}>{t('common:Stats.ATK%')}</Select.Option>
-            <Select.Option value={Constants.Stats.DEF_P} label={t('common:ShortStats.DEF%')}>{t('common:Stats.DEF%')}</Select.Option>
-            <Select.Option value={Constants.Stats.BE} label={t('common:ShortStats.Break Effect')}>{t('common:Stats.Break Effect')}</Select.Option>
-            <Select.Option value={Constants.Stats.ERR} label={t('common:ShortStats.Energy Regeneration Rate')}>
-              {t('common:Stats.Energy Regeneration Rate')}
-            </Select.Option>
-          </Select>
-        </Form.Item>
+      <Flex direction='column' gap={7}>
+        <MainStatBody />
+        <MainStatFeet />
+        <MainStatPlanarSphere />
+        <MainStatLinkRope />
       </Flex>
 
-      <Flex justify='space-between' align='center' style={{ marginTop: 30 }}>
+      <Flex justify='space-between' align='center' className={classes.setsHeader}>
         <HeaderText>{t('Sets') /* Sets */}</HeaderText>
         <TooltipImage type={Hint.sets()} />
       </Flex>
 
-      <Flex vertical gap={7}>
-        <ConfigProvider
-          theme={{
-            components: {
-              Cascader: {
-                dropdownHeight: 750,
-                controlItemWidth: 150,
-                controlWidth: 150,
-                optionPadding: '0px 12px',
-              },
-            },
-          }}
-        >
-          <Form.Item name='relicSets'>
-            <Cascader
-              popupClassName='relic-sets-cascader'
-              placeholder={t('RelicSetSelector.Placeholder')}
-              options={useMemo(() => GenerateSetsOptions(), [t])}
-              showCheckedStrategy={SHOW_CHILD}
-              tagRender={RelicSetTagRenderer}
-              placement='bottomLeft'
-              maxTagCount='responsive'
-              multiple={true}
-              expandTrigger='hover'
-            />
-          </Form.Item>
-        </ConfigProvider>
-
-        <Form.Item name='ornamentSets'>
-          <Select
-            dropdownStyle={{
-              width: 250,
-            }}
-            listHeight={800}
-            mode='multiple'
-            allowClear
-            style={{
-              width: panelWidth,
-            }}
-            options={useMemo(() => GenerateOrnamentsOptions(), [t])}
-            tagRender={OrnamentSetTagRenderer}
-            placeholder={t('OrnamentSetSelector.Placeholder')}
-            maxTagCount='responsive'
-          >
-          </Select>
-        </Form.Item>
+      <Flex direction='column' gap={7}>
         <Button
+          variant='default'
           onClick={() => setOpen(OpenCloseIDs.OPTIMIZER_SETS_DRAWER)}
-          icon={<SettingOutlined />}
+          leftSection={<IconSettings size={16} />}
         >
           {t('SetConditionals.Title') /* Conditional set effects */}
         </Button>
+        <RelicSetFilterRow />
+        <OrnamentSetFilterRow />
       </Flex>
     </Flex>
   )

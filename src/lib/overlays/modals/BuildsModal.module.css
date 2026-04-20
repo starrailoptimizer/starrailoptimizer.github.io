@@ -1,0 +1,50 @@
+.footerActions {
+  margin-top: 16px;
+}
+
+.actionButton {
+  height: 30px;
+  width: 30px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.emptyPreview {
+  width: 656px;
+  height: 900px;
+  border: 1px solid var(--border-default);
+}
+
+.buildList {
+  overflow-y: auto;
+  margin-bottom: 20px;
+  width: 100%;
+  min-width: 360px;
+  height: 840px;
+}
+
+.buildCard {
+  cursor: pointer;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--border-default);
+
+}
+
+.buildName {
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deleteButton {
+  width: 35px;
+  padding: 0;
+}
+
+.teammateImg {
+  position: relative;
+}

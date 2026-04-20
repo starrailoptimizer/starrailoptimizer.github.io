@@ -1,14 +1,17 @@
 import { lightConeConfigRegistry } from 'lib/conditionals/resolver/lightConeConfigRegistry'
-import { ElementName, PathName } from 'lib/constants/constants'
-import { CharacterId } from 'types/character'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { LightConeId } from 'types/lightCone'
+import type {
+  ElementName,
+  PathName,
+} from 'lib/constants/constants'
+import type { CharacterId } from 'types/character'
+import type { LightConeConditionalsController } from 'types/conditionals'
+import type { LightConeId } from 'types/lightCone'
 
-export type WearerMetadata = { element: ElementName; characterId: CharacterId }
+export type WearerMetadata = { element: ElementName, characterId: CharacterId }
 
 export const LightConeConditionalsResolver = {
   get: (
-    request: { lightCone: string; lightConeSuperimposition: number; lightConePath: PathName; path: PathName; element: ElementName; characterId: CharacterId },
+    request: { lightCone: string, lightConeSuperimposition: number, lightConePath: PathName, path: PathName, element: ElementName, characterId: CharacterId },
     withContent = false,
   ): LightConeConditionalsController => {
     const lcFn = lightConeConfigRegistry.get(request.lightCone as LightConeId)?.conditionals

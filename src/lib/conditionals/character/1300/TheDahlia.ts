@@ -16,8 +16,8 @@ import {
 import {
   AbilityEidolon,
   addSuperBreakHits,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -30,13 +30,13 @@ import {
   Stats,
 } from 'lib/constants/constants'
 import { Source } from 'lib/optimization/buffSource'
-import { ModifierContext } from 'lib/optimization/context/calculateActions'
+import { type ModifierContext } from 'lib/optimization/context/calculateActions'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -49,24 +49,25 @@ import {
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
-  RELICS_2P_BREAK_EFFECT_SPEED,
   SPREAD_ORNAMENTS_2P_ENERGY_REGEN,
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { Hit } from 'types/hitConditionalTypes'
+import { relics2pByStats } from 'lib/sets/setConfigRegistry'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type Hit } from 'types/hitConditionalTypes'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TheDahliaEntities = createEnum('TheDahlia')
@@ -79,7 +80,7 @@ export const TheDahliaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TheDahlia')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TheDahlia')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -143,13 +144,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'ultDefPen',
       formItem: 'switch',
       text: t('Content.ultDefPen.text'),
-      content: t('Content.ultDefPen.content', { DefShred: TsUtils.precisionRound(100 * ultDefPenValue) }),
+      content: t('Content.ultDefPen.content', { DefShred: precisionRound(100 * ultDefPenValue) }),
     },
     dancePartner: {
       id: 'dancePartner',
       formItem: 'switch',
       text: t('Content.dancePartner.text'),
-      content: t('Content.dancePartner.content', { SBScaling: TsUtils.precisionRound(100 * superBreakScaling) }),
+      content: t('Content.dancePartner.content', { SBScaling: precisionRound(100 * superBreakScaling) }),
     },
     superBreakDmg: {
       id: 'superBreakDmg',
@@ -437,6 +438,7 @@ const simulation = (): SimulationMetadata => ({
     Stats.ATK_P,
     Stats.CR,
     Stats.CD,
+    Stats.ATK,
   ],
   errRopeEidolon: 0,
   comboTurnAbilities: [
@@ -451,12 +453,11 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_FUA,
     WHOLE_BASIC,
   ],
-  comboDot: 0,
   deprioritizeBuffs: true,
   relicSets: [
     [Sets.IronCavalryAgainstTheScourge, Sets.IronCavalryAgainstTheScourge],
     [Sets.ThiefOfShootingMeteor, Sets.ThiefOfShootingMeteor],
-    RELICS_2P_BREAK_EFFECT_SPEED,
+    relics2pByStats(Stats.BE, Stats.SPD_P),
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
@@ -528,7 +529,12 @@ const display = {
     y: 950,
     z: 1.025,
   },
-  showcaseColor: '#586bec',
+  spineCenter: {
+    x: 1027,
+    y: 965,
+    z: 1.07,
+  },
+  showcaseColor: '#9290f8',
 }
 
 export const TheDahlia: CharacterConfig = {

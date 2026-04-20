@@ -1,26 +1,32 @@
+import { type PreviewRelics } from 'lib/characterPreview/characterPreviewController'
 import { CUSTOM_TEAM } from 'lib/constants/constants'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import type { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import { applyScoringFunction } from 'lib/scoring/simScoringUtils'
 import { BenchmarkSimulationOrchestrator } from 'lib/simulations/orchestrator/benchmarkSimulationOrchestrator'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
-import {
-  Character,
-  CharacterId,
-  SavedBuild,
-} from 'types/character'
-import {
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { getScoringMetadata } from 'lib/stores/scoring/scoringStore'
+import { clone } from 'lib/utils/objectUtils'
+import type { Character } from 'types/character'
+import type {
   ScoringMetadata,
   ShowcaseTemporaryOptions,
   SimulationMetadata,
 } from 'types/metadata'
+import type { SavedBuild } from 'types/savedBuild'
 
-export async function runDpsScoreBenchmarkOrchestrator(
+/**
+ * Prepare phase (steps 1-8): synchronous, ~5ms.
+ * Creates an orchestrator, runs setup + baseline + original sim.
+ * The orchestrator can then be passed to executeOrchestrator for the expensive async work.
+ */
+export function prepareOrchestrator(
   character: Character,
   simulationMetadata: SimulationMetadata,
-  singleRelicByPart: SingleRelicByPart,
+  singleRelicByPart: PreviewRelics,
   showcaseTemporaryOptions: ShowcaseTemporaryOptions,
-) {
-  const orchestrator = new BenchmarkSimulationOrchestrator(simulationMetadata)
+): BenchmarkSimulationOrchestrator {
+  // Clone metadata because setMetadata() mutates substats, parts, relicSets, ornamentSets in-place.
+  const orchestrator = new BenchmarkSimulationOrchestrator(clone(simulationMetadata))
 
   orchestrator.setMetadata()
   orchestrator.setOriginalSimRequestWithRelics(singleRelicByPart)
@@ -32,41 +38,56 @@ export async function runDpsScoreBenchmarkOrchestrator(
   orchestrator.setBaselineBuild()
   orchestrator.setOriginalBuild(showcaseTemporaryOptions.spdBenchmark)
 
-  await orchestrator.calculateBenchmark()
-  await orchestrator.calculatePerfection()
+  // Apply scoring function now so the preview simScore matches what calculateScores
+  // will produce later. This is idempotent — applyScoringFunction reads from
+  // result.x (ComputedStatsContainer), not from result.simScore.
+  applyScoringFunction(orchestrator.originalSimResult!, orchestrator.metadata, true, true)
+
+  return orchestrator
+}
+
+/**
+ * Execute phase (steps 9-13): async, ~500-2000ms.
+ * Runs the expensive benchmark + perfection search on a prepared orchestrator.
+ */
+export async function executeOrchestrator(
+  orchestrator: BenchmarkSimulationOrchestrator,
+): Promise<BenchmarkSimulationOrchestrator> {
+  // JSON clone strips closures (conditional registries, controllers) that
+  // postMessage's structured clone can't handle. The worker rebuilds them
+  // via initializeContextConditionals. Also flattens Float32Arrays to plain
+  // objects, which the worker reconstructs.
+  const clonedContext = clone(orchestrator.context!)
+
+  await orchestrator.calculateBenchmark(clonedContext)
+  await orchestrator.calculatePerfection(clonedContext)
 
   orchestrator.calculateScores()
+  // Initialize empty upgrades so the early SimulationScore is structurally valid
+  // (upgrade tables may render before calculateUpgrades completes)
+  orchestrator.substatUpgradeResults ??= []
+  orchestrator.setUpgradeResults ??= []
+  orchestrator.mainUpgradeResults ??= []
+  orchestrator.calculateResults()
+
+  return orchestrator
+}
+
+export async function executeUpgradeOrchestrator(orchestrator: BenchmarkSimulationOrchestrator) {
   orchestrator.calculateUpgrades()
   orchestrator.calculateResults()
 
   return orchestrator
 }
 
-const cache: Record<string, BenchmarkSimulationOrchestrator> = {}
-
-export function retrieveBenchmarkCache(
+export async function runDpsScoreBenchmarkOrchestrator(
   character: Character,
   simulationMetadata: SimulationMetadata,
   singleRelicByPart: SingleRelicByPart,
   showcaseTemporaryOptions: ShowcaseTemporaryOptions,
 ) {
-  const form = character.form
-
-  const cacheKey = TsUtils.objectHash({
-    form,
-    singleRelicByPart,
-    simulationMetadata,
-    showcaseTemporaryOptions,
-  })
-
-  return {
-    cacheKey: cacheKey,
-    cachedOrchestrator: cache[cacheKey],
-  }
-}
-
-export function setBenchmarkCache(cacheKey: string, orchestator: BenchmarkSimulationOrchestrator) {
-  cache[cacheKey] = orchestator
+  const orchestrator = prepareOrchestrator(character, simulationMetadata, singleRelicByPart, showcaseTemporaryOptions)
+  return executeOrchestrator(orchestrator)
 }
 
 export function resolveDpsScoreSimulationMetadata(
@@ -78,22 +99,23 @@ export function resolveDpsScoreSimulationMetadata(
   const form = character.form
 
   if (!character?.id || !form) {
-    console.log('Invalid character sim setup')
+    console.warn('Invalid character sim setup')
     return null
   }
 
-  const customSimulation = TsUtils.clone(DB.getScoringMetadata(characterId).simulation)
-  const simulation = TsUtils.clone(DB.getMetadata().characters[characterId].scoringMetadata.simulation)
+  const customSimulation = getScoringMetadata(characterId).simulation
+  const defaultSimulation = getGameMetadata().characters[characterId].scoringMetadata.simulation
 
-  if (!simulation || !customSimulation) {
+  if (!defaultSimulation || !customSimulation) {
     console.log('No scoring sim defined for this character')
     return null
   }
 
-  // Merge any necessary configs from the custom metadata
+  // Shallow copy — only .teammates and .deprioritizeBuffs are reassigned
+  const simulation = { ...defaultSimulation }
 
-  simulation.teammates = getTeammates(teamSelection, customSimulation, simulation, buildOverride)
-  simulation.deprioritizeBuffs = buildOverride != undefined
+  simulation.teammates = getTeammates(teamSelection, customSimulation, defaultSimulation, buildOverride)
+  simulation.deprioritizeBuffs = buildOverride != undefined && 'deprioritizeBuffs' in buildOverride
     ? buildOverride.deprioritizeBuffs
     : customSimulation.deprioritizeBuffs ?? false
 
@@ -107,14 +129,19 @@ function getTeammates(
   buildOverride?: SavedBuild | null,
 ): SimulationMetadata['teammates'] {
   if (buildOverride != undefined) {
-    return buildOverride.team.map((t) => ({
-      characterId: t.characterId,
-      lightCone: t.lightConeId,
-      characterEidolon: t.eidolon,
-      lightConeSuperimposition: t.superimposition,
-      teamRelicSet: t.relicSet,
-      teamOrnamentSet: t.ornamentSet,
-    }))
+    const teammates: SimulationMetadata['teammates'] = []
+    for (const t of buildOverride.team) {
+      if (t == null) continue
+      teammates.push({
+        characterId: t.characterId,
+        lightCone: t.lightCone,
+        characterEidolon: t.characterEidolon,
+        lightConeSuperimposition: t.lightConeSuperimposition,
+        teamRelicSet: t.teamRelicSet,
+        teamOrnamentSet: t.teamOrnamentSet,
+      })
+    }
+    return teammates
   }
   if (teamSelection === CUSTOM_TEAM) {
     return customSimulation.teammates ?? defaultSimulation.teammates

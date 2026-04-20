@@ -1,4 +1,7 @@
-import { SetKey, Sets } from 'lib/constants/constants'
+import {
+  type SetKey,
+  Sets,
+} from 'lib/constants/constants'
 import {
   OrnamentSetKeyToIndex,
   RelicSetKeyToIndex,
@@ -10,17 +13,13 @@ export const SetKeys: Record<SetKey, SetKey> = Object.fromEntries(
 ) as Record<SetKey, SetKey>
 
 export type SetCounts = {
-  relicMatch2: number
-  relicMatch4: number
-  ornamentMatch2: number
+  relicMatch2: number,
+  relicMatch4: number,
+  ornamentMatch2: number,
 }
 
 export function ornament2p(key: SetKey, sets: SetCounts) {
   return (sets.ornamentMatch2 >> OrnamentSetKeyToIndex[key]) & 1
-}
-
-export function relic2p(key: SetKey, sets: SetCounts) {
-  return (sets.relicMatch2 >> RelicSetKeyToIndex[key]) & 1
 }
 
 export function relic4p(key: SetKey, sets: SetCounts) {

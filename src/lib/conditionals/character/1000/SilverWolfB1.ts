@@ -3,8 +3,8 @@ import { Cipher } from 'lib/conditionals/character/1400/Cipher'
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -29,7 +29,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   END_SKILL,
@@ -40,24 +40,26 @@ import {
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
-  RELICS_2P_SPEED,
   SPREAD_ORNAMENTS_2P_ENERGY_REGEN,
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { relics2pByStats } from 'lib/sets/setConfigRegistry'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SilverWolfB1Entities = createEnum('SilverWolfB1')
@@ -69,7 +71,7 @@ export const SilverWolfB1Abilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.SilverWolfB1.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.SilverWolfB1.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -126,20 +128,20 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillResShredDebuff',
       formItem: 'switch',
       text: t('skillResShredDebuff.text'),
-      content: t('skillResShredDebuff.content', { SkillResShred: TsUtils.precisionRound(100 * skillResShredValue) }),
+      content: t('skillResShredDebuff.content', { SkillResShred: precisionRound(100 * skillResShredValue) }),
     },
     skillWeaknessResShredDebuff: {
       id: 'skillWeaknessResShredDebuff',
       formItem: 'switch',
       text: t('skillWeaknessResShredDebuff.text'),
-      content: t('skillWeaknessResShredDebuff.content', { ImplantBaseChance: TsUtils.precisionRound(skill(e, 120, 128)) }),
+      content: t('skillWeaknessResShredDebuff.content', { ImplantBaseChance: precisionRound(skill(e, 120, 128)) }),
     },
     talentDefShredDebuff: {
       id: 'talentDefShredDebuff',
       formItem: 'switch',
       text: t('talentDefShredDebuff.text'),
       content: t('talentDefShredDebuff.content', {
-        BugBaseChance: TsUtils.precisionRound(100 * bugBaseChance),
+        BugBaseChance: precisionRound(100 * bugBaseChance),
         BugAtkDown: talent(e, 10, 11),
         BugDefDown: talent(e, 12, 13.2),
         BugSpdDown: talent(e, 6, 6.6),
@@ -150,15 +152,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('ultDefShredDebuff.text'),
       content: t('ultDefShredDebuff.content', {
-        UltDefShred: TsUtils.precisionRound(100 * ultDefShredValue),
-        UltBaseChance: TsUtils.precisionRound(100 * ultBaseChance),
+        UltDefShred: precisionRound(100 * ultDefShredValue),
+        UltBaseChance: precisionRound(100 * ultBaseChance),
       }),
     },
     targetDebuffs: {
       id: 'targetDebuffs',
       formItem: 'slider',
       text: t('targetDebuffs.text'),
-      content: t('targetDebuffs.content', { BugBaseChance: TsUtils.precisionRound(100 * bugBaseChance) }),
+      content: t('targetDebuffs.content', { BugBaseChance: precisionRound(100 * bugBaseChance) }),
       min: 0,
       max: 5,
     },
@@ -290,7 +292,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
             action,
             context,
             SOURCE_TRACE,
-            (convertibleValue) => Math.min(0.50, 0.10 * Math.floor(convertibleValue / 0.10)) * context.baseATK,
+            (convertibleValue) => Math.min(0.50, 0.10 * floorSafe(convertibleValue / 0.10)) * context.baseATK,
           )
         },
         gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -302,7 +304,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
             this,
             action,
             context,
-            `min(0.50, 0.10 * floor(convertibleValue / 0.10)) * baseATK`,
+            `min(0.50, 0.10 * floorSafe(convertibleValue / 0.10)) * baseATK`,
             `${wgslTrue(r.ehrToAtkConversion)}`,
           )
         },
@@ -348,13 +350,12 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
   ],
   deprioritizeBuffs: true,
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.PioneerDiverOfDeadWaters, Sets.PioneerDiverOfDeadWaters],
     [Sets.GeniusOfBrilliantStars, Sets.GeniusOfBrilliantStars],
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
-    RELICS_2P_SPEED,
+    relics2pByStats(Stats.SPD_P),
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
@@ -441,7 +442,7 @@ const display = {
     y: 950,
     z: 1,
   },
-  showcaseColor: '#8483eb',
+  showcaseColor: '#8d92f9',
 }
 
 export const SilverWolfB1: CharacterConfig = {

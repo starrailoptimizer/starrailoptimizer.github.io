@@ -1,0 +1,37 @@
+.card {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--layer-2);
+  overflow: hidden;
+  box-shadow: var(--shadow-card-flat);
+}
+
+.rightCol {
+  flex-shrink: 0;
+}
+
+.rightColLc {
+  flex-shrink: 0;
+}
+
+/* ---- Avatar ---- */
+
+.avatar {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+}
+
+.avatar:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- Segmented control ---- */
+
+.segmented :global(.mantine-SegmentedControl-label) {
+  padding-inline: 0;
+  min-width: 0;
+}
+

@@ -1,0 +1,19 @@
+.comboContainer {
+  height: 275px;
+}
+
+.abilitiesColumn {
+  margin-left: 0;
+}
+
+.advancedButtonContainer {
+  margin-top: 8px;
+}
+
+/* Override Mantine's high-specificity [data-disabled] styles on inputs */
+.simpleAbilities [data-disabled] {
+  background: transparent !important;
+  border-color: transparent !important;
+  opacity: 1 !important;
+  cursor: default !important;
+}

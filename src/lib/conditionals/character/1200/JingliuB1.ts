@@ -3,8 +3,8 @@ import { Hyacine } from 'lib/conditionals/character/1400/Hyacine'
 import { Tribbie } from 'lib/conditionals/character/1400/Tribbie'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -22,7 +22,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_ULT,
@@ -36,17 +36,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const JingliuB1Entities = createEnum('JingliuB1')
@@ -58,7 +59,7 @@ export const JingliuB1Abilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.JingliuB1.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.JingliuB1.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_TALENT_3_SKILL_BASIC_5
   const {
     SOURCE_BASIC,
@@ -97,7 +98,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentEnhancedState',
       formItem: 'switch',
       text: t('talentEnhancedState.text'),
-      content: t('talentEnhancedState.content', { UltCRBuff: TsUtils.precisionRound(100 * talentCrBuff) }),
+      content: t('talentEnhancedState.content', { UltCRBuff: precisionRound(100 * talentCrBuff) }),
     },
     maxSyzygyDefPen: {
       id: 'maxSyzygyDefPen',
@@ -109,7 +110,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'moonlightStacks',
       formItem: 'slider',
       text: t('moonlightStacks.text'),
-      content: t('moonlightStacks.content', { MoonlightCDBuff: TsUtils.precisionRound(100 * talentCdScaling) }),
+      content: t('moonlightStacks.content', { MoonlightCDBuff: precisionRound(100 * talentCdScaling) }),
       min: 0,
       max: 5,
     },
@@ -274,7 +275,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     [Sets.GeniusOfBrilliantStars, Sets.GeniusOfBrilliantStars],
@@ -353,7 +353,8 @@ const display = {
     y: 930,
     z: 1,
   },
-  showcaseColor: '#3e65f2',
+  disableSpine: true,
+  showcaseColor: '#8d92f9',
 }
 
 export const JingliuB1: CharacterConfig = {

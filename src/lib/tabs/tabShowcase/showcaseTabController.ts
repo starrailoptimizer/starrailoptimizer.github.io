@@ -11,42 +11,33 @@ import {
   TrailblazerElationStelle,
 } from 'lib/conditionals/character/8000/TrailblazerElation'
 import { ElationBrimmingWithBlessings } from 'lib/conditionals/lightcone/5star/ElationBrimmingWithBlessings'
-import { EncounterAtFloweringsComing } from 'lib/conditionals/lightcone/5star/EncounterAtFloweringsComing'
 import { InTheNameOfTheWorld } from 'lib/conditionals/lightcone/5star/InTheNameOfTheWorld'
 import { InTheNight } from 'lib/conditionals/lightcone/5star/InTheNight'
 import { NightOfFright } from 'lib/conditionals/lightcone/5star/NightOfFright'
 import { TheFinaleOfALie } from 'lib/conditionals/lightcone/5star/TheFinaleOfALie'
-import { WelcomeToTheCityOfStars } from 'lib/conditionals/lightcone/5star/WelcomeToTheCityOfStars'
+import { UntilTheFlowersBloomAgain } from 'lib/conditionals/lightcone/5star/UntilTheFlowersBloomAgain'
+import { WelcomeToTheCosmicCity } from 'lib/conditionals/lightcone/5star/WelcomeToTheCosmicCity'
 import { WhereaboutsShouldDreamsRest } from 'lib/conditionals/lightcone/5star/WhereaboutsShouldDreamsRest'
 import {
-  CharacterConverter,
-  UnconvertedCharacter,
-} from 'lib/importer/characterConverter'
-import { Message } from 'lib/interactions/message'
-import DB, {
   AppPages,
   PageToRoute,
-} from 'lib/state/db'
+} from 'lib/constants/appPages'
+import { Message } from 'lib/interactions/message'
+import type { CharacterModalForm } from 'lib/overlays/modals/characterModalStore'
+import * as persistenceService from 'lib/services/persistenceService'
+import { getGameMetadata } from 'lib/state/gameMetadata'
 import { SaveState } from 'lib/state/saveState'
+import { submitForm } from 'lib/tabs/tabShowcase/showcaseApi'
+import type { ShowcaseTabCharacter } from 'lib/tabs/tabShowcase/showcaseTabTypes'
 import {
-  APIResponse,
-  processEnkaData,
-  processMihomoData,
-} from 'lib/tabs/tabShowcase/dataProcessors'
-import {
-  ShowcaseTabCharacter,
+  getSelectedCharacter,
   useShowcaseTabStore,
 } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { LightConeId } from 'types/lightCone'
+import type { CharacterId } from 'types/character'
+import type { Form } from 'types/form'
+import type { LightConeId } from 'types/lightCone'
 
-export const API_ENDPOINT = 'https://9di5b7zvtb.execute-api.us-west-2.amazonaws.com/prod'
-
-export type ShowcaseTabForm = {
-  scorerId: string | null,
-}
+// ── Preset types ──
 
 export type Preset = CharacterPreset | FillerPreset
 
@@ -66,14 +57,16 @@ type FillerPreset = {
   custom: true,
 }
 
+// ── Preset characters ──
+
 export function presetCharacters(): Preset[] {
-  const DBMetadata = DB.getMetadata()
+  const DBMetadata = getGameMetadata()
   const char = (id: CharacterId) => Object.values(DBMetadata.characters).some((x) => x.id === id) ? id : null
   const lc = (id: LightConeId) => Object.values(DBMetadata.lightCones).some((x) => x.id === id) ? id : null
 
   return [
-    { characterId: char(SilverWolfLv999.id), lightConeId: lc(WelcomeToTheCityOfStars.id) },
-    { characterId: char(Evanescia.id), lightConeId: lc(EncounterAtFloweringsComing.id) },
+    { characterId: char(SilverWolfLv999.id), lightConeId: lc(WelcomeToTheCosmicCity.id) },
+    { characterId: char(Evanescia.id), lightConeId: lc(UntilTheFlowersBloomAgain.id) },
     { characterId: char(TrailblazerElationStelle.id), lightConeId: lc(ElationBrimmingWithBlessings.id), characterEidolon: 6, lightConeSuperimposition: 5 },
     { characterId: char(TrailblazerElationCaelus.id), lightConeId: lc(ElationBrimmingWithBlessings.id), characterEidolon: 6, lightConeSuperimposition: 5 },
     { characterId: char(Ashveil.id), lightConeId: lc(TheFinaleOfALie.id) },
@@ -90,165 +83,88 @@ export function presetCharacters(): Preset[] {
   ].filter((x) => x.custom || !!x.characterId) as Preset[]
 }
 
-export function onCharacterModalOk(form: ShowcaseTabCharacter['form']) {
-  const t = i18next.getFixedT(null, 'relicScorerTab', 'Messages')
-  const state = useShowcaseTabStore.getState()
-  if (!form.characterId) {
-    return Message.error(t('NoCharacterSelected') /* No selected character */)
-  }
-  if (state.availableCharacters?.find((x) => x.id === form.characterId) && state.selectedCharacter?.id !== form.characterId) {
-    return Message.error(t('CharacterAlreadyExists') /* Selected character already exists */)
-  }
+// ── Initialization ──
 
-  const selectedCharacter = TsUtils.clone(state.selectedCharacter)!
-  const availableCharacters = TsUtils.clone(state.availableCharacters)!
-  selectedCharacter.form = form
-  selectedCharacter.id = form.characterId
-  Object.values(selectedCharacter.equipped)
-    .filter((x) => !!x)
-    .forEach((x) => x.equippedBy = form.characterId!)
-  availableCharacters[selectedCharacter.index] = selectedCharacter
-
-  state.setSelectedCharacter(selectedCharacter)
-  state.setAvailableCharacters(availableCharacters)
-  console.log('Modified character', selectedCharacter)
+export function parseShowcaseUrlId(): string | null {
+  return window.location.href.split('?')[1]?.split('id=')[1]?.split('&')[0] ?? null
 }
 
-export function importClicked(mode: 'relics' | 'singleCharacter' | 'multiCharacter') {
-  const state = useShowcaseTabStore.getState()
+/**
+ * Called once on mount — handles URL parameter and saved session auto-load.
+ * URL parameter takes priority over saved session.
+ */
+export function initializeShowcaseOnMount(): void {
+  const urlId = parseShowcaseUrlId()
+  const { savedSession, availableCharacters } = useShowcaseTabStore.getState()
 
-  let newCharacters: ShowcaseTabCharacter[] = []
+  if (urlId) {
+    // URL parameter takes priority — load that profile
+    submitForm({ scorerId: urlId }, { skipCooldown: true })
+  } else if (!availableCharacters?.length && savedSession.scorerId) {
+    // No URL param, no data yet, but saved session has a UID — auto-load
+    submitForm({ scorerId: savedSession.scorerId }, { skipCooldown: true })
+  }
+  // Otherwise: stay on Landing screen, wait for user input
+}
 
-  if (mode === 'singleCharacter' && state.selectedCharacter?.form) {
-    DB.addFromForm(state.selectedCharacter.form as Form, false)
-    newCharacters = [state.selectedCharacter]
-  } else if (mode === 'multiCharacter' && state.availableCharacters) {
-    state.availableCharacters?.forEach((char) => {
-      DB.addFromForm(char.form as Form)
-    })
-    newCharacters = state.availableCharacters
+/**
+ * Called on tab activation (via activation listener) — URL sync only.
+ * Guard: only writes URL if data is loaded and scorerId exists.
+ */
+export function syncShowcaseUrl(): void {
+  const { availableCharacters, savedSession } = useShowcaseTabStore.getState()
+  const { scorerId } = savedSession
+
+  if (availableCharacters?.length && scorerId) {
+    window.history.replaceState(
+      { id: scorerId },
+      `profile: ${scorerId}`,
+      PageToRoute[AppPages.SHOWCASE] + `?id=${scorerId}`,
+    )
+  }
+}
+
+// ── Controller functions (moved from store — side effects belong here) ──
+
+/**
+ * Handles character modal OK — validation + error messages + store update.
+ * Keep: null characterId check.
+ * Dropped: duplicate character restriction (users can simulate same character on multiple slots).
+ */
+export function handleCharacterModalOk(form: CharacterModalForm): void {
+  const t = i18next.getFixedT(null, 'relicScorerTab', 'Messages')
+
+  if (!form.characterId || !form.lightCone) {
+    return Message.error(t('NoCharacterSelected') /* No selected character */)
   }
 
-  const newRelics = state.availableCharacters
+  // Safe cast: after guards, characterId and lightCone are non-null
+  useShowcaseTabStore.getState().applyCharacterOverride(form as ShowcaseTabCharacter['form'])
+}
+
+/**
+ * Handles importing showcase characters/relics into the optimizer.
+ * Persistence side effects live here, not in the store.
+ */
+export function importShowcaseCharacters(mode: 'relics' | 'singleCharacter' | 'multiCharacter'): void {
+  const selectedCharacter = getSelectedCharacter()
+  const { availableCharacters } = useShowcaseTabStore.getState()
+  let newCharacters: ShowcaseTabCharacter[] = []
+
+  if (mode === 'singleCharacter' && selectedCharacter?.form) {
+    persistenceService.upsertCharacterFromForm(selectedCharacter.form as Form)
+    newCharacters = [selectedCharacter]
+  } else if (mode === 'multiCharacter' && availableCharacters) {
+    availableCharacters.forEach((char) => {
+      persistenceService.upsertCharacterFromForm(char.form as Form)
+    })
+    newCharacters = availableCharacters
+  }
+
+  const newRelics = availableCharacters
     ?.flatMap((x) => Object.values(x.equipped))
     .filter((x) => !!x)
 
-  console.log('import clicked! mode:', mode, 'relics:', newRelics)
-
-  DB.mergePartialRelicsWithState(newRelics, newCharacters)
+  persistenceService.mergePartialRelics(newRelics, newCharacters)
   SaveState.delayedSave()
-}
-
-export function initialiseShowcaseTab(activeKey: AppPages) {
-  const { savedSession, availableCharacters } = useShowcaseTabStore.getState()
-  const { scorerId } = savedSession
-
-  if (activeKey !== AppPages.SHOWCASE) return
-
-  // load showcase if id present in url | only applies to initial website load
-  const id: string | null = window.location.href.split('?')[1]?.split('id=')[1]?.split('&')[0] ?? null
-  if (id) submitForm({ scorerId: id })
-
-  // add id to url when navigating if a showcase is already loaded
-  if (availableCharacters?.length && scorerId && activeKey === AppPages.SHOWCASE) {
-    window.history.replaceState({ id: scorerId }, `profile: ${scorerId}`, PageToRoute[AppPages.SHOWCASE] + `?id=${scorerId}`)
-  }
-  // load showcase when the user first visits the tab
-  if (!id && !availableCharacters?.length) submitForm({ scorerId })
-}
-
-const throttleSeconds = 10
-
-export function submitForm(form: ShowcaseTabForm) {
-  if (!form.scorerId) return
-  const t = i18next.getFixedT(null, 'relicScorerTab', 'Messages')
-  const {
-    setSelectedCharacter,
-    setAvailableCharacters,
-    latestRefreshDate,
-    setLatestRefreshDate,
-    setLoading,
-    loading,
-    setScorerId,
-  } = useShowcaseTabStore.getState()
-
-  console.log('scorerId:', form.scorerId)
-  const id = form.scorerId?.trim() ?? ''
-
-  if (id.length != 9) {
-    setLoading(false)
-    Message.error(t('InvalidIdWarning') /* Invalid ID */)
-    return
-  }
-
-  if (latestRefreshDate) {
-    const t = i18next.getFixedT(null, 'relicScorerTab', 'Messages')
-    Message.warning(t('ThrottleWarning', /* Please wait {{seconds}} seconds before retrying */ {
-      seconds: Math.max(1, Math.ceil(throttleSeconds - (new Date().getTime() - latestRefreshDate.getTime()) / 1000)),
-    }))
-    if (loading) {
-      setLoading(false)
-    }
-    return
-  } else {
-    setLoading(true)
-    setLatestRefreshDate(new Date())
-    setTimeout(() => {
-      setLatestRefreshDate(null)
-    }, throttleSeconds * 1000)
-  }
-
-  setScorerId(id)
-  SaveState.delayedSave()
-
-  window.history.replaceState({ id: id }, `profile: ${id}`, PageToRoute[AppPages.SHOWCASE] + `?id=${id}`)
-
-  void fetch(`${API_ENDPOINT}/profile/${id}`, { method: 'GET' })
-    .then((response) => {
-      if (!response.ok) throw new Error(`HTTP Error! Status: ${response.status}`)
-      return response.json() as Promise<APIResponse>
-    })
-    .then((data) => {
-      console.log(data)
-
-      let characters: UnconvertedCharacter[]
-      // backup
-      if (data.source === 'mihomo') {
-        characters = processMihomoData(data)
-        // enka
-      } else if (data.source === 'enka') {
-        characters = processEnkaData(data)
-      } else {
-        setLoading(false)
-        Message.error(t('IdLoadError') /* Error loading ID */)
-        return
-      }
-
-      console.log('characters', characters)
-
-      // Remove duplicate characters (the same character can be placed in both one of the first 3 slots and one of the latter 5)
-      const converted = characters
-        .map((x) => CharacterConverter.convert(x))
-        .filter((
-          value,
-          index,
-          self,
-        ) => self.map((x) => x.id).indexOf(value.id) == index)
-      converted.forEach((x, index) => x.index = index)
-
-      setAvailableCharacters(converted)
-      if (converted.length) {
-        setSelectedCharacter(converted[0])
-      }
-      setLoading(false)
-      Message.success(t('SuccessMsg') /* Successfully loaded profile */)
-      window.showcaseTabForm.setFieldValue('scorerId', id)
-    })
-    .catch((error) => {
-      setTimeout(() => {
-        Message.warning(t('LookupError') /* Error during lookup, please try again in a bit */)
-        console.error('Fetch error:', error)
-        setLoading(false)
-      }, 1000 * 5)
-    })
 }

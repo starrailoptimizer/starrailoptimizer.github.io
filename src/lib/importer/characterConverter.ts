@@ -1,18 +1,20 @@
 import {
   Constants,
+  type Parts,
+} from 'lib/constants/constants'
+import type {
   MainStats,
-  Parts,
   SubStats,
 } from 'lib/constants/constants'
 import { RelicAugmenter } from 'lib/relics/relicAugmenter'
-import DB from 'lib/state/db'
-import { ShowcaseTabCharacter } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
-import { Utils } from 'lib/utils/utils'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
-import { Relic } from 'types/relic'
-
-// FIXME MED
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import type { ShowcaseTabCharacter } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { uuid } from 'lib/utils/miscUtils'
+import { isFlat } from 'lib/utils/statUtils'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
+import type { Relic } from 'types/relic'
 
 const partConversion = {
   1: Constants.Parts.Head,
@@ -56,7 +58,7 @@ export type UnconvertedCharacter = {
   relicList?: PreRelic[],
   equipment?: PreLightCone,
   rank?: number,
-  avatarId: CharacterId,
+  avatarId: number | string, // API sends number; dataProcessors may append enhancedId suffix
 }
 
 type PreRelic = {
@@ -98,7 +100,7 @@ export const CharacterConverter = {
     const preRelics = character.relicList ?? []
     const preLightCone = character.equipment
     const characterEidolon = character.rank ?? 0
-    const id = '' + character.avatarId as CharacterId
+    const id = String(character.avatarId) as CharacterId
     const lightConeId = preLightCone ? ('' + preLightCone.tid) as LightConeId : null
     const lightConeSuperimposition = preLightCone ? preLightCone.rank : 0
 
@@ -113,7 +115,7 @@ export const CharacterConverter = {
 
     return {
       id: id,
-      key: Utils.randomId(),
+      key: uuid(),
       index: 0, // gets overwritten later
       form: {
         characterId: id,
@@ -146,24 +148,24 @@ const tidOverrides = {
 
 function convertRelic(preRelic: PreRelic) {
   try {
-    const metadata = DB.getMetadata().relics
+    const metadata = getGameMetadata().relics
     const tid = '' + preRelic.tid
 
     const enhance: Relic['enhance'] = preRelic.level || 0
 
     let setId = tid.substring(1, 4)
-    // @ts-ignore
+    // @ts-expect-error - tidOverrides keys are numeric but tid is string
     if (tidOverrides[tid]) {
-      // @ts-ignore
+      // @ts-expect-error - tidOverrides keys are numeric but tid is string
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       setId = tidOverrides[tid].set
     }
     const setName = metadata.relicSets[setId].name
 
     let partId = tid.substring(4, 5) as '1' | '2' | '3' | '4' | '5' | '6'
-    // @ts-ignore
+    // @ts-expect-error - tidOverrides keys are numeric but tid is string
     if (tidOverrides[tid]) {
-      // @ts-ignore
+      // @ts-expect-error - tidOverrides keys are numeric but tid is string
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       partId = tidOverrides[tid].part
     }
@@ -176,13 +178,13 @@ function convertRelic(preRelic: PreRelic) {
     if (!mainId) {
       mainId = Number(
         Object.values(metadata.relicMainAffixes[`${grade}${partId}`].affixes)
-          .find((x) => x.property == preRelic.main_affix.type)!.affix_id,
+          .find((x) => x.property === preRelic.main_affix.type)!.affix_id,
       )
     }
     let mainData = metadata.relicMainAffixes[`${grade}${partId}`].affixes[mainId]
-    // @ts-ignore
+    // @ts-expect-error - tidOverrides keys are numeric but tid is string
     if (tidOverrides[tid]) {
-      // @ts-ignore
+      // @ts-expect-error - tidOverrides keys are numeric but tid is string
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       mainData = metadata.relicMainAffixes[tidOverrides[tid].main].affixes[mainId]
     }
@@ -194,7 +196,7 @@ function convertRelic(preRelic: PreRelic) {
 
     const main: Relic['main'] = {
       stat: mainStat,
-      value: Utils.precisionRound(mainValue * (Utils.isFlat(mainStat) ? 1 : 100), 5),
+      value: precisionRound(mainValue * (isFlat(mainStat) ? 1 : 100), 5),
     }
 
     const substats: Relic['substats'] = []
@@ -203,7 +205,7 @@ function convertRelic(preRelic: PreRelic) {
       if (!subId) {
         subId = Number(
           Object.values(metadata.relicSubAffixes[`${grade}`].affixes)
-            .find((x) => x.property == sub.type)!.affix_id,
+            .find((x) => x.property === sub.type)!.affix_id,
         )
       }
       const count: number = sub.cnt ?? sub.count
@@ -221,14 +223,14 @@ function convertRelic(preRelic: PreRelic) {
 
         substats.push({
           stat: subStat,
-          value: Utils.precisionRound(subValue * (Utils.isFlat(subStat) ? 1 : 100), 5),
+          value: precisionRound(subValue * (isFlat(subStat) ? 1 : 100), 5),
           addedRolls: Math.max(0, count - 1),
           rolls,
         })
       } else {
         substats.push({
           stat: subStat,
-          value: Utils.precisionRound(subValue * (Utils.isFlat(subStat) ? 1 : 100), 5),
+          value: precisionRound(subValue * (isFlat(subStat) ? 1 : 100), 5),
         })
       }
     }
@@ -257,7 +259,7 @@ export function rollCounter(count: number | undefined, step: number | undefined)
     rolls.low = count
 
     for (let i = 0; i < step; i++) {
-      if (rolls.low == 0) {
+      if (rolls.low === 0) {
         rolls.high++
         rolls.mid--
       } else {

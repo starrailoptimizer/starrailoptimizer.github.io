@@ -1,17 +1,18 @@
-import { ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
+import { type ConvertibleStatsType } from 'lib/conditionals/evaluation/statConversionConfig'
 import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
 import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightConeConditionalsResolver'
 import { Stats } from 'lib/constants/constants'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import { type DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import { resetConditionalState } from 'lib/optimization/conditionalStateUtils'
 import { getAllSetDynamicConditionals } from 'lib/sets/setConfigRegistry'
 import {
-  CharacterConditionalsController,
-  LightConeConditionalsController,
+  type CharacterConditionalsController,
+  type LightConeConditionalsController,
 } from 'types/conditionals'
 import {
-  CharacterMetadata,
-  OptimizerAction,
-  OptimizerContext,
+  type CharacterMetadata,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export function calculateContextConditionalRegistry(
@@ -34,10 +35,10 @@ export function calculateContextConditionalRegistry(
   registerTeammateConditionals(conditionalRegistry, context.teammate2Metadata, action, 2)
 
   action.conditionalRegistry = conditionalRegistry
-  action.conditionalState = {}
+  resetConditionalState(action)
 }
 
-export function registerTeammateConditionals(
+function registerTeammateConditionals(
   conditionalRegistry: ConditionalRegistry,
   teammateMetadata: CharacterMetadata,
   action: OptimizerAction,

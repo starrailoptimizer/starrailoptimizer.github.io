@@ -1,25 +1,26 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  LightConeConditionalFunction,
-  LightConeConfig,
+  type LightConeConditionalFunction,
+  type LightConeConfig,
 } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals: LightConeConditionalFunction = (s, withContent) => {
   const { SOURCE_LC } = Source.lightCone(WhenSheDecidedToSee.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.WhenSheDecidedToSee.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.WhenSheDecidedToSee.Content')
 
   const sValuesCr = [0.10, 0.11, 0.12, 0.13, 0.14]
   const sValuesCd = [0.30, 0.375, 0.45, 0.525, 0.60]
@@ -40,9 +41,9 @@ const conditionals: LightConeConditionalFunction = (s, withContent) => {
       formItem: 'switch',
       text: t('greatFortune.text'),
       content: t('greatFortune.content', {
-        critDamageBuff: TsUtils.precisionRound(100 * sValuesCd[s]),
-        critRateBuff: TsUtils.precisionRound(100 * sValuesCr[s]),
-        errBuff: TsUtils.precisionRound(100 * sValuesErr[s]),
+        critDamageBuff: precisionRound(100 * sValuesCd[s]),
+        critRateBuff: precisionRound(100 * sValuesCr[s]),
+        errBuff: precisionRound(100 * sValuesErr[s]),
       }),
     },
   }

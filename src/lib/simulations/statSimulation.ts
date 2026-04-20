@@ -1,31 +1,30 @@
+import type { MainStats } from 'lib/constants/constants'
 import {
   Constants,
-  MainStats,
   Parts,
   Stats,
   SubStats,
 } from 'lib/constants/constants'
 import { BasicStatsArrayCore } from 'lib/optimization/basicStatsArray'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { resetConditionalState } from 'lib/optimization/conditionalStateUtils'
 import { GlobalRegister } from 'lib/optimization/engine/config/keys'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { StatCalculator } from 'lib/relics/statCalculator'
-import {
-  cloneSimResult,
-  SimulationFlags,
-} from 'lib/scoring/simScoringUtils'
+import { cloneSimResult } from 'lib/scoring/simScoringUtils'
+import type { SimulationFlags } from 'lib/scoring/simScoringUtils'
 import { simulateBuild } from 'lib/simulations/simulateBuild'
-import {
+import type {
   RunSimulationsParams,
   RunStatSimulationsResult,
   Simulation,
   SimulationRelic,
   SimulationRelicByPart,
-  StatSimTypes,
 } from 'lib/simulations/statSimulationTypes'
+import { StatSimTypes } from 'lib/simulations/statSimulationTypes'
 import { precisionRound } from 'lib/utils/mathUtils'
 import { isFlat } from 'lib/utils/statUtils'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import type { Form } from 'types/form'
+import type { OptimizerContext } from 'types/optimizer'
 
 const defaultSimulationParams: RunSimulationsParams = {
   quality: 1,
@@ -60,7 +59,7 @@ export function runStatSimulations(
   const forcedBasicSpd = params.simulationFlags.benchmarkBasicSpdTarget
   const simulationResults: RunStatSimulationsResult[] = []
   for (const action of context.allActions) {
-    action.conditionalState = {}
+    resetConditionalState(action)
   }
 
   const container = trace ? null : cachedComputedStatsContainer
@@ -69,13 +68,14 @@ export function runStatSimulations(
     const simRelics = generateSimRelics(sim, params)
     const basicStatsArray = trace ? new BasicStatsArrayCore(true) : cachedBasicStatsArray
 
-    const { x, primaryActionStats, actionDamage, actionBuffSnapshots, rotationBuffSteps } = simulateBuild(
+    const { x, primaryActionStats, actionDamage, rotationDamage, actionBuffSnapshots, rotationBuffSteps } = simulateBuild(
       simRelics,
       context,
       basicStatsArray,
       container,
       trace,
       forcedBasicSpd,
+      !!params.skipDefaults,
     )
 
     const result: RunStatSimulationsResult = {
@@ -86,6 +86,7 @@ export function runStatSimulations(
       key: sim.key,
       primaryActionStats,
       actionDamage,
+      rotationDamage,
       actionBuffSnapshots,
       rotationBuffSteps,
     }
@@ -96,7 +97,7 @@ export function runStatSimulations(
   return simulationResults
 }
 
-export function generateSimRelics(simulation: Simulation, params: RunSimulationsParams): SimulationRelicByPart {
+function generateSimRelics(simulation: Simulation, params: RunSimulationsParams): SimulationRelicByPart {
   const request = simulation.request
   const simRelics = {
     [Parts.Head]: simulationRelic(request.simRelicSet1, Constants.Stats.HP, 705.600),
@@ -130,7 +131,7 @@ export function generateSimRelics(simulation: Simulation, params: RunSimulations
 function addSubstats(relics: SimulationRelicByPart, sim: Simulation, params: RunSimulationsParams) {
   const request = sim.request
   for (const substat of SubStats) {
-    const value = sim.simType == StatSimTypes.SubstatRolls
+    const value = sim.simType === StatSimTypes.SubstatRolls
       ? convertRollCountsToSubstatTotal(substat, sim, params)
       : request.stats[substat]
 
@@ -141,7 +142,7 @@ function addSubstats(relics: SimulationRelicByPart, sim: Simulation, params: Run
 
 function convertRollCountsToSubstatTotal(substat: SubStats, sim: Simulation, params: RunSimulationsParams) {
   const substatScale = isFlat(substat) ? 1 : 0.01
-  const substatValue = substat == Stats.SPD
+  const substatValue = substat === Stats.SPD
     ? params.speedRollValue
     : StatCalculator.getMaxedSubstatValue(substat, params.quality)
 

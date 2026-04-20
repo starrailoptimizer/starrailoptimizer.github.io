@@ -1,25 +1,26 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  LightConeConditionalFunction,
-  LightConeConfig,
+  type LightConeConditionalFunction,
+  type LightConeConfig,
 } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals: LightConeConditionalFunction = (s, withContent) => {
   const { SOURCE_LC } = Source.lightCone(ElationBrimmingWithBlessings.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ElationBrimmingWithBlessings.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ElationBrimmingWithBlessings.Content')
 
   const sValuesElation = [0.12, 0.15, 0.18, 0.21, 0.24]
 
@@ -37,7 +38,7 @@ const conditionals: LightConeConditionalFunction = (s, withContent) => {
       id: 'elationBuff',
       formItem: 'switch',
       text: t('elationBuff.text'),
-      content: t('elationBuff.content', { elationBuff: TsUtils.precisionRound(100 * sValuesElation[s]) }),
+      content: t('elationBuff.content', { elationBuff: precisionRound(100 * sValuesElation[s]) }),
     },
   }
 

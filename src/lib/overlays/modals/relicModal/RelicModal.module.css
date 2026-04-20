@@ -1,0 +1,45 @@
+/* 280px = half of Modal size={560} */
+.navArrowLeft {
+  position: fixed;
+  top: 50%;
+  right: calc(50% + 280px + 16px);
+  transform: translateY(-50%) rotate(90deg);
+  cursor: pointer;
+  z-index: 201;
+  animation: fadeIn 150ms ease-in;
+}
+
+.navArrowRight {
+  position: fixed;
+  top: 50%;
+  left: calc(50% + 280px + 16px);
+  transform: translateY(-50%) rotate(-90deg);
+  cursor: pointer;
+  z-index: 201;
+  animation: fadeIn 150ms ease-in;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.relicGrid {
+  display: grid;
+  grid-template-columns: 300px 12px 1fr;
+  column-gap: 10px;
+  align-items: start;
+}
+
+.previewContainer {
+  height: 180px;
+  overflow: hidden;
+  margin-top: 7px;
+  border-radius: var(--radius-md);
+  box-shadow: 0px 0px 0px 1px var(--border-default) inset;
+}
+
+.locatorFlex {
+  width: 298px;
+  padding-left: 1px;
+}

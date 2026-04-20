@@ -1,11 +1,11 @@
-import { Flex } from 'antd'
-import { HitDefinitionRows } from 'lib/characterPreview/buffsAnalysis/HitDefinitionDisplay'
-import { OptimizerContext } from 'types/optimizer'
-import {
+import type {
   AbilityColorKey,
-  ABILITY_COLORS,
-  DAMAGE_TAG_ENTRIES,
   TagColorEntry,
+} from 'lib/characterPreview/buffsAnalysis/abilityColors'
+import {
+  ABILITY_COLORS,
+  DAMAGE_TAG_BY_KEY,
+  DAMAGE_TAG_ENTRIES,
 } from 'lib/characterPreview/buffsAnalysis/abilityColors'
 import {
   CardHeader,
@@ -20,17 +20,20 @@ import {
 import {
   DesignContext,
   ellipsisStyle,
+  FilterChangeContext,
   FilterContext,
   getRowBaseStyle,
   getSourceLabelStyle,
   GROUP_ORDER,
 } from 'lib/characterPreview/buffsAnalysis/designContext'
-import { Buff } from 'lib/optimization/basicStatsArray'
+import { HitDefinitionRows } from 'lib/characterPreview/buffsAnalysis/HitDefinitionDisplay'
+import type { Buff } from 'lib/optimization/basicStatsArray'
 import { AKeyNames } from 'lib/optimization/engine/config/keys'
-import { DamageTag } from 'lib/optimization/engine/config/tag'
-import { BuffGroups } from 'lib/simulations/combatBuffsAnalysis'
-import React, { useContext } from 'react'
+import type { DamageTag } from 'lib/optimization/engine/config/tag'
+import type { BuffGroups } from 'lib/simulations/combatBuffsAnalysis'
+import { useContext } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { OptimizerContext } from 'types/optimizer'
 
 // Summary totals filter: only sums universal buffs when unfiltered, sums universal + matching when filtered
 function buffMatchesSumFilter(buff: Buff, filter: DamageTag | null): boolean {
@@ -155,9 +158,9 @@ function getContributionTagPills(contributions: StatSumContribution[]): TagColor
   }
 
   const pills: TagColorEntry[] = []
-  if (hasAll) pills.push({ color: ABILITY_COLORS.ALL, key: 'ALL', label: 'ALL' })
+  if (hasAll) pills.push({ color: ABILITY_COLORS.ALL, key: 'ALL' })
   for (const entry of DAMAGE_TAG_ENTRIES) {
-    if (specificTags.has(entry.tag)) pills.push({ color: entry.color, key: entry.key, label: entry.label })
+    if (specificTags.has(entry.tag)) pills.push({ color: entry.color, key: entry.key })
   }
   return pills
 }
@@ -165,25 +168,31 @@ function getContributionTagPills(contributions: StatSumContribution[]): TagColor
 function isPillActive(pillKey: AbilityColorKey, filter: DamageTag | null): boolean {
   if (pillKey === 'ALL') return true
   if (filter === null) return false
-  const entry = DAMAGE_TAG_ENTRIES.find((e) => e.key === pillKey)
+  const entry = DAMAGE_TAG_BY_KEY.get(pillKey)
   return entry != null && (entry.tag & filter) !== 0
 }
 
 function SummaryTagPills(props: { allContributions: StatSumContribution[] }) {
+  const { t } = useTranslation('optimizerTab', { keyPrefix: 'ExpandedDataPanel.DamageTags' })
   const filter = useContext(FilterContext)
+  const onFilterChange = useContext(FilterChangeContext)
   const pills = getContributionTagPills(props.allContributions)
   if (pills.length === 0) return null
 
   return (
-    <Flex gap={2} style={{ flexShrink: 0 }}>
-      {pills.map((p) => renderPill(p.key, p.color, p.label, !isPillActive(p.key, filter)))}
-    </Flex>
+    <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+      {pills.map((p) => {
+        const tag = p.key === 'ALL' ? null : DAMAGE_TAG_BY_KEY.get(p.key)?.tag ?? null
+        const active = p.key !== 'ALL' && tag != null && filter != null && (tag & filter) !== 0
+        return renderPill(p.key, p.color, t(p.key), { dimmed: !isPillActive(p.key, filter), onClick: () => onFilterChange?.(tag), active })
+      })}
+    </div>
   )
 }
 
 export function StatSummaryTable(props: {
-  sums: StatSum[]
-  avatarSrc: string
+  sums: StatSum[],
+  avatarSrc: string,
 }) {
   const options = useContext(DesignContext)
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ExpandedDataPanel.BuffsAnalysisDisplay' })
@@ -194,41 +203,41 @@ export function StatSummaryTable(props: {
     <CardShell avatarSrc={props.avatarSrc}>
       <CardHeader label={t('SummaryLabel')} />
       {props.sums.map((sum, i) => (
-        <Flex
+        <div
           key={sum.label}
-          align='center'
-          gap={6}
           style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
             ...rowBase,
             borderBottom: i < props.sums.length - 1 ? `1px solid ${options.borderColor}` : undefined,
             opacity: sum.total === 0 ? 0.15 : 1,
-            transition: 'opacity 0.15s',
           }}
         >
           <span style={{ minWidth: 60, fontSize: options.fontSize, textWrap: 'nowrap' }}>
             {formatBuffValue(sum.total, sum.percent)}
           </span>
 
-          <Flex align='center' gap={3} style={{ minWidth: 150, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 3, minWidth: 150, overflow: 'hidden' }}>
             <span style={{ fontSize: options.fontSize, flexShrink: 0, position: 'relative', top: -1 }}>∑</span>
             <span style={ellipsisStyle(options.fontSize)}>{sum.label}</span>
-          </Flex>
+          </div>
 
           <SummaryTagPills allContributions={sum.allContributions} />
 
           <span style={sourceLabelStyle}>
             {'x' + sum.count}
           </span>
-        </Flex>
+        </div>
       ))}
     </CardShell>
   )
 }
 
 export function HitDefinitionTable(props: {
-  avatarSrc: string
-  context: OptimizerContext
-  selectedAction?: number | null
+  avatarSrc: string,
+  context: OptimizerContext,
+  selectedAction?: number | null,
 }) {
   return (
     <CardShell avatarSrc={props.avatarSrc}>
@@ -239,4 +248,3 @@ export function HitDefinitionTable(props: {
     </CardShell>
   )
 }
-

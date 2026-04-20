@@ -9,25 +9,24 @@ import {
   DEFAULT_STAT_DISPLAY,
   Sets,
 } from 'lib/constants/constants'
-import { ComboType } from 'lib/optimization/rotation/comboStateTransform'
+import { ComboType } from 'lib/optimization/rotation/comboType'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { setConfigRegistry } from 'lib/sets/setConfigRegistry'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { getScoringMetadata } from 'lib/stores/scoring/scoringStore'
+import { clone } from 'lib/utils/objectUtils'
+import type { CharacterId } from 'types/character'
 import {
-  Form,
-  Teammate,
+  type Form,
+  type Teammate,
 } from 'types/form'
 
 // FIXME HIGH
 
-export function getDefaultWeights(characterId?: CharacterId): Form['weights'] {
+function getDefaultWeights(characterId?: CharacterId): Form['weights'] {
   if (characterId) {
-    const scoringMetadata = TsUtils.clone(DB.getScoringMetadata(characterId))
-    scoringMetadata.stats.headHands = 0
-    scoringMetadata.stats.bodyFeet = 0
-    scoringMetadata.stats.sphereRope = 0
+    const scoringMetadata = clone(getScoringMetadata(characterId))
+    scoringMetadata.stats.minWeightedRolls = 0
     return scoringMetadata.stats
   }
 
@@ -44,22 +43,22 @@ export function getDefaultWeights(characterId?: CharacterId): Form['weights'] {
     [Constants.Stats.EHR]: 1,
     [Constants.Stats.RES]: 1,
     [Constants.Stats.BE]: 1,
-    headHands: 0,
-    bodyFeet: 0,
-    sphereRope: 0,
+    minWeightedRolls: 0,
   }
 }
 
 export function getDefaultForm(initialCharacter: { id: CharacterId }) {
   // TODO: Clean this up
-  const scoringMetadata = DB.getMetadata().characters[initialCharacter?.id]?.scoringMetadata
+  const scoringMetadata = getGameMetadata().characters[initialCharacter?.id]?.scoringMetadata
   const parts = scoringMetadata?.parts || {}
   const weights = scoringMetadata?.stats || getDefaultWeights()
 
   const combatBuffs = {} as Record<typeof CombatBuffs[keyof typeof CombatBuffs]['key'], number>
-  Object.values(CombatBuffs).map((x) => combatBuffs[x.key] = 0)
+  Object.values(CombatBuffs).forEach((x) => {
+    combatBuffs[x.key] = 0
+  })
 
-  const defaultForm: Partial<Form> = TsUtils.clone({
+  const defaultForm: Partial<Form> = clone({
     characterId: initialCharacter?.id,
     mainBody: parts[Constants.Parts.Body] || [],
     mainFeet: parts[Constants.Parts.Feet] || [],
@@ -100,6 +99,7 @@ export function getDefaultForm(initialCharacter: { id: CharacterId }) {
     },
     comboStateJson: '{}',
     comboPreprocessor: true,
+    comboDot: 0,
     deprioritizeBuffs: false,
     ...defaultEnemyOptions(),
   })
@@ -108,8 +108,7 @@ export function getDefaultForm(initialCharacter: { id: CharacterId }) {
   applyScoringMetadataPresets(defaultForm as Form)
 
   if (scoringMetadata?.simulation?.comboTurnAbilities) {
-    defaultForm.comboTurnAbilities = scoringMetadata.simulation.comboTurnAbilities
-    defaultForm.comboDot = scoringMetadata.simulation.comboDot
+    defaultForm.comboTurnAbilities = [...scoringMetadata.simulation.comboTurnAbilities]
   }
 
   return defaultForm as Form
@@ -127,7 +126,7 @@ export function defaultTeammate() {
   return teammate
 }
 
-export function defaultEnemyOptions() {
+function defaultEnemyOptions() {
   return {
     enemyLevel: 95,
     enemyCount: 1,

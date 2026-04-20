@@ -1,25 +1,22 @@
+import { Table } from '@mantine/core'
+import type { SubStats } from 'lib/constants/constants'
 import {
-  Flex,
-  Table,
-  TableProps,
-} from 'antd'
-import { SubStats } from 'lib/constants/constants'
-import { iconSize } from 'lib/constants/constantsUi'
-import { AKeyType, GlobalRegister, StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+  type AKeyType,
+  GlobalRegister,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { Assets } from 'lib/rendering/assets'
-import {
-  calculateStatUpgrades,
-  OptimizerResultAnalysis,
-} from 'lib/tabs/tabOptimizer/analysis/expandedDataPanelController'
-import { cardShadowNonInset } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormCard'
+import { calculateStatUpgrades } from 'lib/tabs/tabOptimizer/analysis/expandedDataPanelController'
+import type { OptimizerResultAnalysis } from 'lib/tabs/tabOptimizer/analysis/expandedDataPanelController'
 import {
   localeNumber_0,
   localeNumber_00,
 } from 'lib/utils/i18nUtils'
-import { Utils } from 'lib/utils/utils'
-import React, { ReactElement } from 'react'
+import { truncate100ths } from 'lib/utils/mathUtils'
+import type { ReactElement } from 'react'
 import { useTranslation } from 'react-i18next'
+import classes from './SubstatUpgrades.module.css'
 
 type Metrics = 'COMBO_DMG' | 'EHP'
 
@@ -34,15 +31,14 @@ type StatUpgradeItem = {
   percent: number,
 }
 
-export function DamageUpgrades(props: {
+export function DamageUpgrades({ analysis }: {
   analysis: OptimizerResultAnalysis,
 }) {
   const { t } = useTranslation('optimizerTab', { keyPrefix: 'ExpandedDataPanel.SubstatUpgrades' })
   const { t: tCommon } = useTranslation('common', { keyPrefix: 'ShortSpacedStats' })
-  const analysis = props.analysis
-  // @ts-ignore
-  if (Object.values(analysis.newRelics).some((relic) => relic.set == -1 || relic.set == '')) {
-    return <></>
+  // @ts-expect-error - relic.set may be -1 or empty string from optimizer results
+  if (Object.values(analysis.newRelics).some((relic) => relic.set === -1 || relic.set === '')) {
+    return null
   }
 
   const statUpgrades = calculateStatUpgrades(analysis)
@@ -86,68 +82,52 @@ export function DamageUpgrades(props: {
   for (const group of upgradeGroups) {
     group.upgrades.sort((a, b) => b.value - a.value)
 
-    const columns: TableProps<StatUpgradeItem>['columns'] = [
-      {
-        title: t('ColumnHeaders.Substat'),
-        dataIndex: 'key',
-        align: 'center',
-        width: 100,
-        render: (text: SubStats) => (
-          <Flex>
-            <img src={Assets.getStatIcon(text)} style={{ width: iconSize, height: iconSize, marginLeft: 3, marginRight: 3 }} />
-            {tCommon(text)}
-          </Flex>
-        ),
-      },
-      {
-        title: t(`ColumnHeaders.${group.key}_P`),
-        dataIndex: 'percent',
-        align: 'center',
-        width: 110,
-        render: (n: number) => (
-          <>
-            {n == 0 ? '' : `${localeNumber_00(Utils.truncate100ths(n * 100))}%`}
-          </>
-        ),
-      },
-      {
-        title: t(`ColumnHeaders.${group.key}`),
-        dataIndex: 'value',
-        align: 'center',
-        width: 110,
-        render: (n: number) => (
-          <>
-            {n == 0 ? '' : `${localeNumber_0(n)}`}
-          </>
-        ),
-      },
-    ]
-
     displays.push(
-      <Table<StatUpgradeItem>
-        className='remove-table-bottom-border'
+      <Table
         key={group.key}
-        columns={columns}
-        dataSource={group.upgrades}
-        pagination={false}
-        size='small'
-        style={{
-          border: '1px solid #354b7d',
-          boxShadow: cardShadowNonInset,
-          borderRadius: 5,
-          overflow: 'hidden',
-        }}
-      />,
+        className={classes.upgradeTable}
+      >
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th className={classes.substatHeader}>{t('ColumnHeaders.Substat')}</Table.Th>
+            <Table.Th className={classes.columnHeader}>{t(`ColumnHeaders.${group.key}_P`)}</Table.Th>
+            <Table.Th className={classes.columnHeader}>{t(`ColumnHeaders.${group.key}`)}</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
+          {group.upgrades.map((item) => (
+            <Table.Tr key={item.key}>
+              <Table.Td className={classes.centeredCell}>
+                <div style={{ display: 'flex' }}>
+                  <img src={Assets.getStatIcon(item.key)} className={classes.statIcon} />
+                  {tCommon(item.key)}
+                </div>
+              </Table.Td>
+              <Table.Td className={classes.centeredCell}>
+                {item.percent === 0 ? '' : `${localeNumber_00(truncate100ths(item.percent * 100))}%`}
+              </Table.Td>
+              <Table.Td className={classes.centeredCell}>
+                {item.value === 0 ? '' : `${localeNumber_0(item.value)}`}
+              </Table.Td>
+            </Table.Tr>
+          ))}
+        </Table.Tbody>
+      </Table>,
     )
   }
 
   return (
-    <Flex
-      vertical
-      gap={10}
-      style={{ width: 360 }}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 10,
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+      }}
+      className={classes.upgradesGrid}
     >
       {displays}
-    </Flex>
+    </div>
   )
 }

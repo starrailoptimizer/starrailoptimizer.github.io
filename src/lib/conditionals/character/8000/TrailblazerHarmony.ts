@@ -1,8 +1,8 @@
 import {
   AbilityEidolon,
   addSuperBreakHits,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -11,25 +11,26 @@ import {
   Stats,
 } from 'lib/constants/constants'
 import { Source } from 'lib/optimization/buffSource'
-import { ModifierContext } from 'lib/optimization/context/calculateActions'
+import { type ModifierContext } from 'lib/optimization/context/calculateActions'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterConfig } from 'types/characterConfig'
-import { ScoringMetadata } from 'types/metadata'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type ScoringMetadata } from 'types/metadata'
 
-import { Eidolon } from 'types/character'
+import { type Eidolon } from 'types/character'
 
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TrailblazerHarmonyEntities = createEnum('TrailblazerHarmony')
@@ -40,7 +41,7 @@ export const TrailblazerHarmonyAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TrailblazerHarmony')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TrailblazerHarmony')
   const { basic, skill, ult } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -85,7 +86,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'backupDancer',
       formItem: 'switch',
       text: t('Content.backupDancer.text'),
-      content: t('Content.backupDancer.content', { ultBeScaling: TsUtils.precisionRound(100 * ultBeScaling) }),
+      content: t('Content.backupDancer.content', { ultBeScaling: precisionRound(100 * ultBeScaling) }),
     },
     superBreakDmg: {
       id: 'superBreakDmg',
@@ -259,7 +260,8 @@ const display = {
     y: 1000,
     z: 1.1,
   },
-  showcaseColor: '#8d7abc',
+  disableSpine: true,
+  showcaseColor: '#b68ad1',
 }
 
 export const TrailblazerHarmonyCaelus: CharacterConfig = {

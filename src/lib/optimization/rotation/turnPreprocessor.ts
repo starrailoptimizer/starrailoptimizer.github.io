@@ -7,11 +7,11 @@ import {
   isWholeTurnAbility,
   NULL_TURN_ABILITY,
   toTurnAbility,
-  TurnAbility,
-  TurnAbilityName,
+  type TurnAbility,
+  type TurnAbilityName,
   TurnMarker,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { clone } from 'lib/utils/objectUtils'
 
 type TurnState = {
   turnStarts: boolean[],
@@ -40,16 +40,16 @@ export function preprocessTurnAbilities(input: TurnAbility[]): TurnAbility[] {
     return []
   }
 
-  const inputAbilities = TsUtils.clone(input)
+  const inputAbilities = clone(input)
   inputAbilities.shift()
 
   const state: TurnState = {
-    turnStarts: new Array(inputAbilities.length).fill(false),
-    turnEnds: new Array(inputAbilities.length).fill(false),
+    turnStarts: Array.from({ length: inputAbilities.length }, () => false),
+    turnEnds: Array.from({ length: inputAbilities.length }, () => false),
     turnRanges: [],
     originalAbilities: inputAbilities,
     normalizedAbilities: [],
-    inTurn: new Array(inputAbilities.length).fill(false),
+    inTurn: Array.from({ length: inputAbilities.length }, () => false),
     hasBasicOrSkill: [],
   }
 
@@ -61,12 +61,9 @@ export function preprocessTurnAbilities(input: TurnAbility[]): TurnAbility[] {
   annotateOrphanedBasicSkill(state)
   updateTurnRanges(state)
   dissolveTurnsWithoutBasicOrSkill(state)
-  // updateTurnRanges(state)
-  // extendTurnsForOrphanedUlts(state)
 
   const outputAbilities = generateFinalSequence(state)
 
-  // console.log(outputAbilities)
   return [NULL_TURN_ABILITY, ...outputAbilities]
 }
 
@@ -250,39 +247,6 @@ function dissolveTurnsWithoutBasicOrSkill(state: TurnState): void {
     if (!hasBasicOrSkill) {
       turnStarts[range.start] = false
       turnEnds[range.end] = false
-    }
-  }
-}
-
-/**
- * Step 7: Extend turns to incorporate orphaned ULTs
- */
-function extendTurnsForOrphanedUlts(state: TurnState): void {
-  const { normalizedAbilities, turnRanges, turnStarts, turnEnds } = state
-
-  // Process each turn
-  for (const range of turnRanges) {
-    if (range.start === 0) continue
-
-    // Look backward for ULTs
-    let i = range.start - 1
-    while (i >= 0) {
-      // Stop if we hit another turn's end
-      if (turnEnds[i]) break
-
-      // Stop if we hit another turn's start
-      if (turnStarts[i]) break
-
-      if (normalizedAbilities[i].kind === AbilityKind.ULT) {
-        // Extend turn to include this ULT
-        turnStarts[i] = true
-        turnStarts[range.start] = false
-
-        // Update the range for future checks
-        range.start = i
-      }
-
-      i--
     }
   }
 }

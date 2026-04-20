@@ -1,10 +1,10 @@
 import { Stats } from 'lib/constants/constants'
 import { StatCalculator } from 'lib/relics/statCalculator'
 import { BenchmarkSimulationOrchestrator } from 'lib/simulations/orchestrator/benchmarkSimulationOrchestrator'
-import { SimulationRequest } from 'lib/simulations/statSimulationTypes'
-import DB from 'lib/state/db'
-import { BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
-import { TsUtils } from 'lib/utils/TsUtils'
+import type { SimulationRequest } from 'lib/simulations/statSimulationTypes'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import type { BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
+import { clone } from 'lib/utils/objectUtils'
 
 export async function runCustomBenchmarkOrchestrator(benchmarkForm: BenchmarkForm) {
   const simulationMetadata = generateSimulationMetadata(benchmarkForm)
@@ -29,8 +29,9 @@ export async function runCustomBenchmarkOrchestrator(benchmarkForm: BenchmarkFor
 
   orchestrator.flags.forceErrRope = benchmarkForm.errRope
 
-  await orchestrator.calculateBenchmark()
-  await orchestrator.calculatePerfection()
+  const clonedContext = clone(orchestrator.context!)
+  await orchestrator.calculateBenchmark(clonedContext)
+  await orchestrator.calculatePerfection(clonedContext)
 
   orchestrator.calculateScores()
   orchestrator.calculateUpgrades()
@@ -40,7 +41,7 @@ export async function runCustomBenchmarkOrchestrator(benchmarkForm: BenchmarkFor
 }
 
 function generateSimulationMetadata(benchmarkForm: BenchmarkForm) {
-  const metadata = TsUtils.clone(DB.getMetadata().characters[benchmarkForm.characterId].scoringMetadata.simulation!)
+  const metadata = clone(getGameMetadata().characters[benchmarkForm.characterId].scoringMetadata.simulation!)
   metadata.teammates = [
     benchmarkForm.teammate0!,
     benchmarkForm.teammate1!,

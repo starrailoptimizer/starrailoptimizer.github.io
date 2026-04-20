@@ -2,8 +2,6 @@ import {
   Constants,
   RelicSetFilterOptions,
 } from 'lib/constants/constants'
-import { Utils } from 'lib/utils/utils'
-import { Form } from 'types/form'
 import {
   OrnamentSetToIndex,
   RelicSetToIndex,
@@ -12,6 +10,11 @@ import {
   SetsRelics,
   SetsRelicsNames,
 } from 'lib/sets/setConfigRegistry'
+import {
+  arrayOfValue,
+  arrayOfZeroes,
+} from 'lib/utils/arrayUtils'
+import { type Form } from 'types/form'
 
 // Here be dragons
 export function generateRelicSetSolutions(request: Form) {
@@ -25,7 +28,7 @@ export function generateRelicSetSolutions(request: Form) {
       if (setArr.length == 2) {
         // Specific 4 piece
         const index = RelicSetToIndex[setArr[1]]
-        const arr: number[] = Utils.arrayOfZeroes(len)
+        const arr: number[] = arrayOfZeroes(len)
         arr[index] = 4
         const indices = relicSetAllowListToIndices(arr)
         setIndices.push(indices)
@@ -36,7 +39,7 @@ export function generateRelicSetSolutions(request: Form) {
       if (setArr.length == 2) {
         const index = RelicSetToIndex[setArr[1]]
         for (let i = 0; i < len; i++) {
-          const arr: number[] = Utils.arrayOfZeroes(len)
+          const arr: number[] = arrayOfZeroes(len)
           arr[index] = 2
           arr[i] += 2
           const indices = relicSetAllowListToIndices(arr)
@@ -44,7 +47,7 @@ export function generateRelicSetSolutions(request: Form) {
         }
 
         // 2 + 0
-        const arr: number[] = Utils.arrayOfZeroes(len)
+        const arr: number[] = arrayOfZeroes(len)
         arr[index] = 2
         const indices = relicSetAllowListToIndices(arr)
         const filledIndices = fillRelicSetArrPossibilities(indices, len)
@@ -54,13 +57,25 @@ export function generateRelicSetSolutions(request: Form) {
 
     if (setArr[0] == RelicSetFilterOptions.relic2Plus2Piece) {
       if (setArr.length == 3) {
-        const arr: number[] = Utils.arrayOfZeroes(len)
+        const arr: number[] = arrayOfZeroes(len)
         const index1 = RelicSetToIndex[setArr[1]]
         const index2 = RelicSetToIndex[setArr[2]]
         arr[index1] += 2
         arr[index2] += 2
         const indices = relicSetAllowListToIndices(arr)
         setIndices.push(indices)
+      }
+    }
+
+    if (setArr[0] == RelicSetFilterOptions.relic2Plus2Any) {
+      for (let i = 0; i < len; i++) {
+        for (let j = i + 1; j < len; j++) {
+          const arr: number[] = arrayOfZeroes(len)
+          arr[i] = 2
+          arr[j] = 2
+          const indices = relicSetAllowListToIndices(arr)
+          setIndices.push(indices)
+        }
       }
     }
   }
@@ -73,10 +88,10 @@ export function generateOrnamentSetSolutions(request: Form) {
   const len = SetsOrnamentsNames.length
 
   if (setRequest.length == 0) {
-    return Utils.arrayOfValue(len * len, 1)
+    return arrayOfValue(len * len, 1)
   }
 
-  const arr = Utils.arrayOfZeroes(len * len)
+  const arr = arrayOfZeroes(len * len)
   for (const set of setRequest) {
     const setIndex = OrnamentSetToIndex[set]
     const index1D = setIndex + setIndex * len
@@ -104,7 +119,7 @@ function fillRelicSetArrPossibilities(arr: number[], len: number) {
   const out: number[][] = []
   for (let i = 0; i < len; i++) {
     for (let j = 0; j < len; j++) {
-      const newArr: number[] = Utils.arrayOfZeroes(4)
+      const newArr: number[] = arrayOfZeroes(4)
       newArr[0] = arr[0]
       newArr[1] = arr[1]
       newArr[2] = i
@@ -121,10 +136,10 @@ function fillRelicSetArrPossibilities(arr: number[], len: number) {
 function convertRelicSetIndicesTo1D(setIndices: number[][]) {
   const len = SetsRelicsNames.length
   if (setIndices.length == 0) {
-    return Utils.arrayOfValue(Math.pow(len, 4), 1)
+    return arrayOfValue(Math.pow(len, 4), 1)
   }
 
-  const arr = Utils.arrayOfZeroes(Math.pow(len, 4))
+  const arr = arrayOfZeroes(Math.pow(len, 4))
 
   for (let i = 0; i < setIndices.length; i++) {
     const y = setIndices[i] // [5,5,2,3]
@@ -145,7 +160,7 @@ export function bitpackBooleanArray(arr: number[]) {
     let packedValue = 0
     for (let j = 0; j < 32; j++) {
       const val = i + j < arr.length ? arr[i + j] : 0
-      packedValue |= (val << j)
+      packedValue |= val << j
     }
     result.push(packedValue >>> 0)
   }

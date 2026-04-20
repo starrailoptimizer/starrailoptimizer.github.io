@@ -1,32 +1,43 @@
-import { Flex } from 'antd'
+import { useRelicStore } from 'lib/stores/relic/relicStore'
 import { useScannerState } from 'lib/tabs/tabImport/ScannerWebsocketClient'
 import { RecentRelicCard } from 'lib/tabs/tabRelics/RecentRelicCard'
-import useRelicsTabStore from 'lib/tabs/tabRelics/useRelicsTabStore'
-import React from 'react'
+import { useRelicsTabStore } from 'lib/tabs/tabRelics/useRelicsTabStore'
+import {
+  memo,
+  useCallback,
+} from 'react'
+import { useShallow } from 'zustand/react/shallow'
 
 function padArray<T>(array: T[], length: number, filler: T): T[] {
   return [...array, ...Array(length - array.length).fill(filler)]
 }
 
-export const RecentRelics = React.memo(() => {
-  const { focusCharacter: scoringCharacter, selectedRelicId, setSelectedRelicsIds } = useRelicsTabStore()
-  const { recentRelics: recentRelicIDs } = useScannerState()
-  const allRelics = window.store((s) => s.relicsById)
+export const RecentRelics = memo(() => {
+  const { focusCharacter: scoringCharacter, selectedRelicId, setSelectedRelicsIds } = useRelicsTabStore(
+    useShallow((s) => ({
+      focusCharacter: s.focusCharacter,
+      selectedRelicId: s.selectedRelicId,
+      setSelectedRelicsIds: s.setSelectedRelicsIds,
+    })),
+  )
+  const recentRelicIDs = useScannerState((s) => s.recentRelics)
+  const allRelics = useRelicStore((s) => s.relicsById)
 
   const recentRelics = recentRelicIDs
     .map((id) => allRelics[id])
     .filter((relic) => relic != null)
 
-  const setSelectedRelicID = (id: string) => {
+  const setSelectedRelicID = useCallback((id: string) => {
     setSelectedRelicsIds([id])
-  }
+  }, [setSelectedRelicsIds])
 
   return (
-    <Flex
-      gap={10}
-      justify='space-between'
+    <div
       style={{
-        padding: 10,
+        display: 'flex',
+        gap: 10,
+        justifyContent: 'space-between',
+        padding: '0px 10px 10px 10px',
       }}
     >
       {padArray(recentRelics.slice(0, 6), 6, undefined).map((relic, i) => (
@@ -38,7 +49,7 @@ export const RecentRelics = React.memo(() => {
           setSelectedRelicID={setSelectedRelicID}
         />
       ))}
-    </Flex>
+    </div>
   )
 })
 RecentRelics.displayName = 'RecentRelics'

@@ -1,16 +1,4 @@
 // @vitest-environment jsdom
-import {
-  Sets,
-  Stats,
-} from 'lib/constants/constants'
-import { expectBenchmarkResultsToMatch } from 'lib/simulations/tests/customBenchmark/benchmarkOrchestratorTestUtils'
-import {
-  generateE6S5Test,
-  testCharacter,
-  testMains,
-  testSets,
-  testStatSpread,
-} from 'lib/simulations/tests/simTestUtils'
 import { Kafka } from 'lib/conditionals/character/1000/Kafka'
 import { Huohuo } from 'lib/conditionals/character/1200/Huohuo'
 import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
@@ -37,6 +25,18 @@ import { ReforgedRemembrance } from 'lib/conditionals/lightcone/5star/ReforgedRe
 import { SailingTowardsASecondLife } from 'lib/conditionals/lightcone/5star/SailingTowardsASecondLife'
 import { ScentAloneStaysTrue } from 'lib/conditionals/lightcone/5star/ScentAloneStaysTrue'
 import { WhereaboutsShouldDreamsRest } from 'lib/conditionals/lightcone/5star/WhereaboutsShouldDreamsRest'
+import {
+  Sets,
+  Stats,
+} from 'lib/constants/constants'
+import { expectBenchmarkResultsToMatch } from 'lib/simulations/tests/customBenchmark/benchmarkOrchestratorTestUtils'
+import {
+  generateE6S5Test,
+  testCharacter,
+  testMains,
+  testSets,
+  testStatSpread,
+} from 'lib/simulations/tests/simTestUtils'
 import { Metadata } from 'lib/state/metadataInitializer'
 import { test } from 'vitest'
 
@@ -57,7 +57,7 @@ test('Anaxa benchmark 0', async () => {
       stats: testStatSpread(),
     }),
     6395631.5,
-    7782346,
+    7783189.5,
   )
 }, TIMEOUT)
 
@@ -74,7 +74,7 @@ test('Anaxa benchmark 133.333', async () => {
       stats: testStatSpread(),
     }),
     5640659,
-    7212902,
+    7213742.5,
   )
 }, TIMEOUT)
 
@@ -146,7 +146,7 @@ test('The herta benchmark 100', async () => {
       stats: testStatSpread(),
     }),
     4654556,
-    5781292.5,
+    5781975.5,
   )
 }, TIMEOUT)
 
@@ -163,7 +163,7 @@ test('The herta benchmark 100 err', async () => {
       stats: testStatSpread(),
     }),
     4252174.5,
-    5328330.5,
+    5328960,
   )
 }, TIMEOUT)
 

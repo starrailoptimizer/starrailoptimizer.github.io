@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
   findMemospriteIndex,
 } from 'lib/conditionals/conditionalUtils'
@@ -29,18 +29,22 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  floorSafe,
+  precisionRound,
+} from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SundayEntities = createEnum('Sunday')
@@ -50,7 +54,7 @@ export const SundayAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sunday')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sunday')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -101,8 +105,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       content: t(
         'Content.skillDmgBuff.content',
         {
-          DmgBoost: TsUtils.precisionRound(100 * skillDmgBoostValue),
-          SummonDmgBoost: TsUtils.precisionRound(100 * skillDmgBoostSummonValue),
+          DmgBoost: precisionRound(100 * skillDmgBoostValue),
+          SummonDmgBoost: precisionRound(100 * skillDmgBoostSummonValue),
         },
       ),
     },
@@ -110,7 +114,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentCrBuffStacks',
       formItem: 'slider',
       text: t('Content.talentCrBuffStacks.text'),
-      content: t('Content.talentCrBuffStacks.content', { CritRateBoost: TsUtils.precisionRound(100 * talentCrBuffValue) }),
+      content: t('Content.talentCrBuffStacks.content', { CritRateBoost: precisionRound(100 * talentCrBuffValue) }),
       min: 0,
       max: e < 6 ? 1 : 3,
     },
@@ -146,8 +150,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       content: t(
         'TeammateContent.beatified.content',
         {
-          CritBuffScaling: TsUtils.precisionRound(100 * ultCdBoostValue),
-          CritBuffFlat: TsUtils.precisionRound(100 * ultCdBoostBaseValue),
+          CritBuffScaling: precisionRound(100 * ultCdBoostValue),
+          CritBuffFlat: precisionRound(100 * ultCdBoostBaseValue),
         },
       ),
     },
@@ -158,8 +162,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       content: t(
         'TeammateContent.teammateCDValue.content',
         {
-          CritBuffScaling: TsUtils.precisionRound(100 * ultCdBoostValue),
-          CritBuffFlat: TsUtils.precisionRound(100 * ultCdBoostBaseValue),
+          CritBuffScaling: precisionRound(100 * ultCdBoostValue),
+          CritBuffFlat: precisionRound(100 * ultCdBoostBaseValue),
         },
       ),
       min: 0,
@@ -282,7 +286,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
           const memoUnconvertibleCr = x.getActionValueByIndex(StatKey.UNCONVERTIBLE_CR_BUFF, memoIndex)
 
           const stateValue = action.conditionalState[this.id] || 0
-          const buffValue = Math.floor((memoCr - memoUnconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01
+          const buffValue = floorSafe((memoCr - memoUnconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01
 
           action.conditionalState[this.id] = buffValue
           x.buffDynamic(StatKey.UNCONVERTIBLE_CD_BUFF, buffValue - stateValue, action, context, x.targets(TargetTag.Memosprite).source(SOURCE_E6))
@@ -314,7 +318,7 @@ let cr = ${containerActionVal(memoIndex, StatKey.CR, config)};
 let unconvertibleCr = ${containerActionVal(memoIndex, StatKey.UNCONVERTIBLE_CR_BUFF, config)};
 
 if (cr > 1.00) {
-  let buffValue: f32 = floor((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01;
+  let buffValue: f32 = floorSafe((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01;
   let stateValue: f32 = (*p_state).${this.id}${action.actionIdentifier};
 
   (*p_state).${this.id}${action.actionIdentifier} = buffValue;
@@ -344,7 +348,7 @@ if (cr > 1.00) {
           const unconvertibleCr = x.getActionValueByIndex(StatKey.UNCONVERTIBLE_CR_BUFF, SELF_ENTITY_INDEX)
 
           const stateValue = action.conditionalState[this.id] || 0
-          const buffValue = Math.floor((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01
+          const buffValue = floorSafe((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01
 
           action.conditionalState[this.id] = buffValue
           x.buffDynamic(StatKey.UNCONVERTIBLE_CD_BUFF, buffValue - stateValue, action, context, x.source(SOURCE_E6))
@@ -371,7 +375,7 @@ let cr = ${containerActionVal(SELF_ENTITY_INDEX, StatKey.CR, config)};
 let unconvertibleCr = ${containerActionVal(SELF_ENTITY_INDEX, StatKey.UNCONVERTIBLE_CR_BUFF, config)};
 
 if (cr > 1.00) {
-  let buffValue: f32 = floor((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01;
+  let buffValue: f32 = floorSafe((cr - unconvertibleCr - 1.00) / 0.01) * 2.00 * 0.01;
   let stateValue: f32 = (*p_state).${this.id}${action.actionIdentifier};
 
   (*p_state).${this.id}${action.actionIdentifier} = buffValue;
@@ -423,11 +427,16 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1000,
-    y: 950,
-    z: 1.075,
+    x: 1006,
+    y: 927,
+    z: 1.12,
   },
-  showcaseColor: '#7e95e9',
+  spineCenter: {
+    x: 1024,
+    y: 810,
+    z: 1.17,
+  },
+  showcaseColor: '#8495fb',
 }
 
 export const Sunday: CharacterConfig = {

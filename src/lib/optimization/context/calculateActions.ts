@@ -1,6 +1,6 @@
-import { CharacterId } from 'types/character'
-import { ConditionalValueMap } from 'types/conditionals'
-import {
+import type { CharacterId } from 'types/character'
+import type { ConditionalValueMap } from 'types/conditionals'
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -14,8 +14,8 @@ export interface ModifierContext {
 }
 
 export type ActionModifier = {
-  characterId?: CharacterId
-  eidolon?: number
-  isTeammate?: boolean
-  modify: (action: OptimizerAction, context: OptimizerContext, self: ModifierContext) => void
+  characterId?: CharacterId,
+  eidolon?: number,
+  isTeammate?: boolean,
+  modify: (action: OptimizerAction, context: OptimizerContext, self: ModifierContext) => void,
 }

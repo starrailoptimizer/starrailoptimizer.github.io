@@ -1,20 +1,20 @@
-import { TFunction } from 'i18next'
+import { type TFunction } from 'i18next'
 import {
-  ConditionalDataType,
+  type ConditionalDataType,
   Constants,
   Sets,
 } from 'lib/constants/constants'
 import { setConfigRegistry } from 'lib/sets/setConfigRegistry'
-import { SelectOptionContent } from 'types/setConfig'
+import { type SelectOptionContent } from 'types/setConfig'
 
 export type { SelectOptionContent } from 'types/setConfig'
 
 type SetConditionalTFunction = TFunction<'optimizerTab', 'SetConditionals.SelectOptions'>
 
 export type SetMetadata = {
-  type: ConditionalDataType
-  modifiable?: boolean
-  selectionOptions?: (t: SetConditionalTFunction) => SelectOptionContent[]
+  type: ConditionalDataType,
+  modifiable?: boolean,
+  selectionOptions?: (t: SetConditionalTFunction) => SelectOptionContent[],
 }
 
 export function generateSetConditionalContent(t: SetConditionalTFunction) {

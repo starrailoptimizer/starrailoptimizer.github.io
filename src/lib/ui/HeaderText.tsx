@@ -1,11 +1,4 @@
-import { Typography } from 'antd'
-import styled from 'styled-components'
+import type React from 'react'
+import classes from './HeaderText.module.css'
 
-const { Text } = Typography
-
-export const HeaderText = styled(Text)`
-    text-decoration: underline;
-    text-decoration-color: #6d97ffb3;
-    text-underline-offset: 2px;
-    white-space: nowrap;
-`
+export const HeaderText = (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} className={`${classes.headerText} ${props.className ?? ''}`} />

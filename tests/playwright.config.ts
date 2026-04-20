@@ -13,56 +13,36 @@ export const STORAGE_STATE = path.join(
 )
 
 export default defineConfig({
-  timeout: 90000,
+  timeout: 30000,
   testDir: './',
-  fullyParallel: true, // Run all tests in parallel.
-  forbidOnly: !!process.env.CI, // Fail the build on CI if you accidentally left test.only in the source code.
-  retries: process.env.CI ? 1 : 0, // Retry on CI only.
-  workers: process.env.CI ? 5 : undefined, // Github CI maxes at 12 workers on last check, but they may time out
+  fullyParallel: true,
+  forbidOnly: !!process.env.CI,
+  retries: process.env.CI ? 1 : 0,
+  workers: process.env.CI ? '75%' : undefined,
+  globalSetup: './global.setup.ts',
 
   expect: {
-    timeout: 5000, // Maximum time expect() should wait for the condition to be met.
-    // toHaveScreenshot: {
-    //   maxDiffPixels: 10, // An acceptable amount of pixels that could be different, unset by default.
-    // },
-    // toMatchSnapshot: {
-    //   maxDiffPixelRatio: 0.1,// An acceptable ratio of pixels that are different to the total amount of pixels, between 0 and 1.
-    // },
+    timeout: 5000,
   },
 
   use: {
-    actionTimeout: 0, // Maximum time each action such as `click()` can take. Defaults to 0 (no limit).
-    baseURL: 'http://localhost:3000/hsr-optimizer', // Base URL to use in actions like `await page.goto('/')`.
-    trace: 'on-first-retry', // Collect trace when retrying the failed test.
-    screenshot: 'only-on-failure', // Capture screenshot after each test failure.
-  },
-  // Configure projects for major browsers.
-  projects: [
-    {
-      name: 'setup',
-      testMatch: /global\.setup\.ts/,
+    actionTimeout: 10000,
+    baseURL: 'http://127.0.0.1:3000/hsr-optimizer',
+    trace: 'on-first-retry',
+    screenshot: 'only-on-failure',
+    video: 'on-first-retry',
+    ...devices['Desktop Chrome'],
+    storageState: STORAGE_STATE,
+    launchOptions: {
+      args: ['--disable-gpu', '--disable-dev-shm-usage'],
     },
-    {
-      name: 'WITH test data',
-      use: {
-        ...devices['Desktop Chrome'],
-        storageState: STORAGE_STATE,
-      },
-      dependencies: ['setup'],
-    }, /* {
-      name: 'NO test data',
-      use: {
-        ...devices['Desktop Chrome'],
-      },
-      testMatch: '!global.setup.ts',
-    }, */
-  ],
-  // Run your local dev server before starting the tests.
+  },
+
   webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:3000/hsr-optimizer',
+    command: process.env.CI ? 'npm run preview' : 'npm run start',
+    url: 'http://127.0.0.1:3000/hsr-optimizer',
     reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000, // 2min max to startup
+    timeout: 60 * 1000,
   },
   reporter: [['html', { open: 'never' }]],
 })

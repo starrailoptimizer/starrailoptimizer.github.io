@@ -1,21 +1,22 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TextureOfMemories')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.TextureOfMemories')
   const { SOURCE_LC } = Source.lightCone(TextureOfMemories.id)
 
   const sValues = [0.12, 0.15, 0.18, 0.21, 0.24]
@@ -32,8 +33,8 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       formItem: 'switch',
       text: t('Content.activeShieldDmgDecrease.text'),
       content: t('Content.activeShieldDmgDecrease.content', {
-        ShieldHp: TsUtils.precisionRound(100 * sValuesShieldHp[s]),
-        DmgReduction: TsUtils.precisionRound(100 * sValues[s]),
+        ShieldHp: precisionRound(100 * sValuesShieldHp[s]),
+        DmgReduction: precisionRound(100 * sValues[s]),
       }),
     },
   }

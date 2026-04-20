@@ -1,10 +1,9 @@
-import { DownloadOutlined } from '@ant-design/icons'
 import {
   Button,
   Flex,
   Tabs,
-  Typography,
-} from 'antd'
+} from '@mantine/core'
+import { IconDownload } from '@tabler/icons-react'
 import { Message } from 'lib/interactions/message'
 import { SaveState } from 'lib/state/saveState'
 import { ClearDataSubmenu } from 'lib/tabs/tabImport/ClearDataSubmenu'
@@ -14,11 +13,9 @@ import {
   ScannerWebsocket,
   useScannerState,
 } from 'lib/tabs/tabImport/ScannerWebsocketClient'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { consoleWarnWrapper } from 'lib/utils/miscUtils'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
-
-const { Text } = Typography
 
 const buttonWidth = 250
 
@@ -49,7 +46,7 @@ const saveFile = async (blob: Blob, suggestedName: string) => {
       await writable.write(blob)
       await writable.close()
     } catch (err: unknown) {
-      TsUtils.consoleWarnWrapper(err)
+      consoleWarnWrapper(err)
     }
   } else {
     // Fallback if the File System Access API is not supported…
@@ -77,6 +74,7 @@ function SaveDataSubmenu() {
   async function saveClicked() {
     try {
       const stateString = SaveState.save()
+      if (!stateString) return
 
       const blob = new Blob(
         [stateString],
@@ -91,19 +89,18 @@ function SaveDataSubmenu() {
   }
 
   return (
-    <Flex vertical gap={5}>
-      <Text>
+    <Flex direction='column' gap={5}>
+      <div>
         {t('Label') /* Save your optimizer data to a file. */}
-      </Text>
-      <Button type='primary' onClick={saveClicked} icon={<DownloadOutlined />} style={{ width: buttonWidth }}>
+      </div>
+      <Button onClick={saveClicked} leftSection={<IconDownload size={16} />} w={buttonWidth}>
         {t('ButtonText') /* Save data */}
       </Button>
     </Flex>
   )
 }
 
-export default function ImportTab() {
-  const tabSize = 'large'
+export function ImportTab() {
   const { t } = useTranslation('importSaveTab', { keyPrefix: 'TabLabels' })
   const ingest = useScannerState((s) => s.ingest)
 
@@ -111,36 +108,33 @@ export default function ImportTab() {
     <div>
       {ingest && <ScannerWebsocket />}
 
-      <Flex vertical gap={5} style={{ marginLeft: 20, width: 1200 }}>
+      <Flex direction='column' gap={5} ml={20} w={1200}>
         <Tabs
-          defaultActiveKey='1'
-          size={tabSize}
-          style={{
-            marginBottom: 32,
-          }}
-          items={[
-            {
-              label: t('Import'),
-              key: 'Import',
-              children: <ScannerImportSubmenu />,
-            },
-            {
-              label: t('Load'),
-              key: 'Load',
-              children: <LoadDataSubmenu />,
-            },
-            {
-              label: t('Save'),
-              key: 'Save',
-              children: <SaveDataSubmenu />,
-            },
-            {
-              label: t('Clear'),
-              key: 'Clear',
-              children: <ClearDataSubmenu />,
-            },
-          ]}
-        />
+          defaultValue='Import'
+          variant='outline'
+          mb={32}
+          styles={{ tab: { height: 42, paddingInline: 32 }, panel: { paddingTop: 'var(--mantine-spacing-xl)' } }}
+        >
+          <Tabs.List>
+            <Tabs.Tab value='Import'>{t('Import')}</Tabs.Tab>
+            <Tabs.Tab value='Load'>{t('Load')}</Tabs.Tab>
+            <Tabs.Tab value='Save'>{t('Save')}</Tabs.Tab>
+            <Tabs.Tab value='Clear'>{t('Clear')}</Tabs.Tab>
+          </Tabs.List>
+
+          <Tabs.Panel value='Import'>
+            <ScannerImportSubmenu />
+          </Tabs.Panel>
+          <Tabs.Panel value='Load'>
+            <LoadDataSubmenu />
+          </Tabs.Panel>
+          <Tabs.Panel value='Save'>
+            <SaveDataSubmenu />
+          </Tabs.Panel>
+          <Tabs.Panel value='Clear'>
+            <ClearDataSubmenu />
+          </Tabs.Panel>
+        </Tabs>
       </Flex>
     </div>
   )

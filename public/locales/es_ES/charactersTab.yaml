@@ -27,10 +27,8 @@ CharacterMenu:
       SortByScore: Ordenar todos los personajes por puntaje
       MoveToTop: Mover personaje al tope de la lista
 SearchPlaceholder: Buscar
-GridHeaders:
-  Icon: Ícono
-  Priority: Prioridad
-  Character: Personaje
+GridDensityOptions:
+  default: Por defecto
 Messages:
   RemoveSuccess: Personaje eliminado con éxito
   UnequipSuccess: Personaje desequipado con éxito
@@ -89,7 +87,6 @@ CharacterPreview:
     TitleBenchmark: 'Evaluación {{spd}} VEL'
     Score: 'Puntaje DPS {{score}}% {{grade}}'
   AlgorithmSlider:
-    Title: 'Algorit. de puntuación:'
     Labels:
       CombatScore: Puntaje de combate
       CombatScoreTBD: Combate (a definir)
@@ -129,16 +126,10 @@ CharacterPreview:
       FUA: ATQ. ADICIONAL
       MEMO_SKILL: HABILIDADᴹ
       MEMO_TALENT: TALENTOᴹ
-      DOTS: 'DOTS:'
       BREAKS: 'RUPTURAS:'
     CombatResults:
-      Header: Resultados de daño de combate
-      Primary: 'Habilidad princ.:'
-      Character: 'Daño del personaje:'
-      Benchmark: 'Daño de la eval.:'
-      Baseline: 'Daño base:'
-      Maximum: 'Daño máximo:'
-      Score: 'Puntaje DPS %:'
+      Character: Personaje
+      Benchmark: Evaluación
       Abilities:
         BASIC: DAÑO BÁSICO
         SKILL: DAÑO HABILIDAD
@@ -155,21 +146,18 @@ CharacterPreview:
   ScoringColumn:
     Character:
       Header: 'Equip. del personaje ({{score}}%)'
-      BasicStats: Atributos base del personaje
       CombatStats: <1>Atributos de combate</1> del personaje
       Substats: Atr. sec. del personje (mín. mejoras)
       Mainstats: Atributos principales del personaje
       Abilities: Daño de habilidad del personaje
     Benchmark:
       Header: 'Equip. del evaluador ({{score}}%)'
-      BasicStats: Evaluación al 100% de atributos básicos
       CombatStats: Evaluación al 100% de <1>atributos de combate</1>
       Substats: Eval. 100% de atr. sec. (mín. mejoras)
       Mainstats: Eval. al 100% de atributos principales
       Abilities: Evaluación al 100% de daño de habilidad
     Perfect:
       Header: 'Equip. perfecto ({{score}}%)'
-      BasicStats: 200% Atributos básicos perfectos
       CombatStats: 200% <1>Atributos de combate</1> perfectos
       Substats: 200% Atr. sec. perfectos (máx. mejoras)
       Mainstats: 200% Atributos principales perfectos

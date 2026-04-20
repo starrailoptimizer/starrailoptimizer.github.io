@@ -1,0 +1,68 @@
+/* CTA Cards */
+
+.cardsRoot {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+
+.card {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: var(--layer-3);
+  text-decoration: none;
+  box-shadow: var(--shadow-card-flat);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.card:hover {
+  box-shadow: var(--shadow-card);
+  transform: translateY(-1px);
+}
+
+/* Discord brand accent on hover */
+.card.cardDiscord:hover {
+  border-color: rgba(88, 101, 242, 0.7);
+}
+
+/* Ko-fi brand accent on hover */
+.card.cardKofi:hover {
+  border-color: rgba(255, 94, 91, 0.7);
+}
+
+/* GitHub / neutral accent on hover */
+.card.cardDefault:hover {
+  border-color: var(--border-hover);
+}
+
+.cardLabel {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.1px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 480px) {
+  .cardsRoot {
+    gap: 8px;
+  }
+
+  .card {
+    min-width: 100px;
+    padding: 10px 8px;
+  }
+
+  .cardLabel {
+    font-size: 11px;
+  }
+}

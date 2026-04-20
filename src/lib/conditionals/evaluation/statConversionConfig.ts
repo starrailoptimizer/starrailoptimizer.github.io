@@ -1,8 +1,8 @@
 import { Stats } from 'lib/constants/constants'
 import {
   AKey,
-  AKeyType,
-  AKeyValue,
+  type AKeyType,
+  type AKeyValue,
 } from 'lib/optimization/engine/config/keys'
 
 type StatConversionConfigEntry = {

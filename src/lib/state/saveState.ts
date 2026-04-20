@@ -1,23 +1,63 @@
 import { CURRENT_OPTIMIZER_VERSION } from 'lib/constants/constants'
-import DB from 'lib/state/db'
+import * as persistenceService from 'lib/services/persistenceService'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { getCharacters } from 'lib/stores/character/characterStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
+import { getRelics } from 'lib/stores/relic/relicStore'
+import { useScoringStore } from 'lib/stores/scoring/scoringStore'
 import {
   DEFAULT_WEBSOCKET_URL,
   useScannerState,
 } from 'lib/tabs/tabImport/ScannerWebsocketClient'
 import { useRelicLocatorStore } from 'lib/tabs/tabRelics/RelicLocator'
-import useRelicsTabStore from 'lib/tabs/tabRelics/useRelicsTabStore'
+import { useRelicsTabStore } from 'lib/tabs/tabRelics/useRelicsTabStore'
 import { useShowcaseTabStore } from 'lib/tabs/tabShowcase/useShowcaseTabStore'
 import { useWarpCalculatorStore } from 'lib/tabs/tabWarp/useWarpCalculatorStore'
-import { Relic } from 'types/relic'
-import { HsrOptimizerSaveFormat } from 'types/store'
+import type { Relic } from 'types/relic'
+import type { HsrOptimizerSaveFormat } from 'types/store'
 
-let saveTimeout: NodeJS.Timeout | null
+let saveTimeout: ReturnType<typeof setTimeout> | null
+let allowEmptySave = false
 
 const STATE_KEY = 'state'
 
+// Flush pending saves before page unload (e.g. HMR full reload)
+window.addEventListener('beforeunload', () => {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout)
+    SaveState.save()
+  }
+})
+
 export const SaveState = {
   save: () => {
-    const globalState = window.store.getState()
+    const characters = getCharacters()
+    const relics = getRelics()
+
+    // Block saves that would wipe existing data (e.g. broken metadata during HMR reload)
+    if (!allowEmptySave) {
+      const existing = localStorage.getItem(STATE_KEY)
+      if (existing) {
+        try {
+          const parsed = JSON.parse(existing) as HsrOptimizerSaveFormat
+          if (characters.length === 0 && parsed.characters?.length > 0) {
+            console.warn(`SaveState: Blocked save — would delete ${parsed.characters.length} characters`)
+            saveTimeout = null
+            return
+          }
+          if (relics.length === 0 && parsed.relics?.length > 0) {
+            console.warn(`SaveState: Blocked save — would delete ${parsed.relics.length} relics`)
+            saveTimeout = null
+            return
+          }
+        } catch {
+          // If we can't parse existing state, allow the save
+        }
+      }
+    }
+    allowEmptySave = false
+
+    const globalState = useGlobalStore.getState()
     const relicsTabState = useRelicsTabStore.getState()
     const showcaseTabSession = useShowcaseTabStore.getState().savedSession
     const globalSession = globalState.savedSession
@@ -27,11 +67,11 @@ export const SaveState = {
     const scannerState = useScannerState.getState()
 
     const state: HsrOptimizerSaveFormat = {
-      relics: DB.getRelics().map(({ augmentedStats, ...rest }) => rest) as Relic[],
-      characters: DB.getCharacters(),
-      scoringMetadataOverrides: globalState.scoringMetadataOverrides,
-      showcasePreferences: globalState.showcasePreferences,
-      optimizerMenuState: globalState.optimizerMenuState,
+      relics: relics.map(({ augmentedStats, ...rest }) => rest) as Relic[],
+      characters: characters,
+      scoringMetadataOverrides: useScoringStore.getState().scoringMetadataOverrides,
+      showcasePreferences: useShowcaseTabStore.getState().showcasePreferences,
+      optimizerMenuState: useOptimizerDisplayStore.getState().menuState,
       excludedRelicPotentialCharacters: relicsTabState.excludedRelicPotentialCharacters,
       savedSession: {
         showcaseTab: showcaseTabSession,
@@ -54,7 +94,12 @@ export const SaveState = {
     }
 
     const stateString = JSON.stringify(state)
-    localStorage.setItem(STATE_KEY, stateString)
+    try {
+      localStorage.setItem(STATE_KEY, stateString)
+      console.log('SaveState: Saved')
+    } catch (e) {
+      console.error('Failed to save state (storage quota exceeded?)', e)
+    }
     saveTimeout = null
 
     return stateString
@@ -70,6 +115,11 @@ export const SaveState = {
     }, ms)
   },
 
+  // Bypass the empty-save guard for the next save (used by "Clear data")
+  permitEmptySave: () => {
+    allowEmptySave = true
+  },
+
   load: (autosave = true, sanitize = true) => {
     try {
       const state = localStorage.getItem(STATE_KEY)
@@ -77,7 +127,7 @@ export const SaveState = {
         const parsed = JSON.parse(state) as HsrOptimizerSaveFormat
         console.log('Loaded SaveState')
 
-        DB.setStore(parsed, autosave, sanitize)
+        persistenceService.loadSaveData(parsed, autosave, sanitize)
 
         return true
       }

@@ -1,21 +1,19 @@
-import {
-  statConversionEntries,
-  UnconvertibleProperty,
-} from 'lib/conditionals/evaluation/statConversionConfig'
+import type { UnconvertibleProperty } from 'lib/conditionals/evaluation/statConversionConfig'
+import { statConversionEntries } from 'lib/conditionals/evaluation/statConversionConfig'
 import { PathNames } from 'lib/constants/constants'
-import {
+import type {
   BasicKeyType,
   Buff,
 } from 'lib/optimization/basicStatsArray'
 import { BUFF_TYPE } from 'lib/optimization/buffSource'
-import { AKeyType } from 'lib/optimization/engine/config/keys'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import {
+import type { AKeyType } from 'lib/optimization/engine/config/keys'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type {
   ActionBuffSnapshot,
   RotationBuffStep,
 } from 'lib/simulations/statSimulationTypes'
-import DB from 'lib/state/db'
-import { OptimizerForm } from 'types/form'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import type { OptimizerForm } from 'types/form'
 
 const unconvertibleStatNames = new Set<AKeyType | BasicKeyType>()
 const mainStatToUnconvertibleStat = new Map<AKeyType | BasicKeyType, UnconvertibleProperty>()
@@ -44,7 +42,7 @@ export function aggregatePerActionBuffs(
   request: OptimizerForm,
   primaryAbilityKey: string,
 ): PerActionBuffGroups {
-  const hasMemo = DB.getMetadata().characters[request.characterId].path === PathNames.Remembrance
+  const hasMemo = getGameMetadata().characters[request.characterId].path === PathNames.Remembrance
   const buffsBasic: Buff[] = (x.c as unknown as { buffs?: Buff[] }).buffs ?? []
 
   const byAction: Record<string, BuffGroups> = {}

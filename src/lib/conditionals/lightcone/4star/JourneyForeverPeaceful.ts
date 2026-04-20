@@ -1,19 +1,26 @@
 import {
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
 } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
-import { OutputTag, TargetTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { OptimizerAction, OptimizerContext } from 'types/optimizer'
+import {
+  OutputTag,
+  TargetTag,
+} from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
+} from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.JourneyForeverPeaceful.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.JourneyForeverPeaceful.Content')
   const { SOURCE_LC } = Source.lightCone(JourneyForeverPeaceful.id)
 
   const sValuesShieldBoost = [0.12, 0.15, 0.18, 0.21, 0.24]
@@ -34,14 +41,14 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'shieldBoost',
       formItem: 'switch',
       text: t('shieldBoost.text'),
-      content: t('shieldBoost.content', { ShieldBuff: TsUtils.precisionRound(100 * sValuesShieldBoost[s]) }),
+      content: t('shieldBoost.content', { ShieldBuff: precisionRound(100 * sValuesShieldBoost[s]) }),
     },
     dmgBoost: {
       lc: true,
       id: 'dmgBoost',
       formItem: 'switch',
       text: t('dmgBoost.text'),
-      content: t('dmgBoost.content', { DmgBuff: TsUtils.precisionRound(100 * sValuesDmgBoost[s]) }),
+      content: t('dmgBoost.content', { DmgBuff: precisionRound(100 * sValuesDmgBoost[s]) }),
     },
   }
 

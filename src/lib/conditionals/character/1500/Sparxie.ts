@@ -6,8 +6,8 @@ import {
 } from 'lib/conditionals/character/1500/Yaoguang'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -33,7 +33,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_SKILL,
@@ -49,19 +49,21 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 import {
-  CharacterConditionalFunction,
-  CharacterConfig,
+  type CharacterConditionalFunction,
+  type CharacterConfig,
 } from 'types/characterConfig'
-import { HitDefinition } from 'types/hitConditionalTypes'
+import { type HitDefinition } from 'types/hitConditionalTypes'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SparxieEntities = createEnum('Sparxie')
@@ -89,7 +91,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
     SOURCE_ELATION_SKILL,
   } = Source.character(Sparxie.id)
 
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sparxie.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sparxie.Content')
 
   const basicScaling = basic(e, 1.00, 1.10)
   const engagementScaling = skill(e, 0.20, 0.22)
@@ -148,10 +150,10 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       formItem: 'slider',
       text: t('certifiedBangerStacks.text'),
       content: t('certifiedBangerStacks.content', {
-        ebaAdjacentScaling: TsUtils.precisionRound(100 * talentEngagementElationScaling),
-        ebaPrimaryScaling: TsUtils.precisionRound(100 * talentMainElationScaling),
-        ebaBounceScaling: TsUtils.precisionRound(100 * talentEngagementElationScaling),
-        ultElationScaling: TsUtils.precisionRound(100 * talentUltElationScaling),
+        ebaAdjacentScaling: precisionRound(100 * talentEngagementElationScaling),
+        ebaPrimaryScaling: precisionRound(100 * talentMainElationScaling),
+        ebaBounceScaling: precisionRound(100 * talentEngagementElationScaling),
+        ultElationScaling: precisionRound(100 * talentUltElationScaling),
       }),
       min: 0,
       max: 200,
@@ -160,7 +162,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       id: 'engagementFarmingStacks',
       formItem: 'slider',
       text: t('engagementFarmingStacks.text'),
-      content: t('engagementFarmingStacks.content', { ebaBounceScaling: TsUtils.precisionRound(100 * talentEngagementElationScaling) }),
+      content: t('engagementFarmingStacks.content', { ebaBounceScaling: precisionRound(100 * talentEngagementElationScaling) }),
       min: 0,
       max: 20,
     },
@@ -169,10 +171,10 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
       formItem: 'switch',
       text: t('certifiedBanger.text'),
       content: t('certifiedBanger.content', {
-        ebaAdjacentScaling: TsUtils.precisionRound(100 * talentEngagementElationScaling),
-        ebaPrimaryScaling: TsUtils.precisionRound(100 * talentMainElationScaling),
-        ebaBounceScaling: TsUtils.precisionRound(100 * talentEngagementElationScaling),
-        ultElationScaling: TsUtils.precisionRound(100 * talentUltElationScaling),
+        ebaAdjacentScaling: precisionRound(100 * talentEngagementElationScaling),
+        ebaPrimaryScaling: precisionRound(100 * talentMainElationScaling),
+        ebaBounceScaling: precisionRound(100 * talentEngagementElationScaling),
+        ultElationScaling: precisionRound(100 * talentUltElationScaling),
       }),
     },
     atkToElation: {
@@ -372,7 +374,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
             SOURCE_TRACE,
             (convertibleValue) => {
               if (convertibleValue < 2000) return 0
-              return Math.min(0.80, Math.floor((convertibleValue - 2000) / 100) * 0.05)
+              return Math.min(0.80, floorSafe((convertibleValue - 2000) / 100) * 0.05)
             },
           )
         },
@@ -385,7 +387,7 @@ const conditionals: CharacterConditionalFunction = (e, withContent) => {
             this,
             action,
             context,
-            `min(0.80, floor((convertibleValue - 2000.0) / 100.0) * 0.05)`,
+            `min(0.80, floorSafe((convertibleValue - 2000.0) / 100.0) * 0.05)`,
             `${wgslTrue(r.atkToElation)}`,
             `convertibleValue >= 2000.0`,
           )
@@ -423,21 +425,17 @@ const simulation = (): SimulationMetadata => ({
   comboTurnAbilities: [
     NULL_TURN_ABILITY_NAME,
     START_ULT,
-    DEFAULT_SKILL,
     END_BASIC,
     WHOLE_ELATION_SKILL,
-    START_SKILL,
     END_BASIC,
     WHOLE_ELATION_SKILL,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.EverGloriousMagicalGirl, Sets.EverGloriousMagicalGirl],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
-    // TODO: Add Sets.PunklordeStageZero to index 0 during 4.1
     Sets.TengokuLivestream,
     Sets.PunklordeStageZero,
     Sets.RutilantArena,
@@ -513,7 +511,8 @@ const display = {
     y: 1050,
     z: 1.10,
   },
-  showcaseColor: '#b4a8e8',
+  showcaseColor: '#b385ea',
+  gridPortraitOffset: 20,
 }
 
 export const Sparxie: CharacterConfig = {

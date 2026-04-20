@@ -1,7 +1,3 @@
-import { Flex } from 'antd'
-import React from 'react'
-import { IconExtractedProps } from 'types/components'
-
 const IconSVG = (props: { color?: string }) => {
   const { color } = props
 
@@ -20,12 +16,4 @@ const IconSVG = (props: { color?: string }) => {
   )
 }
 
-export const RingedCircleCheckIcon = React.forwardRef<HTMLDivElement, IconExtractedProps>((props, ref) => {
-  const { color, className, style, ...restProps } = props
-
-  return (
-    <Flex ref={ref} className={className} style={style} {...restProps}>
-      <IconSVG color={color} />
-    </Flex>
-  )
-})
+export const RingedCircleCheckIcon = ({ color }: { color?: string }) => <IconSVG color={color} />

@@ -11,8 +11,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -31,7 +31,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_FUA,
@@ -49,18 +49,19 @@ import {
   SPREAD_ORNAMENTS_2P_SUPPORT,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TopazEntities = createEnum('Topaz', 'Numby')
@@ -72,7 +73,7 @@ export const TopazAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Topaz')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Topaz')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -124,15 +125,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enemyProofOfDebtDebuff',
       formItem: 'switch',
       text: t('Content.enemyProofOfDebtDebuff.text'),
-      content: t('Content.enemyProofOfDebtDebuff.content', { proofOfDebtFuaVulnerability: TsUtils.precisionRound(100 * proofOfDebtFuaVulnerability) }),
+      content: t('Content.enemyProofOfDebtDebuff.content', { proofOfDebtFuaVulnerability: precisionRound(100 * proofOfDebtFuaVulnerability) }),
     },
     numbyEnhancedState: {
       id: 'numbyEnhancedState',
       formItem: 'switch',
       text: t('Content.numbyEnhancedState.text'),
       content: t('Content.numbyEnhancedState.content', {
-        enhancedStateFuaCdBoost: TsUtils.precisionRound(100 * enhancedStateFuaCdBoost),
-        enhancedStateFuaScalingBoost: TsUtils.precisionRound(100 * enhancedStateFuaScalingBoost),
+        enhancedStateFuaCdBoost: precisionRound(100 * enhancedStateFuaCdBoost),
+        enhancedStateFuaScalingBoost: precisionRound(100 * enhancedStateFuaScalingBoost),
       }),
     },
     e1DebtorStacks: {
@@ -304,7 +305,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   deprioritizeBuffs: true,
   relicSets: [
     [Sets.TheAshblazingGrandDuke, Sets.TheAshblazingGrandDuke],
@@ -389,11 +389,16 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1120,
-    y: 875,
+    x: 1041,
+    y: 890,
     z: 1,
   },
-  showcaseColor: '#0f349b',
+  spineCenter: {
+    x: 1178,
+    y: 886,
+    z: 1.1,
+  },
+  showcaseColor: '#5246bd',
 }
 
 export const Topaz: CharacterConfig = {

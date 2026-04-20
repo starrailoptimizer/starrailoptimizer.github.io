@@ -1,25 +1,23 @@
-import { CellClassParams } from 'ag-grid-community'
-import type { GlobalToken } from 'antd/es/theme/interface'
-import { SubStats } from 'lib/constants/constants'
-import { OptimizerDisplayDataStatSim } from 'lib/optimization/bufferPacker'
-import { ScoredRelic } from 'lib/relics/scoreRelics'
-import { ColorThemeOverrides } from 'lib/rendering/theme'
+import { type CellClassParams } from 'ag-grid-community'
+import chroma from 'chroma-js'
+import { type SubStats } from 'lib/constants/constants'
+import { type OptimizerDisplayDataStatSim } from 'lib/optimization/bufferPacker'
+import { type ScoredRelic } from 'lib/relics/scoreRelics'
 import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import tinygradient from 'tinygradient'
 
 export type GridAggregations = {
   min: Record<string, number>,
   max: Record<string, number>,
 }
 
-const optimizerGridGradient = tinygradient([
-  { color: '#5A1A06', pos: 0 }, // red
-  { color: '#343127', pos: 0.35 },
-  { color: '#38821F', pos: 1 }, // green
-])
+const optimizerGridGradient = chroma.scale(['#5A1A06', '#343127', '#38821F']).domain([0, 0.35, 1])
+const NEUTRAL_OPTIMIZER_STYLE = { '--cell-bg': optimizerGridGradient(0.5).hex() } as const
+const GRADIENT_BUCKETS = 201 // 0-200 inclusive
+let optimizerGradientCache: Array<{ '--cell-bg': string } | undefined> = Array.from({ length: GRADIENT_BUCKETS })
 
-// this default is overwritten on page load, Gradient.setToken() in App.tsx
-let relicGridGradient = tinygradient('#343127', '#38821F')
+// this default is overwritten on page load, Gradient.setTheme() in App.tsx
+let relicGridGradient = chroma.scale(['#343127', '#38821F'])
+let relicGradientCache: Array<{ '--cell-bg': string } | undefined> = Array.from({ length: GRADIENT_BUCKETS })
 
 const relicColumnRanges = {
   'augmentedStats.HP': 169.35,
@@ -43,62 +41,56 @@ const relicColumnRanges = {
 } as const
 
 export const Gradient = {
-  getColor: (decimal: number, gradient: tinygradient.Instance) => {
-    return gradient.rgbAt(decimal).toHexString()
+  getColor: (decimal: number, gradient: chroma.Scale) => {
+    return gradient(decimal).hex()
+  },
+
+  clearOptimizerGradientCache() {
+    optimizerGradientCache = Array.from({ length: GRADIENT_BUCKETS })
   },
 
   getOptimizerColumnGradient: (params: CellClassParams<OptimizerDisplayDataStatSim, number>) => {
+    if (!params.data) return
+    if (params.value == null) return
+
     const aggregations = OptimizerTabController.getAggregations()
+    if (!aggregations) return NEUTRAL_OPTIMIZER_STYLE
 
-    try {
-      const colId = params.column.getColId()
+    const colId = params.column.getColId()
+    const min = aggregations.min[colId]
+    const max = aggregations.max[colId]
+    if (min == null) return
 
-      const columnsToAggregate = OptimizerTabController.getColumnsToAggregateMap() as Record<string, boolean>
-      if (!columnsToAggregate[colId]) return
+    const value = params.value
 
-      if (params.data && aggregations) {
-        const min = aggregations.min[colId]
-        const max = aggregations.max[colId]
-        const value = params.value!
+    const range = max === min ? 0.5 : (value - min) / (max - min)
+    const clamped = Math.min(Math.max(range, 0), 1)
+    // Quantize to ~200 buckets to maximize cache hits
+    const key = Math.round(clamped * 200)
+    const cached = optimizerGradientCache[key]
+    if (cached) return cached
 
-        let range = (value - min) / (max - min)
-        if (max == min) {
-          range = 0.5
-        }
-
-        const color = Gradient.getColor(Math.min(Math.max(range, 0), 1), optimizerGridGradient)
-        return {
-          backgroundColor: color,
-        }
-      }
-
-      // No aggregations yet — return neutral color to prevent black flash
-      if (params.data) {
-        return { backgroundColor: Gradient.getColor(0.5, optimizerGridGradient) }
-      }
-    } catch (e) {
-      console.error(e)
-    }
+    const color = Gradient.getColor(clamped, optimizerGridGradient)
+    const style = { '--cell-bg': color }
+    optimizerGradientCache[key] = style
+    return style
   },
 
-  setTheme(colorTheme: ColorThemeOverrides) {
-    relicGridGradient = tinygradient(colorTheme.colorBgBase, colorTheme.colorPrimary)
-  },
-
-  setToken(token: GlobalToken) {
-    relicGridGradient = tinygradient(token.colorBgElevated, token.colorPrimaryHover)
+  setTheme(darkBg: string, primaryLight: string) {
+    relicGridGradient = chroma.scale([darkBg, primaryLight])
+    relicGradientCache = Array.from({ length: GRADIENT_BUCKETS })
   },
 
   getRelicGradient(params: CellClassParams<ScoredRelic>) {
     const col = params.column.getColId()
     const value = params.value
 
-    if (isNaN(value) || value == 0) {
+    if (isNaN(value) || value === 0) {
       return
     }
 
     let range: number
-    if (col == 'weights.rerollAvgSelectedDelta') {
+    if (col === 'weights.rerollAvgSelectedDelta') {
       range = value / 40
     } else if (col.startsWith('weights.potential') || col.startsWith('weights.reroll')) {
       range = value / 100
@@ -108,10 +100,15 @@ export const Gradient = {
       range = value / relicColumnRanges[col as `augmentedStats.${SubStats}` | 'cv']
     }
 
-    const color = Gradient.getColor(Math.min(Math.max(range, 0), 1), relicGridGradient)
+    const clamped = Math.min(Math.max(range, 0), 1)
+    // Quantize to ~200 buckets to maximize cache hits
+    const key = Math.round(clamped * 200)
+    const cached = relicGradientCache[key]
+    if (cached) return cached
 
-    return {
-      backgroundColor: color,
-    }
+    const color = Gradient.getColor(clamped, relicGridGradient)
+    const style = { '--cell-bg': color }
+    relicGradientCache[key] = style
+    return style
   },
 }

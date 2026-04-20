@@ -1,21 +1,22 @@
 import {
-  GetLocaleTextParams,
-  GetRowIdParams,
-  GridOptions,
-  IRowNode,
-  IsExternalFilterPresentParams,
-  PaginationNumberFormatterParams,
+  type GetRowIdParams,
+  type GridOptions,
+  type IRowNode,
+  type IsExternalFilterPresentParams,
 } from 'ag-grid-community'
 import {
   AgGridReact,
-  AgGridReactProps,
+  type AgGridReactProps,
 } from 'ag-grid-react'
-import { theme } from 'antd'
 import {
-  ScoredRelic,
-  scoreRelics,
-} from 'lib/relics/scoreRelics'
-import { getGridTheme } from 'lib/rendering/theme'
+  useGridLocale,
+  useGridLocaleRebuild,
+} from 'lib/hooks/useGridLocale'
+import { TabVisibilityContext } from 'lib/hooks/useTabVisibility'
+import type { ScoredRelic } from 'lib/relics/scoreRelics'
+import { gridStore } from 'lib/stores/gridStore'
+import { useRelicStore } from 'lib/stores/relic/relicStore'
+import { useScoringStore } from 'lib/stores/scoring/scoringStore'
 import {
   defaultRelicsGridColDefs,
   generateBaselineColDefs,
@@ -23,22 +24,30 @@ import {
 } from 'lib/tabs/tabRelics/columnDefs'
 import { TAB_WIDTH } from 'lib/tabs/tabRelics/RelicsTab'
 import { RelicsTabController } from 'lib/tabs/tabRelics/relicsTabController'
-import useRelicsTabStore, { ValueColumnField } from 'lib/tabs/tabRelics/useRelicsTabStore'
-import { currentLocale } from 'lib/utils/i18nUtils'
 import {
+  useRelicsTabStore,
+  type ValueColumnField,
+} from 'lib/tabs/tabRelics/useRelicsTabStore'
+import { scoreRelicsAsync } from 'lib/worker/scoreRelicsWorkerRunner'
+import {
+  startTransition,
   useCallback,
+  useContext,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useShallow } from 'zustand/react/shallow'
 
 const gridOptions: GridOptions<ScoredRelic> = {
   rowHeight: 33,
+  rowBuffer: 15,
   suppressDragLeaveHidesColumns: true,
   suppressScrollOnNewData: true,
   suppressMultiSort: true,
+  suppressNoRowsOverlay: true,
   getRowId: (params: GetRowIdParams<ScoredRelic>) => params.data.id,
 }
 
@@ -46,42 +55,84 @@ const paginationSettings: AgGridReactProps<ScoredRelic> = {
   pagination: true,
   paginationPageSizeSelector: false,
   paginationPageSize: 3100,
-  paginationNumberFormatter: (params: PaginationNumberFormatterParams<ScoredRelic>) => params.value.toLocaleString(currentLocale()),
 }
 
-const { useToken } = theme
-
 export function RelicsGrid() {
+  const { getLocaleText, paginationNumberFormatter } = useGridLocale('relicsTab', 'RelicGrid')
   const { t } = useTranslation('relicsTab', { keyPrefix: 'RelicGrid' })
 
-  const { token } = useToken()
+  const { gridDestroyed } = useGridLocaleRebuild()
 
-  const [gridActive, setGridActive] = useState(true)
+  const relics = useRelicStore((s) => s.relics)
+  const scoringVersion = useScoringStore((s) => s.scoringVersion)
 
-  const { relics, scoringMetadataOverrides } = window.store()
-
-  const { focusCharacter, excludedRelicPotentialCharacters } = useRelicsTabStore()
+  const { focusCharacter, excludedRelicPotentialCharacters, filters, valueColumns } = useRelicsTabStore(
+    useShallow((s) => ({
+      focusCharacter: s.focusCharacter,
+      excludedRelicPotentialCharacters: s.excludedRelicPotentialCharacters,
+      filters: s.filters,
+      valueColumns: s.valueColumns,
+    })),
+  )
 
   const gridRef = useRef<AgGridReact<ScoredRelic>>(null)
-  window.relicsGrid = gridRef
+  useEffect(() => {
+    gridStore.setRelicsGrid(gridRef)
+  }, [])
 
-  const scoredRelics = useMemo(() => {
-    return scoreRelics(relics, excludedRelicPotentialCharacters, focusCharacter, scoringMetadataOverrides)
-  }, [relics, scoringMetadataOverrides, focusCharacter, excludedRelicPotentialCharacters])
+  // Score relics off the main thread via web worker. Starts immediately on mount
+  // (during stagger) so data is often ready before the user navigates to the tab.
+  // Results are held in a pending ref until the tab is active, then applied via
+  // startTransition so AG Grid's data ingestion doesn't block the UI.
+  const { isActiveRef, addActivationListener } = useContext(TabVisibilityContext)
+  const [scoredRelics, setScoredRelics] = useState<ScoredRelic[] | null>(null)
+  const pendingResultRef = useRef<ScoredRelic[] | null>(null)
 
-  const { filters, valueColumns } = useRelicsTabStore()
+  // Apply pending results when the tab activates, delayed so the menu animation completes first
+  useEffect(() => {
+    let timerId: ReturnType<typeof setTimeout>
+    const unsub = addActivationListener(() => {
+      if (pendingResultRef.current) {
+        const result = pendingResultRef.current
+        pendingResultRef.current = null
+        timerId = setTimeout(() => {
+          startTransition(() => setScoredRelics(result))
+        }, 250)
+      }
+    })
+    return () => {
+      unsub()
+      clearTimeout(timerId)
+    }
+  }, [addActivationListener])
 
   useEffect(() => {
-    setGridActive(false)
-    setTimeout(() => setGridActive(true), 100)
-  }, [t])
+    pendingResultRef.current = null
 
-  const getLocaleText = useCallback((params: GetLocaleTextParams<ScoredRelic>) => {
-    if (params.key == 'to') return (t('To') /* to */)
-    if (params.key == 'of') return (t('Of') /* of */)
-    if (params.key == 'noRowsToShow') return ''
-    return params.key
-  }, [t])
+    if (relics.length === 0) {
+      setScoredRelics(null)
+      return
+    }
+
+    let cancelled = false
+    scoreRelicsAsync(relics, excludedRelicPotentialCharacters, focusCharacter)
+      .then((result) => {
+        if (cancelled || result.length === 0) return
+        if (isActiveRef.current) {
+          startTransition(() => setScoredRelics(result))
+        } else {
+          pendingResultRef.current = result
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) console.warn('scoreRelicsAsync error:', err)
+      })
+    return () => {
+      cancelled = true
+    }
+    // scoringVersion is not passed to the worker but triggers re-scoring via this dep array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relics, scoringVersion, focusCharacter, excludedRelicPotentialCharacters])
 
   const columnDefs = useMemo(() => {
     return generateBaselineColDefs(t)
@@ -96,7 +147,7 @@ export function RelicsGrid() {
     const relic = node.data
     if (!relic) return false
     if (filters.part.length && !filters.part.includes(relic.part)) return false
-    if (filters.enhance.length && !filters.enhance.flatMap((x) => [x, x + 1, x + 2]).includes(relic.enhance)) return false
+    if (filters.enhance.length && !filters.enhance.some((x) => relic.enhance >= x && relic.enhance <= x + 2)) return false
     if (filters.grade.length && !filters.grade.includes(relic.grade)) return false
     if (filters.initialRolls.length && !filters.initialRolls.includes(relic.initialRolls ?? 3)) return false
     if (filters.verified.length && !filters.verified.includes(relic.verified ?? false)) return false
@@ -120,13 +171,13 @@ export function RelicsGrid() {
       className='ag-theme-balham-dark'
       style={{
         width: TAB_WIDTH,
-        height: 500,
-        resize: 'vertical',
+        height: 600,
         overflow: 'hidden',
-        ...getGridTheme(token),
+        resize: 'vertical',
+        marginTop: 0,
       }}
     >
-      {gridActive && (
+      {!gridDestroyed && (
         <AgGridReact
           ref={gridRef}
           rowData={scoredRelics}
@@ -134,15 +185,15 @@ export function RelicsGrid() {
           defaultColDef={defaultRelicsGridColDefs}
           gridOptions={gridOptions}
           onSelectionChanged={RelicsTabController.onSelectionChanged}
-          onRowClicked={RelicsTabController.onRowClicked}
           onRowDoubleClicked={RelicsTabController.onRowDoubleClicked}
           navigateToNextCell={RelicsTabController.navigateToNextCell}
           isExternalFilterPresent={isExternalFilterPresent}
           doesExternalFilterPass={doesExternalFilterPass}
           getLocaleText={getLocaleText}
-          headerHeight={24}
+          headerHeight={48}
           animateRows={true}
-          rowSelection='multiple'
+          rowSelection={{ mode: 'multiRow', checkboxes: false, headerCheckbox: false, enableClickSelection: true }}
+          paginationNumberFormatter={paginationNumberFormatter}
           {...paginationSettings}
         />
       )}

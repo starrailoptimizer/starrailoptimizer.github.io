@@ -1,52 +1,45 @@
-import {
-  Flex,
-  Form as AntDForm,
-} from 'antd'
 import { useDelayedProps } from 'hooks/useDelayedProps'
-import { BuffsAnalysisDisplay } from 'lib/characterPreview/BuffsAnalysisDisplay'
-import DB, { AppPages } from 'lib/state/db'
+import { BuffsAnalysisDisplay } from 'lib/characterPreview/buildAnalysis/BuffsAnalysisDisplay'
+import { AppPages } from 'lib/constants/appPages'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import { getCharacterById } from 'lib/stores/character/characterStore'
+import { useOptimizerDisplayStore } from 'lib/stores/optimizerUI/useOptimizerDisplayStore'
+import { DamageSplits } from 'lib/tabs/tabOptimizer/analysis/DamageSplits'
+import { DamageTagPieChart } from 'lib/tabs/tabOptimizer/analysis/DamageTagPieChart'
 import {
   generateAnalysisData,
   getCachedForm,
   getPinnedRowData,
   mismatchedCharacter,
-  OptimizerResultAnalysis,
 } from 'lib/tabs/tabOptimizer/analysis/expandedDataPanelController'
-import { DamageSplits } from 'lib/tabs/tabOptimizer/analysis/DamageSplits'
-import { DamageTagPieChart } from 'lib/tabs/tabOptimizer/analysis/DamageTagPieChart'
+import type { OptimizerResultAnalysis } from 'lib/tabs/tabOptimizer/analysis/expandedDataPanelController'
 import { StatsDiffCard } from 'lib/tabs/tabOptimizer/analysis/StatsDiffCard'
 import { DamageUpgrades } from 'lib/tabs/tabOptimizer/analysis/SubstatUpgrades'
-import FilterContainer from 'lib/tabs/tabOptimizer/optimizerForm/layout/FilterContainer'
-import {
-  FormRow,
-  OptimizerMenuIds,
-} from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormRow'
-import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import React, { useMemo } from 'react'
+import { FilterContainer } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FilterContainer'
+import { FormRow } from 'lib/tabs/tabOptimizer/optimizerForm/layout/FormRow'
+import { OptimizerMenuIds } from 'lib/tabs/tabOptimizer/optimizerForm/layout/optimizerMenuIds'
+import { getForm } from 'lib/tabs/tabOptimizer/optimizerForm/optimizerFormActions'
+import { useMemo } from 'react'
 
 export function ExpandedDataPanel() {
-  const selectedRowData = window.store((s) => s.optimizerSelectedRowData)
-  const optimizerTabFocusCharacter = window.store((s) => s.optimizerTabFocusCharacter)
+  const selectedRowData = useOptimizerDisplayStore((s) => s.optimizerSelectedRowData)
+  const optimizerTabFocusCharacter = useOptimizerDisplayStore((s) => s.focusCharacterId)
 
-  // For triggering updates
-  const characterId = AntDForm.useWatch(['characterId'], window.optimizerForm)
-  const lightConeId = AntDForm.useWatch(['lightCone'], window.optimizerForm)
-
-  if (window.store.getState().activeKey != AppPages.OPTIMIZER) {
+  if (useGlobalStore.getState().activeKey !== AppPages.OPTIMIZER) {
     return null
   }
 
-  let form = getCachedForm() ?? OptimizerTabController.getForm()
+  let form = getCachedForm() ?? getForm()
   const pinnedRowData = getPinnedRowData()
 
   // Check the cached form first, otherwise try the current form
   if (mismatchedCharacter(optimizerTabFocusCharacter, form)) {
-    form = OptimizerTabController.getForm()
+    form = getForm()
     if (mismatchedCharacter(optimizerTabFocusCharacter, form)) {
       return null
     }
   }
-  if (selectedRowData == null || pinnedRowData == null || form == null || DB.getCharacterById(form.characterId) == null) {
+  if (selectedRowData == null || pinnedRowData == null || form == null || getCharacterById(form.characterId) == null) {
     return null
   }
   if (selectedRowData.statSim) {
@@ -54,7 +47,6 @@ export function ExpandedDataPanel() {
   }
 
   const analysis = generateAnalysisData(pinnedRowData, selectedRowData, form)
-  console.log('Optimizer result', analysis)
 
   if (!analysis) return null
 
@@ -62,36 +54,38 @@ export function ExpandedDataPanel() {
 }
 
 function MemoizedExpandedDataPanel(props: { analysis: OptimizerResultAnalysis }) {
-  const delayedProps = useDelayedProps(props, 50)
+  const delayedAnalysis = useDelayedProps(props.analysis, 50)
 
   const memoized = useMemo(() => {
-    return delayedProps
-      ? <AnalysisRender analysis={delayedProps.analysis} />
+    return delayedAnalysis
+      ? <AnalysisRender analysis={delayedAnalysis} />
       : null
-  }, [delayedProps])
+  }, [delayedAnalysis])
 
-  if (!delayedProps) return null
+  if (!delayedAnalysis) return null
   return memoized
 }
 
-function AnalysisRender(props: { analysis: OptimizerResultAnalysis }) {
-  const { analysis } = props
-
+function AnalysisRender({ analysis }: { analysis: OptimizerResultAnalysis }) {
   return (
     <FilterContainer>
       <FormRow id={OptimizerMenuIds.analysis}>
-        <Flex justify='space-between' style={{ width: '100%', paddingTop: 4 }} gap={10}>
-          <Flex vertical gap={10}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', paddingTop: 4, gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: 1 }}>
             <StatsDiffCard analysis={analysis} />
             <DamageSplits analysis={analysis} />
-            <Flex gap={10} align='start'>
-              <DamageTagPieChart analysis={analysis} />
-              <DamageUpgrades analysis={analysis} />
-            </Flex>
-          </Flex>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <DamageTagPieChart analysis={analysis} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <DamageUpgrades analysis={analysis} />
+              </div>
+            </div>
+          </div>
 
           <BuffsAnalysisDisplay perActionBuffGroups={analysis.perActionBuffGroups} context={analysis.context} />
-        </Flex>
+        </div>
       </FormRow>
     </FilterContainer>
   )

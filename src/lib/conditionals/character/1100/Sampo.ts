@@ -3,8 +3,8 @@ import { Hysilens } from 'lib/conditionals/character/1400/Hysilens'
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -23,7 +23,7 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_DOT,
@@ -37,19 +37,20 @@ import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SampoEntities = createEnum('Sampo')
@@ -62,7 +63,8 @@ export const SampoAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sampo')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Sampo')
+  const tDot = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.DotTickCoefficient')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_ULT,
@@ -78,6 +80,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
 
   const maxExtraHits = e < 1 ? 4 : 5
   const defaults = {
+    dotTickCoefficient: 20,
     targetDotTakenDebuff: true,
     skillExtraHits: maxExtraHits,
     targetWindShear: true,
@@ -92,7 +95,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'targetDotTakenDebuff',
       formItem: 'switch',
       text: t('Content.targetDotTakenDebuff.text'),
-      content: t('Content.targetDotTakenDebuff.content', { dotVulnerabilityValue: TsUtils.precisionRound(100 * dotVulnerabilityValue) }),
+      content: t('Content.targetDotTakenDebuff.content', { dotVulnerabilityValue: precisionRound(100 * dotVulnerabilityValue) }),
     },
     skillExtraHits: {
       id: 'skillExtraHits',
@@ -107,6 +110,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.targetWindShear.text'),
       content: t('Content.targetWindShear.content'),
+    },
+    dotTickCoefficient: {
+      id: 'dotTickCoefficient',
+      formItem: 'slider',
+      text: tDot('Text'),
+      content: tDot('Content'),
+      min: 0,
+      max: 100,
+      percent: true,
     },
   }
 
@@ -174,6 +186,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
               .damageElement(ElementTag.Wind)
               .atkScaling(totalDotScaling)
               .dotBaseChance(0.65)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
           ],
         },
@@ -241,7 +254,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     DEFAULT_DOT,
   ],
-  comboDot: 60,
   relicSets: [
     [Sets.PrisonerInDeepConfinement, Sets.PrisonerInDeepConfinement],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -322,7 +334,8 @@ const display = {
     y: 950,
     z: 1,
   },
-  showcaseColor: '#7777c9',
+  disableSpine: true,
+  showcaseColor: '#a38af2',
 }
 
 export const Sampo: CharacterConfig = {

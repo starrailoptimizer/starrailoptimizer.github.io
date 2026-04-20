@@ -2,13 +2,13 @@ import {
   Constants,
   Stats,
 } from 'lib/constants/constants'
-import { RelicsByPart } from 'lib/gpu/webgpuTypes'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
+import type { RelicsByPart } from 'lib/gpu/webgpuTypes'
 import {
   SetsOrnaments,
   SetsRelics,
 } from 'lib/sets/setConfigRegistry'
+import type { Form } from 'types/form'
+import type { OptimizerContext } from 'types/optimizer'
 
 export function injectSettings(wgsl: string, context: OptimizerContext, request: Form, relics: RelicsByPart) {
   const merged: Record<string, number> = {}
@@ -52,7 +52,7 @@ function generateRequest(request: Form) {
   let wgsl = '\n'
 
   // "combat" == 0 / "base" == 1
-  wgsl += `const statDisplay: i32 = ${request.statDisplay == 'combat' ? 0 : 1};\n`
+  wgsl += `const statDisplay: i32 = ${request.statDisplay === 'combat' ? 0 : 1};\n`
   wgsl += '\n'
 
   // Enemy
@@ -72,7 +72,11 @@ function generateRequest(request: Form) {
   // Filters
   for (const [key, value] of Object.entries(request)) {
     if ((key.startsWith('min') || key.startsWith('max'))) {
-      wgsl += `const ${key}: f32 = ${value};\n`
+      // Guard against undefined/NaN from missing form fields — emit 0 for min, MAX_INT for max.
+      const n = Number(value)
+      const isMin = key.startsWith('min')
+      const safe = Number.isFinite(n) ? n : (isMin ? 0 : Constants.MAX_INT)
+      wgsl += `const ${key}: f32 = ${safe};\n`
     }
   }
   wgsl += '\n'
@@ -100,17 +104,11 @@ function generateElement(context: OptimizerContext) {
   return wgsl
 }
 
-const EPSILON = 0.00000001
-const EPSILON_STATS = new Set(['HP', 'ATK', 'DEF', 'SPD', 'CR', 'CD', 'EHR', 'RES', 'BE', 'ERR', 'OHB'])
-
 function generateCharacterStats(characterStats: { [key: string]: number }, prefix: string) {
   let wgsl = '\n'
 
   for (const [name, stat] of Object.entries(paramStatNames)) {
-    let value = characterStats[stat] ?? 0
-    if (prefix === 'trace' && EPSILON_STATS.has(name)) {
-      value += EPSILON
-    }
+    const value = characterStats[stat] ?? 0
     wgsl += `const ${prefix}${name}: f32 = ${value};\n`
   }
 

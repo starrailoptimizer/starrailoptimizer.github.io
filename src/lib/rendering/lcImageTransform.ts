@@ -1,14 +1,17 @@
 const NAT_HEIGHT = 1260
 const NAT_WIDTH = 904
-const NAT_BORDER = 14
+const NAT_BORDER = 14 // Actual baked-in border in the LC image
+const CLAMP_MARGIN = 24 // Extra margin to keep the border hidden when translating
 const GAME_WIDTH = 520
 const ASPECT = NAT_HEIGHT / NAT_WIDTH
 const BORDER_SCALAR = (NAT_HEIGHT + NAT_WIDTH - NAT_BORDER * 4) / (NAT_HEIGHT + NAT_WIDTH)
 
 // Minimum zoom to push the border outside the container.
-const BORDER_HIDE_ZOOM = 1 + 2 * 20 / NAT_WIDTH
+const BORDER_HIDE_ZOOM = 1 + 2 * 28 / NAT_WIDTH
 
-export type LcImageOffset = { x: number; y: number; s: number }
+export type LcImageOffset = { x: number, y: number, s: number }
+
+export const DEFAULT_LC_IMAGE_OFFSET: LcImageOffset = { x: 0, y: 0, s: 1.15 }
 
 /**
  * Compute the raw vertical offset (dy) from game data.
@@ -46,18 +49,18 @@ export function computeLcTransform(
   offset: LcImageOffset,
   containerWidth: number,
   containerHeight: number,
-): { dy: number; scale: number } {
+): { dy: number, scale: number } {
   // Keep render zoom fixed to border-hide behavior.
   const scale = BORDER_HIDE_ZOOM
 
   // Rendered image height at width: 100% * scale
   const imgH = containerWidth * ASPECT * scale
 
-  // Border size at rendered scale
-  const border = NAT_BORDER * containerWidth * scale / NAT_WIDTH
+  // Clamp margin at rendered scale
+  const margin = CLAMP_MARGIN * containerWidth * scale / NAT_WIDTH
 
-  // Maximum |dy| before the image edge (minus border) enters the container
-  const maxDy = Math.max(0, (imgH - containerHeight) / 2 - border)
+  // Maximum |dy| before the image edge (minus margin) enters the container
+  const maxDy = Math.max(0, (imgH - containerHeight) / 2 - margin)
 
   // Convert metadata-space dy into our fixed-scale render space.
   const metadataDy = computeRawDy(offset, containerWidth)

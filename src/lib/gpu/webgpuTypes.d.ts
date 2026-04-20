@@ -1,7 +1,7 @@
-import { FixedSizePriorityQueue } from 'lib/optimization/fixedSizePriorityQueue'
-import { Form } from 'types/form'
-import { OptimizerContext } from 'types/optimizer'
-import { Relic } from 'types/relic'
+import { type FixedSizeNumericMinQueue } from 'lib/dataStructures/fixedSizeMinQueue'
+import { type Form } from 'types/form'
+import { type OptimizerContext } from 'types/optimizer'
+import { type Relic } from 'types/relic'
 
 export type GpuResult = {
   index: number,
@@ -36,7 +36,7 @@ export type GpuExecutionContext = {
   permutations: number,
   iterations: number,
   relics: RelicsByPart,
-  resultsQueue: FixedSizePriorityQueue<GpuResult>,
+  resultsQueue: FixedSizeNumericMinQueue,
   cancelled: boolean,
   computeEngine: string,
 

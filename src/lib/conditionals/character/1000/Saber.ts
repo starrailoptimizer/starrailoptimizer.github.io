@@ -3,8 +3,8 @@ import { Tingyun } from 'lib/conditionals/character/1200/Tingyun'
 import { Sunday } from 'lib/conditionals/character/1300/Sunday'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -22,7 +22,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   END_BASIC,
@@ -35,17 +35,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const SaberEntities = createEnum('Saber')
@@ -57,7 +58,7 @@ export const SaberAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Saber.Content')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Saber.Content')
   const { basic, skill, talent, ult } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -110,13 +111,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enhancedSkill',
       formItem: 'switch',
       text: t('enhancedSkill.text'),
-      content: t('enhancedSkill.content', { CoreResonanceExtraScaling: TsUtils.precisionRound(100 * skillStackScaling) }),
+      content: t('enhancedSkill.content', { CoreResonanceExtraScaling: precisionRound(100 * skillStackScaling) }),
     },
     talentDmgBuff: {
       id: 'talentDmgBuff',
       formItem: 'switch',
       text: t('talentDmgBuff.text'),
-      content: t('talentDmgBuff.content', { TalentDmgBuff: TsUtils.precisionRound(100 * talentDmgBuffScaling) }),
+      content: t('talentDmgBuff.content', { TalentDmgBuff: precisionRound(100 * talentDmgBuffScaling) }),
     },
     coreResonanceCdBuff: {
       id: 'coreResonanceCdBuff',
@@ -128,7 +129,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'coreResonanceStacks',
       formItem: 'slider',
       text: t('coreResonanceStacks.text'),
-      content: t('coreResonanceStacks.content', { CoreResonanceExtraScaling: TsUtils.precisionRound(100 * skillStackScaling) }),
+      content: t('coreResonanceStacks.content', { CoreResonanceExtraScaling: precisionRound(100 * skillStackScaling) }),
       min: 0,
       max: 45,
     },
@@ -312,7 +313,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.WavestriderCaptain, Sets.WavestriderCaptain],
@@ -391,11 +391,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 900,
-    y: 950,
-    z: 1.05,
+    x: 924,
+    y: 944,
+    z: 1.15,
   },
-  showcaseColor: '#3e65f2',
+  showcaseColor: '#8395fb',
 }
 
 export const Saber: CharacterConfig = {

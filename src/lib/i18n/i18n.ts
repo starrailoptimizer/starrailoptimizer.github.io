@@ -5,11 +5,9 @@ import yaml from 'js-yaml'
 import {
   BASE_PATH,
   BasePath,
-} from 'lib/state/db'
-import {
-  Languages,
-  languages,
-} from 'lib/utils/i18nUtils'
+} from 'lib/constants/appPages'
+import type { Languages } from 'lib/utils/i18nUtils'
+import { languages } from 'lib/utils/i18nUtils'
 import { initReactI18next } from 'react-i18next'
 
 window.yaml = yaml
@@ -38,7 +36,7 @@ export type Namespaces = typeof namespaces[number]
 
 export const isBeta = BASE_PATH === BasePath.BETA
 
-export const supportedLanguages = isBeta ? Object.keys(languages) : completedLocales
+const supportedLanguages = isBeta ? Object.keys(languages) : completedLocales
 void i18next
   .use(Backend)
   .use(LanguageDetector)
@@ -61,4 +59,3 @@ void i18next
       },
     },
   })
-export default i18next

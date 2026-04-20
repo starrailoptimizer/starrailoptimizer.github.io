@@ -1,4 +1,4 @@
-import {
+import type {
   ElementName,
   MainStats,
   Parts,
@@ -9,16 +9,16 @@ import {
   StatsValues,
   SubStats,
 } from 'lib/constants/constants'
-import { statConversion } from 'lib/importer/characterConverter'
-import { TurnAbilityName } from 'lib/optimization/rotation/turnAbilityConfig'
-import { SortOptionProperties } from 'lib/optimization/sortOptions'
-import { PresetDefinition } from 'lib/scoring/presetEffects'
-import {
+import type { statConversion } from 'lib/importer/characterConverter'
+import type { TurnAbilityName } from 'lib/optimization/rotation/turnAbilityConfig'
+import type { SortOptionProperties } from 'lib/optimization/sortOptions'
+import type { PresetDefinition } from 'lib/scoring/presetEffects'
+import type {
   SetsOrnaments,
   SetsRelics,
 } from 'lib/sets/setConfigRegistry'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
 
 export type ShowcasePreferences = {
   color?: string,
@@ -33,7 +33,7 @@ export type ScoringMetadata = {
   /*      stat score      */ characterId?: CharacterId,
   /*      stat score      */ modified?: boolean,
   /*      stat score      */ parts: Record<Exclude<Parts, typeof Parts.Head | typeof Parts.Hands>, MainStats[]>,
-  /* stat score/optimizer */ stats: Record<SubStats, number> & Partial<Record<'headHands' | 'bodyFeet' | 'sphereRope', number>>,
+  /* stat score/optimizer */ stats: Record<SubStats, number> & Partial<Record<'minWeightedRolls', number>>,
   /*      optimizer       */ presets: PresetDefinition[],
   /*      optimizer       */ sortOption: SortOptionProperties,
   /*      optimizer       */ hiddenColumns: SortOptionProperties[],
@@ -42,15 +42,28 @@ export type ScoringMetadata = {
   /*      dps score       */ simulation?: SimulationMetadata,
 }
 
+export type ScoringParts = Exclude<Parts, typeof Parts.Head | typeof Parts.Hands>
+export type ScoringMetadataOverride = {
+  stats?: Partial<Record<SubStats, number>>,
+  parts?: Partial<Record<ScoringParts, MainStats[]>>,
+  simulation?: Partial<SimulationMetadata>,
+  traces?: { deactivated: string[] },
+}
+
 export type SimulationMetadata = {
   parts: {
-    [part: string]: string[],
+    [part: string]: MainStats[],
   },
-  substats: string[],
+  /**
+   * Must contain at least 5 non-SPD stats so the benchmark search space can fill all 24 substat
+   * slots on a real 6-piece build. If the character only has 3-4 real damage stats, pad with a
+   * flat filler (`Stats.ATK` / `Stats.HP` / `Stats.DEF`) — SPD is implicit and doesn't count.
+   */
+  substats: SubStats[],
   errRopeEidolon?: number,
   deprioritizeBuffs?: boolean,
   comboTurnAbilities: TurnAbilityName[],
-  comboDot: number,
+  comboDot?: number,
   relicSets: SetsRelics[][],
   ornamentSets: SetsOrnaments[],
   teammates: {
@@ -90,6 +103,12 @@ export type ImageCenter = {
   z: number,
 }
 
+export type ShowcaseDisplayDimensionsOverride = {
+  charCenter?: ImageCenter,
+  backgroundCenterOffset?: { x: number, y: number, z: number },
+  forceSimScoreLayout?: boolean,
+}
+
 export type TraceNode = {
   id: string,
   stat: StatsValues,
@@ -109,6 +128,9 @@ export type DBMetadataCharacter = {
   traces: Record<string, number>,
   traceTree: TraceNode[],
   imageCenter: ImageCenter,
+  spineCenter: ImageCenter,
+  backgroundCenterOffset: { x: number, y: number, z: number },
+  disableSpine: boolean,
   scoringMetadata: ScoringMetadata,
 }
 

@@ -1,40 +1,42 @@
 import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
 import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightConeConditionalsResolver'
 import { calculateContextConditionalRegistry } from 'lib/optimization/calculateConditionals'
+import type { ComboState } from 'lib/optimization/combo/comboTypes'
 import {
-  ActionModifier,
-  ModifierContext,
+  type ActionModifier,
+  type ModifierContext,
 } from 'lib/optimization/context/calculateActions'
 import { computeTargetMask } from 'lib/optimization/engine/config/tag'
 import {
   ComputedStatsContainer,
   ComputedStatsContainerConfig,
-  OptimizerEntity,
+  type OptimizerEntity,
 } from 'lib/optimization/engine/container/computedStatsContainer'
 import { NamedArray } from 'lib/optimization/engine/util/namedArray'
 import {
-  countDotAbilities,
   defineAction,
   getComboTypeAbilities,
   precomputeConditionals,
   transformConditionals,
 } from 'lib/optimization/rotation/comboStateTransform'
-import { TurnAbilityName } from 'lib/optimization/rotation/turnAbilityConfig'
-import { ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type TurnAbilityName } from 'lib/optimization/rotation/turnAbilityConfig'
+import { clone } from 'lib/utils/objectUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  Form,
-  OptimizerForm,
+  type Form,
+  type OptimizerForm,
 } from 'types/form'
-import { EntityDefinition, Hit } from 'types/hitConditionalTypes'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type EntityDefinition,
+  type Hit,
+} from 'types/hitConditionalTypes'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export function newTransformStateActions(comboState: ComboState, request: Form, context: OptimizerContext) {
-  const { comboTurnAbilities, comboDot } = getComboTypeAbilities(request)
+  const { comboTurnAbilities } = getComboTypeAbilities(request)
   calculateActionDeclarations(request, context)
 
   // ========== PHASE 1: STRUCTURE DEFINITION ==========
@@ -45,7 +47,6 @@ export function newTransformStateActions(comboState: ComboState, request: Form, 
     const actionDefinitions = context.characterController.actionDefinition(action, context)
     const actionDef = actionDefinitions[actionDeclaration]!
     actionDef.actionKind = actionDeclaration
-    // @ts-ignore
     action.actionType = actionDeclaration
     action.hits = actionDef.hits as Hit[]
 
@@ -182,9 +183,6 @@ export function newTransformStateActions(comboState: ComboState, request: Form, 
   }
 
   // ========== FINALIZE CONTEXT ==========
-
-  context.dotAbilities = countDotAbilities(rotationActions)
-  context.comboDot = comboDot || 0
 }
 
 function computeEntityBaseStats(def: EntityDefinition, context: OptimizerContext) {
@@ -218,7 +216,7 @@ function prepareEntitiesForAction(
   // Main character entities
   const characterController = context.characterController
   const primaryEntityNames = characterController.entityDeclaration()
-  const charEntityDefs = TsUtils.clone(characterController.entityDefinition(action, context))
+  const charEntityDefs = clone(characterController.entityDefinition(action, context))
 
   Object.assign(entityDefinitionsMap, charEntityDefs)
 
@@ -230,7 +228,7 @@ function prepareEntitiesForAction(
       teammateEntityNames.push(...controllerEntityNames)
 
       if (teammateController.entityDefinition) {
-        const teammateEntityDefs = TsUtils.clone(teammateController.entityDefinition(action, context))
+        const teammateEntityDefs = clone(teammateController.entityDefinition(action, context))
         Object.values(teammateEntityDefs).forEach((entityDefinition) => {
           entityDefinition.teammate = true
         })
@@ -294,7 +292,7 @@ function buildModifierContext(
   }
 }
 
-export function calculateActionDeclarations(request: OptimizerForm, context: OptimizerContext) {
+function calculateActionDeclarations(request: OptimizerForm, context: OptimizerContext) {
   const characterConditionalController = CharacterConditionalsResolver.get(context)
   const actionDeclarations = characterConditionalController.actionDeclaration()
 

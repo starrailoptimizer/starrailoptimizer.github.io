@@ -1,5 +1,5 @@
-import { LightConeId } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
+import type { LightConeId } from 'types/lightCone'
+import type { LightConeConfig } from 'types/lightConeConfig'
 
 const lightConeModules = import.meta.glob<Record<string, unknown>>(
   '../lightcone/**/*.ts',
@@ -20,10 +20,6 @@ for (const mod of Object.values(lightConeModules)) {
       lightConeConfigRegistry.set(config.id, config)
     }
   }
-}
-
-export function getLightConeConfig(id: LightConeId): LightConeConfig | undefined {
-  return lightConeConfigRegistry.get(id)
 }
 
 export function getAllLightConeConfigs(): Map<LightConeId, LightConeConfig> {

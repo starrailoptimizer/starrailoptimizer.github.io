@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -20,19 +20,19 @@ import {
 import { Source } from 'lib/optimization/buffSource'
 import { StatKey } from 'lib/optimization/engine/config/keys'
 import { ElementTag } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
 import { Bronya } from 'lib/conditionals/character/1100/Bronya'
@@ -50,10 +50,11 @@ import {
   START_ULT,
   WHOLE_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const YanqingEntities = createEnum('Yanqing')
@@ -66,7 +67,7 @@ export const YanqingAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yanqing')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yanqing')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -106,16 +107,16 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'ultBuffActive',
       formItem: 'switch',
       text: t('Content.ultBuffActive.text'),
-      content: t('Content.ultBuffActive.content', { ultCdBuffValue: TsUtils.precisionRound(100 * ultCdBuffValue) }),
+      content: t('Content.ultBuffActive.content', { ultCdBuffValue: precisionRound(100 * ultCdBuffValue) }),
     },
     soulsteelBuffActive: {
       id: 'soulsteelBuffActive',
       formItem: 'switch',
       text: t('Content.soulsteelBuffActive.text'),
       content: t('Content.soulsteelBuffActive.content', {
-        talentCdBuffValue: TsUtils.precisionRound(100 * talentCdBuffValue),
-        talentCrBuffValue: TsUtils.precisionRound(100 * talentCrBuffValue),
-        ultCdBuffValue: TsUtils.precisionRound(100 * ultCdBuffValue),
+        talentCdBuffValue: precisionRound(100 * talentCdBuffValue),
+        talentCrBuffValue: precisionRound(100 * talentCrBuffValue),
+        ultCdBuffValue: precisionRound(100 * ultCdBuffValue),
       }),
     },
     critSpdBuff: {
@@ -312,7 +313,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     [Sets.HunterOfGlacialForest, Sets.HunterOfGlacialForest],
@@ -393,7 +393,8 @@ const display = {
     y: 1000,
     z: 1,
   },
-  showcaseColor: '#6db1f4',
+  disableSpine: true,
+  showcaseColor: '#7c95c4',
 }
 
 export const Yanqing: CharacterConfig = {

@@ -1,32 +1,37 @@
 import {
-  MainStats,
+  type MainStats,
   Parts,
-  Sets,
+  type Sets,
   Stats,
-  SubStats,
+  type SubStats,
 } from 'lib/constants/constants'
-import {
-  SetsOrnaments,
-  SetsRelics,
-} from 'lib/sets/setConfigRegistry'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import type { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import { BasicKey } from 'lib/optimization/basicStatsArray'
-import { AKeyValue, getAKeyName, GlobalRegister, StatKey } from 'lib/optimization/engine/config/keys'
 import { generateContext } from 'lib/optimization/context/calculateContext'
+import {
+  type AKeyValue,
+  getAKeyName,
+  GlobalRegister,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
 import { AbilityMeta } from 'lib/optimization/rotation/turnAbilityConfig'
 import { StatCalculator } from 'lib/relics/statCalculator'
+import {
+  type SetsOrnaments,
+  type SetsRelics,
+} from 'lib/sets/setConfigRegistry'
 import { runStatSimulations } from 'lib/simulations/statSimulation'
 import {
-  RunStatSimulationsResult,
-  Simulation,
+  type RunStatSimulationsResult,
+  type Simulation,
   StatSimTypes,
 } from 'lib/simulations/statSimulationTypes'
 import { generateFullDefaultForm } from 'lib/simulations/utils/benchmarkForm'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { LightConeId } from 'types/lightCone'
-import { Relic } from 'types/relic'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type CharacterId } from 'types/character'
+import { type Form } from 'types/form'
+import { type LightConeId } from 'types/lightCone'
+import { type Relic } from 'types/relic'
 
 export type SimTestUtils = {
   characterId: CharacterId,
@@ -191,7 +196,7 @@ export function collectResults(input: TestInput) {
 
   // Stats 0-14 have matching indices between AKey and BasicKey
   for (const key of trackedCombatStatKeys) {
-    const value = TsUtils.precisionRound(x.a[key], 7)
+    const value = precisionRound(x.a[key], 7)
 
     keyCombatResults[key] = value
     nameCombatResults[getAKeyName(key)] = value
@@ -199,20 +204,21 @@ export function collectResults(input: TestInput) {
 
   // CR and CD display values include their respective _BOOST components
   if (primaryActionStats) {
-    nameCombatResults['CR'] = TsUtils.precisionRound(primaryActionStats.sourceEntityCR, 7)
-    nameCombatResults['CD'] = TsUtils.precisionRound(primaryActionStats.sourceEntityCD, 7)
+    nameCombatResults['CR'] = precisionRound(primaryActionStats.sourceEntityCR, 7)
+    nameCombatResults['CD'] = precisionRound(primaryActionStats.sourceEntityCD, 7)
   }
 
   // Total DMG% = generic DMG_BOOST (action+hit) + element-specific boost (action)
   if (primaryActionStats) {
-    nameCombatResults['DMG_BOOST'] = TsUtils.precisionRound(
-      primaryActionStats.DMG_BOOST + primaryActionStats.sourceEntityElementDmgBoost, 7,
+    nameCombatResults['DMG_BOOST'] = precisionRound(
+      primaryActionStats.DMG_BOOST + primaryActionStats.sourceEntityElementDmgBoost,
+      7,
     )
   }
 
   // EHP and COMBO_DMG
-  nameCombatResults['EHP'] = TsUtils.precisionRound(x.a[StatKey.EHP], 7)
-  nameCombatResults['COMBO_DMG'] = TsUtils.precisionRound(x.getGlobalRegisterValue(GlobalRegister.COMBO_DMG), 7)
+  nameCombatResults['EHP'] = precisionRound(x.a[StatKey.EHP], 7)
+  nameCombatResults['COMBO_DMG'] = precisionRound(x.getGlobalRegisterValue(GlobalRegister.COMBO_DMG), 7)
 
   // Default all ability damage types to 0, then populate from actionDamage
   const damageAbilities = ['BASIC', 'SKILL', 'ULT', 'FUA', 'DOT', 'BREAK', 'MEMO_SKILL', 'MEMO_TALENT', 'ELATION_SKILL', 'UNIQUE']
@@ -236,16 +242,16 @@ export function collectResults(input: TestInput) {
       } else if (meta?.category === 'shield') {
         shieldValue += dmg ?? 0
       } else if (meta?.category === 'damage') {
-        nameCombatResults[`${abilityKind}_DMG`] = TsUtils.precisionRound(dmg ?? 0, 7)
+        nameCombatResults[`${abilityKind}_DMG`] = precisionRound(dmg ?? 0, 7)
       }
     }
 
-    nameCombatResults['HEAL_VALUE'] = TsUtils.precisionRound(healValue, 7)
-    nameCombatResults['SHIELD_VALUE'] = TsUtils.precisionRound(shieldValue, 7)
+    nameCombatResults['HEAL_VALUE'] = precisionRound(healValue, 7)
+    nameCombatResults['SHIELD_VALUE'] = precisionRound(shieldValue, 7)
   }
 
   for (const key of trackedBasicStatKeys) {
-    const value = TsUtils.precisionRound(x.c.a[key], 7)
+    const value = precisionRound(x.c.a[key], 7)
 
     keyBasicResults[key] = value
     nameBasicResults[BasicKeyNames[key]] = value

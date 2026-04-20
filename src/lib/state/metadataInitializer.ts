@@ -7,12 +7,12 @@ import {
   Parts,
   PartsMainStats,
   Stats,
-  StatsValues,
 } from 'lib/constants/constants'
-import DB from 'lib/state/db'
-import { CharacterId } from 'types/character'
-import { LightConeId } from 'types/lightCone'
-import {
+import type { StatsValues } from 'lib/constants/constants'
+import { setGameMetadata } from 'lib/state/gameMetadata'
+import type { CharacterId } from 'types/character'
+import type { LightConeId } from 'types/lightCone'
+import type {
   DBMetadata,
   DBMetadataCharacter,
   DBMetadataLightCone,
@@ -34,7 +34,7 @@ const ALL_ELEMENT_DMG_STATS = [
 
 // Raw stat property names from game_data.json LC superimposition config.
 // When new stat keys appear in game data, add them here.
-export const LcConfigStatProperty = {
+const LcConfigStatProperty = {
   HPAddedRatio: 'HPAddedRatio',
   AttackAddedRatio: 'AttackAddedRatio',
   DefenceAddedRatio: 'DefenceAddedRatio',
@@ -116,7 +116,7 @@ export const Metadata = {
       lightCones: lightCones,
       relics: relics,
     } as unknown as DBMetadata
-    DB.setMetadata(augmentedDbMetadata)
+    setGameMetadata(augmentedDbMetadata)
 
     return augmentedDbMetadata
   },
@@ -159,11 +159,17 @@ function applyCharacterConfig(
 ) {
   const config = characterConfigs.get(characterId as CharacterId)
   const imageCenter = config?.display.imageCenter ?? DEFAULT_IMAGE_CENTER
+  const spineCenter = config?.display.spineCenter ?? imageCenter
+  const backgroundCenterOffset = config?.display.backgroundCenterOffset ?? { x: 0, y: 0, z: 0 }
+  const disableSpine = config?.display.disableSpine ?? false
   const metadata = config?.scoring
 
   characters[characterId].traces = dbMetadataCharacter.traces
   characters[characterId].traceTree = dbMetadataCharacter.traceTree
   characters[characterId].imageCenter = imageCenter
+  characters[characterId].spineCenter = spineCenter
+  characters[characterId].backgroundCenterOffset = backgroundCenterOffset
+  characters[characterId].disableSpine = disableSpine
 
   if (metadata) {
     for (const part of [Parts.Body, Parts.Feet, Parts.PlanarSphere, Parts.LinkRope]) {

@@ -1,16 +1,14 @@
-import { IRowNode } from 'ag-grid-community'
 import {
-  MainStats,
-  Parts,
-  Sets,
-  SubStats,
+  type MainStats,
+  type Parts,
+  type Sets,
+  type SubStats,
 } from 'lib/constants/constants'
-import DB from 'lib/state/db'
-import { generateValueColumnOptions } from 'lib/tabs/tabRelics/columnDefs'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { CharacterId } from 'types/character'
-import { Relic } from 'types/relic'
-import { create } from 'zustand'
+import { createTabAwareStore } from 'lib/stores/infrastructure/createTabAwareStore'
+import { type generateValueColumnOptions } from 'lib/tabs/tabRelics/columnDefs'
+import { clone } from 'lib/utils/objectUtils'
+import type { CharacterId } from 'types/character'
+import type { Relic } from 'types/relic'
 
 export type ValueColumnField = ReturnType<typeof generateValueColumnOptions>[number]['options'][number]['value']
 
@@ -40,10 +38,8 @@ export enum InsightCharacters {
 
 const defaultState: RelicsTabStateValues = {
   focusCharacter: null,
-  selectedRelic: null,
   selectedRelicId: null,
   selectedRelicsIds: [],
-  relicModalOpen: false,
   valueColumns: [
     'weights.current',
     'weights.rerollAvgSelected',
@@ -53,7 +49,6 @@ const defaultState: RelicsTabStateValues = {
     'weights.potentialAllCustom.averagePct',
     'weights.potentialAllCustom.bestPct',
   ],
-  deleteConfirmOpen: false,
   excludedRelicPotentialCharacters: [],
   filters: {
     part: [],
@@ -72,12 +67,9 @@ const defaultState: RelicsTabStateValues = {
 
 interface RelicsTabStateValues {
   focusCharacter: CharacterId | null
-  selectedRelic: Relic | null
   selectedRelicId: Relic['id'] | null
   selectedRelicsIds: Array<Relic['id']>
-  relicModalOpen: boolean
   valueColumns: ValueColumnField[]
-  deleteConfirmOpen: boolean
   excludedRelicPotentialCharacters: Array<CharacterId>
   filters: RelicTabFilters
   insightsMode: RelicInsights
@@ -87,9 +79,7 @@ interface RelicsTabStateValues {
 interface RelicsTabStateActions {
   setFocusCharacter: (character: RelicsTabStateValues['focusCharacter']) => void
   setSelectedRelicsIds: (relic: RelicsTabStateValues['selectedRelicsIds']) => void
-  setRelicModalOpen: (relicModalOpen: RelicsTabStateValues['relicModalOpen']) => void
   setValueColumns: (cols: RelicsTabStateValues['valueColumns']) => void
-  setDeleteConfirmOpen: (open: RelicsTabStateValues['deleteConfirmOpen']) => void
   setExcludedRelicPotentialCharacters: (characters: RelicsTabStateValues['excludedRelicPotentialCharacters']) => void
 
   setFilters: (filters: RelicsTabStateValues['filters']) => void
@@ -102,25 +92,29 @@ interface RelicsTabStateActions {
 
 type RelicsTabState = RelicsTabStateActions & RelicsTabStateValues
 
-const useRelicsTabStore = create<RelicsTabState>()((set) => ({
+const useRelicsTabStore = createTabAwareStore<RelicsTabState>((set, get) => ({
   ...defaultState,
   setFocusCharacter: (focusCharacter) => set({ focusCharacter }),
   setSelectedRelicsIds: (ids) => {
-    const selectedId = ids.at(-1)
-    const relic = DB.getRelicById(selectedId) ?? null
-    return set({ selectedRelic: relic, selectedRelicId: selectedId ?? null, selectedRelicsIds: [...ids] })
+    const newSelectedId = ids.at(-1) ?? null
+    const currentIds = get().selectedRelicsIds
+    // Skip no-op updates to avoid unnecessary re-renders from new array spreads
+    if (
+      newSelectedId === get().selectedRelicId
+      && ids.length === currentIds.length
+      && ids.every((id, i) => id === currentIds[i])
+    ) return
+    return set({ selectedRelicId: newSelectedId, selectedRelicsIds: [...ids] })
   },
-  setRelicModalOpen: (relicModalOpen) => set({ relicModalOpen }),
   setValueColumns: (cols) => set({ valueColumns: [...cols] }),
-  setDeleteConfirmOpen: (deleteConfirmOpen) => set({ deleteConfirmOpen }),
-  setExcludedRelicPotentialCharacters: (excludedRelicPotentialCharacters) => set({ excludedRelicPotentialCharacters }),
+  setExcludedRelicPotentialCharacters: (excludedRelicPotentialCharacters) => set({ excludedRelicPotentialCharacters: [...excludedRelicPotentialCharacters] }),
 
   setFilters: (filters) => set({ filters }),
   setFilter: (key) => (value) => set((s) => ({ filters: { ...s.filters, [key]: value } })),
-  resetFilters: () => set({ filters: TsUtils.clone(defaultState.filters) }),
+  resetFilters: () => set({ filters: clone(defaultState.filters) }),
 
   setInsightsMode: (insightsMode) => set({ insightsMode }),
   setInsightsCharacters: (insightsCharacters) => set({ insightsCharacters }),
 }))
 
-export default useRelicsTabStore
+export { useRelicsTabStore }

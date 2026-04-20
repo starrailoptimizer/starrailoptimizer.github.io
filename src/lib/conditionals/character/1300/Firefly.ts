@@ -3,8 +3,8 @@ import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
 import { TheDahlia } from 'lib/conditionals/character/1300/TheDahlia'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
   teammateMatchesId,
 } from 'lib/conditionals/conditionalUtils'
@@ -38,7 +38,7 @@ import {
   ElementTag,
   SELF_ENTITY_INDEX,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -52,19 +52,21 @@ import { SortOption } from 'lib/optimization/sortOptions'
 import {
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { Hit } from 'types/hitConditionalTypes'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type Hit } from 'types/hitConditionalTypes'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const FireflyEntities = createEnum('Firefly')
@@ -75,7 +77,7 @@ export const FireflyAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Firefly')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Firefly')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -143,8 +145,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.talentDmgReductionBuff.text'),
       content: t('Content.talentDmgReductionBuff.content', {
-        talentResBuff: TsUtils.precisionRound(100 * talentResBuff),
-        talentDmgReductionBuff: TsUtils.precisionRound(100 * talentDmgReductionBuff),
+        talentResBuff: precisionRound(100 * talentResBuff),
+        talentDmgReductionBuff: precisionRound(100 * talentDmgReductionBuff),
       }),
     },
     e1DefShred: {
@@ -322,7 +324,7 @@ if (${wgslTrue(r.superBreakDmg && r.enhancedStateActive)} && be >= 3.60) {
             action,
             context,
             SOURCE_TRACE,
-            (convertibleValue) => 0.008 * Math.floor((convertibleValue - 1800) / 10),
+            (convertibleValue) => 0.008 * floorSafe((convertibleValue - 1800) / 10),
           )
         },
         gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -334,7 +336,7 @@ if (${wgslTrue(r.superBreakDmg && r.enhancedStateActive)} && be >= 3.60) {
             this,
             action,
             context,
-            `0.008 * floor((convertibleValue - 1800.0) / 10.0)`,
+            `0.008 * floorSafe((convertibleValue - 1800.0) / 10.0)`,
             `${wgslTrue(r.atkToBeConversion)} && ${containerActionVal(SELF_ENTITY_INDEX, StatKey.ATK, action.config)} > 1800.0`,
           )
         },
@@ -375,7 +377,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     WHOLE_SKILL,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.IronCavalryAgainstTheScourge, Sets.IronCavalryAgainstTheScourge],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -448,11 +449,16 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 930,
-    y: 1075,
-    z: 1.25,
+    x: 938,
+    y: 1088,
+    z: 1.3,
   },
-  showcaseColor: '#a0efec',
+  spineCenter: {
+    x: 924,
+    y: 1104,
+    z: 1.3,
+  },
+  showcaseColor: '#90ccd1',
 }
 
 export const Firefly: CharacterConfig = {

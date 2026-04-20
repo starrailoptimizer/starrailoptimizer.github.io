@@ -1,23 +1,25 @@
 import {
   Divider,
-  Flex,
   Progress,
-  theme,
   Tooltip,
-  Typography,
-} from 'antd'
+} from '@mantine/core'
 import chroma from 'chroma-js'
 import { buffedCharacters } from 'lib/importer/kelzFormatParser'
-import { RelicScorer } from 'lib/relics/relicScorerPotential'
+import { RelicScorer } from 'lib/relics/scoring/relicScorer'
 import { Assets } from 'lib/rendering/assets'
 import { ScoringType } from 'lib/scoring/simScoringUtils'
-import DB from 'lib/state/db'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { getCharacters } from 'lib/stores/character/characterStore'
+import classes from 'lib/tabs/tabRelics/RecentRelicCard.module.css'
 import { RelicPreview } from 'lib/tabs/tabRelics/RelicPreview'
-import useRelicsTabStore from 'lib/tabs/tabRelics/useRelicsTabStore'
-import React, { useMemo } from 'react'
+import { useRelicsTabStore } from 'lib/tabs/tabRelics/useRelicsTabStore'
+import {
+  memo,
+  useMemo,
+} from 'react'
 import { useTranslation } from 'react-i18next'
-import { CharacterId } from 'types/character'
-import { Relic } from 'types/relic'
+import type { CharacterId } from 'types/character'
+import type { Relic } from 'types/relic'
 
 interface RelicCardProps {
   relic?: Relic
@@ -26,10 +28,20 @@ interface RelicCardProps {
   isSelected?: boolean
 }
 
-export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Element => {
+const token = {
+  colorPrimary: 'var(--primary-subtle)',
+  colorPrimaryBg: 'color-mix(in srgb, var(--layer-inset) 25%, transparent)',
+  colorBgContainer: 'var(--layer-1)',
+  colorBorderSecondary: 'var(--border-default)',
+  colorTextSecondary: 'var(--text-secondary)',
+  colorText: 'var(--text-primary)',
+}
+
+export const RecentRelicCard = memo((props: RelicCardProps) => {
   const { relic, scoringCharacter, setSelectedRelicID, isSelected } = props
-  const { excludedRelicPotentialCharacters } = useRelicsTabStore()
-  const { token } = theme.useToken()
+  const excludedRelicPotentialCharacters = useRelicsTabStore(
+    (s) => s.excludedRelicPotentialCharacters,
+  )
   const { t } = useTranslation('relicsTab', { keyPrefix: 'RecentlyUpdatedRelics' })
   const { t: tCharacters } = useTranslation('gameData', { keyPrefix: 'Characters' })
 
@@ -43,7 +55,8 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
 
   // Calculate top characters for the relic
   const topCharacters = useMemo(() => {
-    const chars = window.DB.getMetadata().characters
+    const chars = getGameMetadata().characters
+    const characterList = getCharacters()
 
     return relic && (Object.keys(chars) as (keyof typeof chars)[])
       .filter((id) => !excludedRelicPotentialCharacters.includes(id) && !buffedCharacters[id])
@@ -67,7 +80,9 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
           return rarityDiff
         }
 
-        return (DB.getCharacterById(a.id)?.rank ?? 999) - (DB.getCharacterById(b.id)?.rank ?? 999)
+        const aRank = characterList.findIndex((c) => c.id === a.id)
+        const bRank = characterList.findIndex((c) => c.id === b.id)
+        return (aRank === -1 ? 999 : aRank) - (bRank === -1 ? 999 : bRank)
       })
       .slice(0, 5)
   }, [relic, scoringCharacter, excludedRelicPotentialCharacters, tCharacters])
@@ -75,9 +90,9 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
   // Skip render if no relic
   if (!relic) {
     return (
-      <Flex vertical>
+      <div>
         <RelicPreview relic={undefined} />
-      </Flex>
+      </div>
     )
   }
 
@@ -85,15 +100,14 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
   const maxPotential = Math.floor(potentialScore?.bestPct ?? 0)
 
   return (
-    <Flex
-      vertical
+    <div
+      className={classes.cardContainer}
       style={{
+        display: 'flex',
+        flexDirection: 'column',
         border: isSelected ? `2px solid ${token.colorPrimary}` : '2px solid transparent',
-        borderRadius: '8px',
         backgroundColor: isSelected ? `${token.colorPrimaryBg}` : 'transparent',
-        transition: 'all 0.2s ease',
       }}
-      className='recent-relic-card'
     >
       <RelicPreview
         relic={relic}
@@ -102,64 +116,47 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
         scoringType={score ? ScoringType.SUBSTAT_SCORE : ScoringType.NONE}
         setSelectedRelic={(relic) => setSelectedRelicID?.(relic.id)}
       />
-      <Flex
-        vertical
-        gap={8}
+      <div
+        className={classes.bottomPanel}
         style={{
-          width: 200,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 8,
           backgroundColor: token.colorBgContainer,
-          borderRadius: '0 0 6px 6px',
-          padding: '8px 12px',
-          marginTop: -4,
           border: `1px solid ${token.colorBorderSecondary}`,
-          borderTop: 'none',
         }}
       >
         {potentialScore && (
-          <Flex vertical gap={4}>
-            <Flex align='center' justify='space-between'>
-              <Typography.Text
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: token.colorTextSecondary,
-                }}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div
+                className={classes.sectionLabel}
+                style={{ color: token.colorTextSecondary }}
               >
                 {t('Potential') /* POTENTIAL */}
-              </Typography.Text>
-            </Flex>
+              </div>
+            </div>
 
-            <Progress
-              percent={maxPotential}
-              success={{ percent: avgPotential, strokeColor: getColorAtPercent(avgPotential) }}
-              size='small'
-              showInfo={false}
-              strokeColor={getColorAtPercent(maxPotential)}
-              trailColor={token.colorBorderSecondary}
-              style={{
-                lineHeight: 0,
-              }}
-            />
+            <Progress.Root size='xs' style={{ lineHeight: 0 }}>
+              <Progress.Section value={avgPotential} color={getColorAtPercent(avgPotential)} />
+              <Progress.Section value={maxPotential - avgPotential} color={getColorAtPercent(maxPotential)} />
+            </Progress.Root>
 
-            <Flex align='center' justify='space-between'>
-              <Typography.Text
-                style={{
-                  fontSize: '12px',
-                  color: token.colorTextSecondary,
-                }}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div
+                className={classes.statText}
+                style={{ color: token.colorTextSecondary }}
               >
-                {t('Avg') /* AVG */}: <span style={{ color: getColorAtPercent(avgPotential), fontWeight: 700 }}>{avgPotential}%</span>
-              </Typography.Text>
-              <Typography.Text
-                style={{
-                  fontSize: '12px',
-                  color: token.colorTextSecondary,
-                }}
+                {t('Avg') /* AVG */}: <span className={classes.scoreHighlight} style={{ color: getColorAtPercent(avgPotential) }}>{avgPotential}%</span>
+              </div>
+              <div
+                className={classes.statText}
+                style={{ color: token.colorTextSecondary }}
               >
-                {t('Max') /* MAX */}: <span style={{ color: getColorAtPercent(maxPotential), fontWeight: 700 }}>{maxPotential}%</span>
-              </Typography.Text>
-            </Flex>
-          </Flex>
+                {t('Max') /* MAX */}: <span className={classes.scoreHighlight} style={{ color: getColorAtPercent(maxPotential) }}>{maxPotential}%</span>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Top characters potential */}
@@ -167,96 +164,72 @@ export const RecentRelicCard = React.memo((props: RelicCardProps): React.JSX.Ele
           <>
             {potentialScore && <Divider style={{ margin: '0' }} />}
 
-            <Flex vertical gap={4}>
-              <Typography.Text
-                style={{
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: token.colorTextSecondary,
-                }}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div
+                className={classes.sectionLabel}
+                style={{ color: token.colorTextSecondary }}
               >
                 {t('BestFor') /* BEST FOR */}
-              </Typography.Text>
+              </div>
 
-              <Flex vertical gap={5} style={{ margin: '0 -4px' }}>
+              <div className={classes.characterList} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                 {topCharacters?.map((char) => {
                   const maxPct = Math.floor(char.score.bestPct)
                   const avgPct = Math.floor(char.score.averagePct)
 
                   return (
-                    <Flex key={char.id} vertical style={{ padding: '2px 4px' }} gap={2}>
-                      <Flex
-                        align='center'
-                        justify='space-between'
+                    <div key={char.id} style={{ display: 'flex', flexDirection: 'column', padding: '2px 4px', gap: 2 }}>
+                      <div
+                        className={classes.characterRow}
                         style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
                           backgroundColor: char.isSelected ? token.colorPrimaryBg : 'transparent',
-                          padding: '2px 4px',
-                          borderRadius: 4,
-                          cursor: 'pointer',
-                          whiteSpace: 'nowrap',
                         }}
                         onClick={() => setSelectedRelicID?.(relic.id)}
                       >
-                        <Flex align='center' gap={6} style={{ minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
                           <img
                             src={char.icon}
                             alt={char.name}
-                            style={{
-                              width: 20,
-                              height: 20,
-                              borderRadius: '50%',
-                              border: `1px solid ${token.colorBorderSecondary}`,
-                            }}
+                            className={classes.characterAvatar}
+                            style={{ border: `1px solid ${token.colorBorderSecondary}` }}
                           />
-                          <Typography.Text
+                          <div
+                            className={classes.characterName}
                             style={{
-                              fontSize: '12px',
                               color: char.isSelected ? token.colorPrimary : token.colorText,
                               fontWeight: char.isSelected ? 600 : 400,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              marginRight: 2,
                             }}
                           >
                             {char.name}
-                          </Typography.Text>
-                        </Flex>
-                        <Flex align='center' gap={4}>
-                          <Tooltip title={t('Tooltip') /* Average and maximum potential scores for this character */}>
-                            <Typography.Text
-                              style={{
-                                fontSize: '12px',
-                                fontWeight: 600,
-                              }}
-                            >
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Tooltip label={t('Tooltip') /* Average and maximum potential scores for this character */}>
+                            <div className={classes.scoreText}>
                               <span style={{ color: getColorAtPercent(avgPct) }}>{avgPct}%</span>
                               <span style={{ color: token.colorTextSecondary }}>/</span>
                               <span style={{ color: getColorAtPercent(maxPct) }}>{maxPct}%</span>
-                            </Typography.Text>
+                            </div>
                           </Tooltip>
-                        </Flex>
-                      </Flex>
+                        </div>
+                      </div>
 
-                      <Progress
-                        percent={maxPct}
-                        success={{ percent: avgPct, strokeColor: getColorAtPercent(avgPct) }}
-                        size='small'
-                        showInfo={false}
-                        strokeColor={getColorAtPercent(maxPct)}
-                        trailColor={token.colorBorderSecondary}
-                        style={{
-                          lineHeight: 0,
-                        }}
-                      />
-                    </Flex>
+                      <Progress.Root size='xs' style={{ lineHeight: 0 }}>
+                        <Progress.Section value={avgPct} color={getColorAtPercent(avgPct)} />
+                        <Progress.Section value={maxPct - avgPct} color={getColorAtPercent(maxPct)} />
+                      </Progress.Root>
+                    </div>
                   )
                 })}
-              </Flex>
-            </Flex>
+              </div>
+            </div>
           </>
         )}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   )
 })
 

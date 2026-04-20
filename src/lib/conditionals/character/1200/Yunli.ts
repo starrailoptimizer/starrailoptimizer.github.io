@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -23,7 +23,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
@@ -31,7 +31,7 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
 import { Huohuo } from 'lib/conditionals/character/1200/Huohuo'
 import { Tingyun } from 'lib/conditionals/character/1200/Tingyun'
@@ -46,17 +46,18 @@ import {
   NULL_TURN_ABILITY_NAME,
   START_ULT,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { NumberToNumberMap } from 'types/common'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type NumberToNumberMap } from 'types/common'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const YunliEntities = createEnum('Yunli')
@@ -68,7 +69,7 @@ export const YunliAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yunli')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Yunli')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -139,9 +140,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.ultCull.text'),
       content: t('Content.ultCull.content', {
-        CullScaling: TsUtils.precisionRound(100 * ultCullScaling),
-        CullAdjacentScaling: TsUtils.precisionRound(100 * 0.5 * ultCullScaling),
-        CullAdditionalScaling: TsUtils.precisionRound(100 * ultCullHitsScaling),
+        CullScaling: precisionRound(100 * ultCullScaling),
+        CullAdjacentScaling: precisionRound(100 * 0.5 * ultCullScaling),
+        CullAdditionalScaling: precisionRound(100 * ultCullHitsScaling),
       }),
     },
     ultCullHits: {
@@ -149,9 +150,9 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('Content.ultCullHits.text'),
       content: t('Content.ultCullHits.content', {
-        CullScaling: TsUtils.precisionRound(100 * ultCullScaling),
-        CullAdjacentScaling: TsUtils.precisionRound(100 * 0.5 * ultCullScaling),
-        CullAdditionalScaling: TsUtils.precisionRound(100 * ultCullHitsScaling),
+        CullScaling: precisionRound(100 * ultCullScaling),
+        CullAdjacentScaling: precisionRound(100 * 0.5 * ultCullScaling),
+        CullAdditionalScaling: precisionRound(100 * ultCullHitsScaling),
       }),
       min: 0,
       max: maxCullHits,
@@ -338,7 +339,6 @@ const simulation = (): SimulationMetadata => ({
     DEFAULT_FUA,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.TheWindSoaringValorous, Sets.TheWindSoaringValorous],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -420,7 +420,7 @@ const display = {
     y: 1075,
     z: 1.1,
   },
-  showcaseColor: '#a2e9f5',
+  showcaseColor: '#4fa2f8',
 }
 
 export const Yunli: CharacterConfig = {

@@ -1,8 +1,18 @@
+import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
+import { Firefly } from 'lib/conditionals/character/1300/Firefly'
+import { RuanMei } from 'lib/conditionals/character/1300/RuanMei'
+import { TrailblazerHarmonyStelle } from 'lib/conditionals/character/8000/TrailblazerHarmony'
+import { MemoriesOfThePast } from 'lib/conditionals/lightcone/4star/MemoriesOfThePast'
+import { PastSelfInTheMirror } from 'lib/conditionals/lightcone/5star/PastSelfInTheMirror'
+import { ScentAloneStaysTrue } from 'lib/conditionals/lightcone/5star/ScentAloneStaysTrue'
+import { WhereaboutsShouldDreamsRest } from 'lib/conditionals/lightcone/5star/WhereaboutsShouldDreamsRest'
 import {
   Sets,
   Stats,
 } from 'lib/constants/constants'
 import { RelicAugmenter } from 'lib/relics/relicAugmenter'
+import * as equipmentService from 'lib/services/equipmentService'
+import * as persistenceService from 'lib/services/persistenceService'
 import {
   generateE6S5Test,
   generateTestSingleRelicsByPart,
@@ -11,36 +21,30 @@ import {
   testSets,
   testStatSpread,
 } from 'lib/simulations/tests/simTestUtils'
-import { Firefly } from 'lib/conditionals/character/1300/Firefly'
-import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
-import { RuanMei } from 'lib/conditionals/character/1300/RuanMei'
-import { TrailblazerHarmonyStelle } from 'lib/conditionals/character/8000/TrailblazerHarmony'
-import { MemoriesOfThePast } from 'lib/conditionals/lightcone/4star/MemoriesOfThePast'
-import { PastSelfInTheMirror } from 'lib/conditionals/lightcone/5star/PastSelfInTheMirror'
-import { ScentAloneStaysTrue } from 'lib/conditionals/lightcone/5star/ScentAloneStaysTrue'
-import { WhereaboutsShouldDreamsRest } from 'lib/conditionals/lightcone/5star/WhereaboutsShouldDreamsRest'
-import DB from 'lib/state/db'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { getGameMetadata } from 'lib/state/gameMetadata'
+import { SaveState } from 'lib/state/saveState'
+import { useScoringStore } from 'lib/stores/scoring/scoringStore'
+import { uuid } from 'lib/utils/miscUtils'
 
 export function injectBenchmarkDebuggers() {
-  // @ts-ignore
+  // @ts-expect-error - Injecting debug helper onto globalThis for dev tooling
   globalThis.equipTestCharacter = equipTestCharacter
 }
 
 function equipTestCharacter() {
   const testInput = generateE6S5Test({
-      character: testCharacter(Firefly.id, WhereaboutsShouldDreamsRest.id),
-      teammate0: testCharacter(TrailblazerHarmonyStelle.id, MemoriesOfThePast.id),
-      teammate1: testCharacter(RuanMei.id, PastSelfInTheMirror.id),
-      teammate2: testCharacter(Lingsha.id, ScentAloneStaysTrue.id),
-      sets: testSets(Sets.IronCavalryAgainstTheScourge, Sets.IronCavalryAgainstTheScourge, Sets.ForgeOfTheKalpagniLantern),
-      mains: testMains(Stats.ATK_P, Stats.SPD, Stats.Lightning_DMG, Stats.ATK_P),
-      stats: testStatSpread(),
-    })
+    character: testCharacter(Firefly.id, WhereaboutsShouldDreamsRest.id),
+    teammate0: testCharacter(TrailblazerHarmonyStelle.id, MemoriesOfThePast.id),
+    teammate1: testCharacter(RuanMei.id, PastSelfInTheMirror.id),
+    teammate2: testCharacter(Lingsha.id, ScentAloneStaysTrue.id),
+    sets: testSets(Sets.IronCavalryAgainstTheScourge, Sets.IronCavalryAgainstTheScourge, Sets.ForgeOfTheKalpagniLantern),
+    mains: testMains(Stats.ATK_P, Stats.SPD, Stats.Lightning_DMG, Stats.ATK_P),
+    stats: testStatSpread(),
+  })
 
-  const simulationMetadata = DB.getMetadata().characters[testInput.character.characterId].scoringMetadata.simulation!
+  const simulationMetadata = getGameMetadata().characters[testInput.character.characterId].scoringMetadata.simulation!
 
-  DB.updateSimulationScoreOverrides(testInput.character.characterId, {
+  useScoringStore.getState().updateSimulationOverrides(testInput.character.characterId, {
     ...simulationMetadata,
     teammates: [
       testInput.teammate0,
@@ -48,9 +52,11 @@ function equipTestCharacter() {
       testInput.teammate2,
     ],
   })
+  SaveState.delayedSave()
 
-  // @ts-ignore
-  DB.addFromForm(testInput.character)
+  // @ts-expect-error - Test helper passes partial character data
+  persistenceService.upsertCharacterFromForm(testInput.character)
+  SaveState.delayedSave()
 
   const singleRelicByPart = generateTestSingleRelicsByPart(testInput.sets, testInput.mains, testInput.stats)
   singleRelicByPart.Head.substats = []
@@ -72,17 +78,17 @@ function equipTestCharacter() {
     { stat: Stats.EHR, value: 43.2 },
   ]
 
-  const relics = Object.values(singleRelicByPart)
-    .map((relic) => {
-      relic.id = TsUtils.uuid()
+  Object.values(singleRelicByPart)
+    .forEach((relic) => {
+      relic.id = uuid()
       relic.equippedBy = testInput.character.characterId
-      return RelicAugmenter.augment(relic)
+      RelicAugmenter.augment(relic)
     })
 
-  DB.setRelic(singleRelicByPart.Head)
-  DB.setRelic(singleRelicByPart.Hands)
-  DB.setRelic(singleRelicByPart.Body)
-  DB.setRelic(singleRelicByPart.Feet)
-  DB.setRelic(singleRelicByPart.PlanarSphere)
-  DB.setRelic(singleRelicByPart.LinkRope)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.Head)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.Hands)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.Body)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.Feet)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.PlanarSphere)
+  equipmentService.upsertRelicWithEquipment(singleRelicByPart.LinkRope)
 }

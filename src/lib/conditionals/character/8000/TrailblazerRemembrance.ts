@@ -1,8 +1,8 @@
 import { BuffPriority } from 'lib/conditionals/conditionalConstants'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -29,18 +29,19 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const TrailblazerRemembranceAbilities: AbilityKind[] = [
@@ -56,8 +57,8 @@ export const TrailblazerRemembranceEntities = createEnum(
 )
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TrailblazerRemembrance')
-  const tBuff = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.TrailblazerRemembrance')
+  const tBuff = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.BuffPriority')
   const { basic, skill, ult, talent, memoSkill, memoTalent } = AbilityEidolon.SKILL_TALENT_MEMO_TALENT_3_ULT_BASIC_MEMO_SKILL_5
   const {
     SOURCE_BASIC,
@@ -128,15 +129,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'enhancedBasic',
       formItem: 'switch',
       text: t('Content.enhancedBasic.text'),
-      content: t('Content.enhancedBasic.content', { Scaling: TsUtils.precisionRound(100 * enhancedBasicScaling) }),
+      content: t('Content.enhancedBasic.content', { Scaling: precisionRound(100 * enhancedBasicScaling) }),
     },
     memoSkillHits: {
       id: 'memoSkillHits',
       formItem: 'slider',
       text: t('Content.memoSkillHits.text'),
       content: t('Content.memoSkillHits.content', {
-        SingleScaling: TsUtils.precisionRound(memoSkillHitScaling * 100),
-        AoeScaling: TsUtils.precisionRound(memoSkillFinalScaling * 100),
+        SingleScaling: precisionRound(memoSkillHitScaling * 100),
+        AoeScaling: precisionRound(memoSkillFinalScaling * 100),
       }),
       min: 0,
       max: 4,
@@ -146,15 +147,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.teamCdBuff.text'),
       content: t('Content.teamCdBuff.content', {
-        ScalingBuff: TsUtils.precisionRound(memoTalentCdBuffScaling * 100),
-        FlatBuff: TsUtils.precisionRound(memoTalentCdBuffFlat * 100),
+        ScalingBuff: precisionRound(memoTalentCdBuffScaling * 100),
+        FlatBuff: precisionRound(memoTalentCdBuffFlat * 100),
       }),
     },
     memsSupport: {
       id: 'memsSupport',
       formItem: 'switch',
       text: t('Content.memsSupport.text'),
-      content: t('Content.memsSupport.content', { TrueDmgScaling: TsUtils.precisionRound(trueDmgScaling * 100) }),
+      content: t('Content.memsSupport.content', { TrueDmgScaling: precisionRound(trueDmgScaling * 100) }),
     },
     energyTrueDmgValue: {
       id: 'energyTrueDmgValue',
@@ -192,8 +193,8 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'slider',
       text: t('TeammateContent.memCDValue.text'),
       content: t('TeammateContent.memCDValue.content', {
-        ScalingBuff: TsUtils.precisionRound(memoTalentCdBuffScaling * 100),
-        FlatBuff: TsUtils.precisionRound(memoTalentCdBuffFlat * 100),
+        ScalingBuff: precisionRound(memoTalentCdBuffScaling * 100),
+        FlatBuff: precisionRound(memoTalentCdBuffFlat * 100),
       }),
       min: 0,
       max: 4.00,
@@ -463,7 +464,7 @@ const displayCaelus = {
     y: 975,
     z: 0.95,
   },
-  showcaseColor: '#f0a1fa',
+  showcaseColor: '#e6a8d4',
 }
 
 const displayStelle = {
@@ -472,7 +473,7 @@ const displayStelle = {
     y: 975,
     z: 0.95,
   },
-  showcaseColor: '#f0a1fa',
+  showcaseColor: '#e6a8d4',
 }
 
 export const TrailblazerRemembranceCaelus: CharacterConfig = {

@@ -1,3 +1,9 @@
+import type { Sets } from 'lib/constants/constants'
+import type {
+  ComboBooleanConditional,
+  ComboState,
+} from 'lib/optimization/combo/comboTypes'
+import { defaultSetConditionals } from 'lib/optimization/defaultForm'
 import {
   AnaxaCyreneEffectPreprocessor,
   ArcherPreprocessor,
@@ -13,6 +19,7 @@ import {
   TheHertaPreprocessor,
   YunliPreprocessor,
 } from 'lib/optimization/rotation/preprocessor/preprocessCharacters'
+import { ThusBurnsTheDawnPreprocessor } from 'lib/optimization/rotation/preprocessor/preprocessLightCones'
 import {
   BandOfSizzlingThunderPreprocessor,
   FiresmithOfLavaForging as FiresmithOfLavaForgingPreprocessor,
@@ -20,16 +27,12 @@ import {
   ScholarLostInEruditionPreprocessor,
   WavestriderCaptainPreprocessor,
 } from 'lib/optimization/rotation/preprocessor/preprocessSets'
-import { Sets } from 'lib/constants/constants'
-import { defaultSetConditionals } from 'lib/optimization/defaultForm'
-import { AbilityPreprocessorBase } from 'lib/optimization/rotation/preprocessor/utils/preprocessUtils'
+import { type AbilityPreprocessorBase } from 'lib/optimization/rotation/preprocessor/utils/preprocessUtils'
 import { toTurnAbility } from 'lib/optimization/rotation/turnAbilityConfig'
 import { preprocessTurnAbilities } from 'lib/optimization/rotation/turnPreprocessor'
-import { ComboBooleanConditional, ComboState } from 'lib/tabs/tabOptimizer/combo/comboDrawerController'
-import { Form } from 'types/form'
-import { ThusBurnsTheDawnPreprocessor } from './preprocessLightCones'
+import { type Form } from 'types/form'
 
-export const characterPreprocessors: AbilityPreprocessorBase[] = [
+const characterPreprocessors: AbilityPreprocessorBase[] = [
   new AshveilPreprocessor(),
   new CastoricePreprocessor(),
   new TheHertaPreprocessor(),
@@ -45,7 +48,7 @@ export const characterPreprocessors: AbilityPreprocessorBase[] = [
   new CyrenePreprocessor(),
 ]
 
-export const setPreprocessors: AbilityPreprocessorBase[] = [
+const setPreprocessors: AbilityPreprocessorBase[] = [
   new ScholarLostInEruditionPreprocessor(),
   new WavestriderCaptainPreprocessor(),
   new FiresmithOfLavaForgingPreprocessor(),
@@ -53,7 +56,7 @@ export const setPreprocessors: AbilityPreprocessorBase[] = [
   new BandOfSizzlingThunderPreprocessor(),
 ]
 
-export const lightConePreprocessors: AbilityPreprocessorBase[] = [
+const lightConePreprocessors: AbilityPreprocessorBase[] = [
   new ThusBurnsTheDawnPreprocessor(),
 ]
 
@@ -84,6 +87,7 @@ export function precomputeConditionalActivations(comboState: ComboState, request
 
   for (const preprocessor of filteredSetPreprocessors) preprocessor.reset()
   for (const preprocessor of filteredCharacterPreprocessors) preprocessor.reset()
+  for (const preprocessor of filteredLightConePreprocessors) preprocessor.reset()
 
   const comboTurnAbilities = preprocessTurnAbilities(comboState.comboTurnAbilities.map(toTurnAbility))
 

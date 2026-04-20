@@ -6,10 +6,9 @@ import {
 import { Stats } from 'lib/constants/constants'
 import { defaultSetConditionals } from 'lib/optimization/defaultForm'
 import { runCustomBenchmarkOrchestrator } from 'lib/simulations/orchestrator/runCustomBenchmarkOrchestrator'
-import { TestInput } from 'lib/simulations/tests/simTestUtils'
-import DB from 'lib/state/db'
-import { BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { type TestInput } from 'lib/simulations/tests/simTestUtils'
+import { type BenchmarkForm } from 'lib/tabs/tabBenchmarks/useBenchmarksTabStore'
+import { clone } from 'lib/utils/objectUtils'
 import { expect } from 'vitest'
 
 export async function expectBenchmarkResultsToMatch(
@@ -44,7 +43,7 @@ export async function expectBenchmarkResultsToMatch(
     teammate0: teammate0,
     teammate1: teammate1,
     teammate2: teammate2,
-    setConditionals: TsUtils.clone(defaultSetConditionals),
+    setConditionals: clone(defaultSetConditionals),
   }
 
   applySetConditionalPresets(benchmarkForm)
@@ -61,7 +60,7 @@ export async function expectBenchmarkResultsToMatch(
     expect(benchmarkSimScore).toBeCloseTo(benchmarkDmg, 5)
     expect(perfectionSimScore).toBeCloseTo(perfectionDmg, 5)
   } catch (error: unknown) {
-    // @ts-ignore
+    // @ts-expect-error - Error type narrowing in test assertion
     const message = error.message
     throw new Error(`
 ${i18next.t(`gameData:Characters.${input.character.characterId}.LongName`)} BENCHMARK

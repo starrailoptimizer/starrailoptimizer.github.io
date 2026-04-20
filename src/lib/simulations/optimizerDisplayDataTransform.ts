@@ -1,4 +1,4 @@
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { formatOptimizerDisplayData } from 'lib/optimization/optimizer'
 
 export function transformOptimizerDisplayData(x: ComputedStatsContainer, key?: string) {
@@ -11,7 +11,7 @@ export function transformOptimizerDisplayData(x: ComputedStatsContainer, key?: s
     }
 
     // Using the key string for the ID for optimizer grid, since the id does not need to be a permutation index here
-    // @ts-ignore
+    // @ts-expect-error Stat sim rows use string keys as IDs instead of numeric permutation indices
     optimizerDisplayData.id = key
   }
 

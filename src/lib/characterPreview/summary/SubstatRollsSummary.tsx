@@ -1,34 +1,61 @@
-import { Flex } from 'antd'
-import {
-  Stats,
-  SubStats,
-} from 'lib/constants/constants'
-import { defaultGap } from 'lib/constants/constantsUi'
+import { Skeleton } from '@mantine/core'
+import styles from 'lib/characterPreview/summary/SubstatRollsSummary.module.css'
+import { SubStats } from 'lib/constants/constants'
+import { Stats } from 'lib/constants/constants'
 import {
   diminishingReturnsFormula,
+  type SimulationScore,
   spdDiminishingReturnsFormula,
 } from 'lib/scoring/simScoringUtils'
-import { SimulationRequest } from 'lib/simulations/statSimulationTypes'
-import { VerticalDivider } from 'lib/ui/Dividers'
+import type { SimulationRequest } from 'lib/simulations/statSimulationTypes'
 import { numberToLocaleString } from 'lib/utils/i18nUtils'
-import { TsUtils } from 'lib/utils/TsUtils'
-import React from 'react'
+import { precisionRound } from 'lib/utils/mathUtils'
+import {
+  memo,
+  useEffect,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 
-type SubstatRollsSummaryProps = {
-  simRequest: SimulationRequest,
-  precision: number,
-  diminish: boolean,
-  columns?: 1 | 2,
+interface SubstatRollsSummaryCommonProps {
+  precision: number
+  diminish: boolean
+  columns?: 1 | 2
 }
 
-export function SubstatRollsSummary({ simRequest, precision, diminish, columns = 2 }: SubstatRollsSummaryProps) {
-  const { t } = useTranslation(['charactersTab', 'common'])
+interface SyncProps extends SubstatRollsSummaryCommonProps {
+  simRequest: SimulationRequest
+  promise?: never
+  type?: never
+}
 
+interface AsyncProps extends SubstatRollsSummaryCommonProps {
+  simRequest?: never
+  promise: Promise<SimulationScore | null>
+  type: 'Benchmark' | 'Perfect'
+}
+
+type SubstatRollsSummaryProps = SyncProps | AsyncProps
+
+const orderedSubstats: Array<[SubStats, number | undefined]> = SubStats.map((stat) => {
+  const precision = stat === Stats.SPD ? 2 : undefined
+  return [stat, precision]
+})
+
+const substatCount = orderedSubstats.length / 2
+const pairedStats: Array<[SubStats, number | undefined, SubStats, number | undefined]> = Array.from({ length: substatCount }).map((_, idx) => {
+  return [...orderedSubstats[idx], ...orderedSubstats[idx + substatCount]]
+})
+
+export const SubstatRollsSummary = memo(function SubstatRollsSummary(props: SubstatRollsSummaryProps) {
+  return props.promise ? <AsyncStatRollSummary {...props} /> : <SyncSubstatRollsSummary {...props} />
+})
+
+function SyncSubstatRollsSummary({ simRequest, precision, diminish, columns }: SyncProps) {
   const stats = simRequest.stats
   const diminishingReturns: Record<string, number> = {}
   if (diminish) {
-    for (const [stat, rolls] of Object.entries(simRequest.stats)) {
+    for (const [stat, rolls] of Object.entries(stats)) {
       const mainsCount = [
         simRequest.simBody,
         simRequest.simFeet,
@@ -36,8 +63,8 @@ export function SubstatRollsSummary({ simRequest, precision, diminish, columns =
         simRequest.simLinkRope,
         Stats.ATK,
         Stats.HP,
-      ].filter((x) => x == stat).length
-      if (stat == Stats.SPD) {
+      ].filter((x) => x === stat).length
+      if (stat === Stats.SPD) {
         diminishingReturns[stat] = rolls - spdDiminishingReturnsFormula(mainsCount, rolls)
       } else {
         diminishingReturns[stat] = rolls - diminishingReturnsFormula(mainsCount, rolls)
@@ -45,80 +72,154 @@ export function SubstatRollsSummary({ simRequest, precision, diminish, columns =
     }
   }
 
-  // Helper function to create a ScoringNumberParens component for a given stat
-  const renderStatRow = (stat: SubStats, usePrecision: number = precision) => (
-    <ScoringNumberParens
-      label={t(`common:ShortStats.${stat}`) + ':'}
-      number={stats[stat]}
-      parens={diminishingReturns[stat]}
-      precision={usePrecision}
-    />
-  )
-
   return (
-    <Flex vertical gap={defaultGap}>
-      {columns === 2
-        ? (
-          <Flex justify='space-between'>
-            <Flex vertical gap={defaultGap} style={{ width: 125, paddingLeft: 5 }}>
-              {renderStatRow(Stats.ATK_P)}
-              {renderStatRow(Stats.ATK)}
-              {renderStatRow(Stats.HP_P)}
-              {renderStatRow(Stats.HP)}
-              {renderStatRow(Stats.DEF_P)}
-              {renderStatRow(Stats.DEF)}
-            </Flex>
-            <VerticalDivider />
-            <Flex vertical gap={defaultGap} style={{ width: 125, paddingRight: 5 }}>
-              {renderStatRow(Stats.SPD, 2)}
-              {renderStatRow(Stats.CR)}
-              {renderStatRow(Stats.CD)}
-              {renderStatRow(Stats.EHR)}
-              {renderStatRow(Stats.RES)}
-              {renderStatRow(Stats.BE)}
-            </Flex>
-          </Flex>
-        )
-        : (
-          <Flex vertical gap={defaultGap} style={{ width: 150 }}>
-            {renderStatRow(Stats.ATK_P)}
-            {renderStatRow(Stats.ATK)}
-            {renderStatRow(Stats.HP_P)}
-            {renderStatRow(Stats.HP)}
-            {renderStatRow(Stats.DEF_P)}
-            {renderStatRow(Stats.DEF)}
-            {renderStatRow(Stats.SPD, 2)}
-            {renderStatRow(Stats.CR)}
-            {renderStatRow(Stats.CD)}
-            {renderStatRow(Stats.EHR)}
-            {renderStatRow(Stats.RES)}
-            {renderStatRow(Stats.BE)}
-          </Flex>
-        )}
-    </Flex>
+    <RenderStats
+      stats={stats}
+      diminishingReturns={diminishingReturns}
+      columns={columns}
+      precision={precision}
+    />
   )
 }
 
-function ScoringNumberParens(props: {
+function ScoringNumberParens({ label, number, parens: parensValue, precision = 1, suspended = false }: {
   label: string,
   number?: number,
   parens?: number,
   precision?: number,
+  suspended?: boolean,
 }) {
-  const precision = props.precision ?? 1
-  const value = TsUtils.precisionRound(props.number ?? 0)
-  const parens = TsUtils.precisionRound(props.parens ?? 0)
-  const show = value != 0
+  const value = precisionRound(number ?? 0)
+  const parens = precisionRound(parensValue ?? 0)
+  const show = value !== 0
   const showParens = parens > 0
 
   return (
-    <Flex gap={5} justify='space-between'>
-      <pre style={{ margin: 0 }}>{props.label}</pre>
-      <pre style={{ margin: 0, textAlign: 'right' }}>
-        {show && numberToLocaleString(value, precision)}
-        {showParens && <span style={{ margin: 3 }}>-</span>}
-        {showParens && numberToLocaleString(parens, 1)}
-      </pre>
-    </Flex>
+    <div style={{ display: 'flex', gap: 5, justifyContent: 'space-between' }}>
+      <span className={styles.label}>{label}</span>
+      <span className={styles.value}>
+        {suspended
+          ? <Skeleton width={70}>foo</Skeleton>
+          : (
+            <>
+              {show && numberToLocaleString(value, precision)}
+              {showParens && <span className={styles.parensSpacer}>-</span>}
+              {showParens && numberToLocaleString(parens, 1)}
+            </>
+          )}
+      </span>
+    </div>
   )
 }
+
+function AsyncStatRollSummary({ promise, type, precision, diminish, columns }: AsyncProps) {
+  const [stats, setStats] = useState<Record<string, number>>({})
+  const [diminishingReturns, setDiminishingReturns] = useState<Record<string, number>>({})
+  const [suspended, setSuspended] = useState(true)
+
+  useEffect(() => {
+    let stale = false
+
+    setSuspended(true)
+    setDiminishingReturns({})
+    setStats({})
+
+    promise.then((result) => {
+      if (result === null) return
+
+      const request = type === 'Benchmark' ? result.benchmarkSim.request : result.maximumSim.request
+
+      const stats = request.stats
+      const diminishingReturns: Record<string, number> = {}
+
+      if (diminish) {
+        for (const [stat, rolls] of Object.entries(stats)) {
+          const mainsCount = [
+            request.simBody,
+            request.simFeet,
+            request.simPlanarSphere,
+            request.simLinkRope,
+            Stats.ATK,
+            Stats.HP,
+          ].filter((x) => x === stat).length
+          if (stat === Stats.SPD) {
+            diminishingReturns[stat] = rolls - spdDiminishingReturnsFormula(mainsCount, rolls)
+          } else {
+            diminishingReturns[stat] = rolls - diminishingReturnsFormula(mainsCount, rolls)
+          }
+        }
+      }
+
+      if (stale) return
+
+      setSuspended(false)
+      setStats(stats)
+      setDiminishingReturns(diminishingReturns)
+    })
+    return () => {
+      stale = true
+    }
+  }, [promise, type, diminish])
+  return (
+    <RenderStats
+      stats={stats}
+      diminishingReturns={diminishingReturns}
+      precision={precision}
+      columns={columns}
+      suspended={suspended}
+    />
+  )
+}
+
+const RenderStats = memo(function({ stats, diminishingReturns, precision, columns = 2, suspended = false }: {
+  stats: Record<string, number>,
+  diminishingReturns: Record<string, number>,
+  precision: number,
+  columns?: 1 | 2,
+  suspended?: boolean,
+}) {
+  const { t } = useTranslation('common', { keyPrefix: 'ShortStats' })
+  if (columns === 1) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column' }} className={styles.zebraContainer}>
+        {orderedSubstats.map(([stat, prec]) => (
+          <ScoringNumberParens
+            key={stat}
+            label={t(stat)}
+            number={stats[stat]}
+            parens={diminishingReturns[stat]}
+            precision={prec ?? precision}
+            suspended={suspended}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column' }} className={styles.zebraGrid}>
+      {pairedStats.map(([leftStat, leftPrec, rightStat, rightPrec], i) => (
+        <div key={i} className={styles.zebraRow}>
+          <div className={styles.zebraCell}>
+            <ScoringNumberParens
+              label={t(leftStat)}
+              number={stats[leftStat]}
+              parens={diminishingReturns[leftStat]}
+              precision={leftPrec ?? precision}
+              suspended={suspended}
+            />
+          </div>
+          <div className={styles.zebraCell}>
+            <ScoringNumberParens
+              label={t(rightStat)}
+              number={stats[rightStat]}
+              parens={diminishingReturns[rightStat]}
+              precision={rightPrec ?? precision}
+              suspended={suspended}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+})

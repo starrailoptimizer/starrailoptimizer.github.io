@@ -1,7 +1,7 @@
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -15,18 +15,19 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { AbilityKind } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { ScoringMetadata } from 'types/metadata'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
+import { type ScoringMetadata } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const AstaEntities = createEnum('Asta')
@@ -38,7 +39,7 @@ export const AstaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Asta')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Asta')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_TALENT_3_ULT_BASIC_5
   const {
     SOURCE_BASIC,
@@ -81,7 +82,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillExtraDmgHits',
       formItem: 'slider',
       text: t('Content.skillExtraDmgHits.text'),
-      content: t('Content.skillExtraDmgHits.content', { skillScaling: TsUtils.precisionRound(skillScaling * 100), skillExtraDmgHitsMax }),
+      content: t('Content.skillExtraDmgHits.content', { skillScaling: precisionRound(skillScaling * 100), skillExtraDmgHitsMax }),
       min: 0,
       max: skillExtraDmgHitsMax,
     },
@@ -89,7 +90,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'talentBuffStacks',
       formItem: 'slider',
       text: t('Content.talentBuffStacks.text'),
-      content: t('Content.talentBuffStacks.content', { talentStacksAtkBuff: TsUtils.precisionRound(100 * talentStacksAtkBuff) }),
+      content: t('Content.talentBuffStacks.content', { talentStacksAtkBuff: precisionRound(100 * talentStacksAtkBuff) }),
       min: 0,
       max: 5,
     },
@@ -231,7 +232,8 @@ const display = {
     y: 975,
     z: 1,
   },
-  showcaseColor: '#9e80e6',
+  disableSpine: true,
+  showcaseColor: '#a28bf3',
 }
 
 export const Asta: CharacterConfig = {

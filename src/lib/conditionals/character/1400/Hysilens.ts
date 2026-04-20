@@ -7,8 +7,8 @@ import {
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -33,7 +33,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
 import {
   AbilityKind,
@@ -47,17 +47,19 @@ import {
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import { SPREAD_RELICS_4P_GENERAL_CONDITIONALS } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const HysilensAbilities: AbilityKind[] = [
@@ -71,7 +73,8 @@ export const HysilensAbilities: AbilityKind[] = [
 export const HysilensEntities = createEnum('Hysilens')
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Hysilens')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Hysilens')
+  const tDot = wrappedFixedT(withContent).get(null, 'conditionals', 'Common.DotTickCoefficient')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -101,6 +104,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
   const maxUltDotInstances = e >= 6 ? 12 : 8
 
   const defaults = {
+    dotTickCoefficient: 1.25,
     skillVulnerability: true,
     ultZone: true,
     ultDotStacks: maxUltDotInstances,
@@ -125,13 +129,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       id: 'skillVulnerability',
       formItem: 'switch',
       text: t('Content.skillVulnerability.text'),
-      content: t('Content.skillVulnerability.content', { SkillVuln: TsUtils.precisionRound(100 * skillVulnScaling) }),
+      content: t('Content.skillVulnerability.content', { SkillVuln: precisionRound(100 * skillVulnScaling) }),
     },
     ultZone: {
       id: 'ultZone',
       formItem: 'switch',
       text: t('Content.ultZone.text'),
-      content: t('Content.ultZone.content', { ZoneDefShred: TsUtils.precisionRound(100 * ultDefPenScaling) }),
+      content: t('Content.ultZone.content', { ZoneDefShred: precisionRound(100 * ultDefPenScaling) }),
     },
     ultDotStacks: {
       id: 'ultDotStacks',
@@ -159,6 +163,15 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       formItem: 'switch',
       text: t('Content.cyreneSpecialEffect.text'),
       content: t('Content.cyreneSpecialEffect.content'),
+    },
+    dotTickCoefficient: {
+      id: 'dotTickCoefficient',
+      formItem: 'slider',
+      text: tDot('Text'),
+      content: tDot('Content'),
+      min: 0,
+      max: 5,
+      percent: true,
     },
     e1Buffs: {
       id: 'e1Buffs',
@@ -273,26 +286,31 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
               .dotBaseChance(1.0)
               .damageElement(ElementTag.Fire)
               .atkScaling(actualTalentDot)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
             HitDefinitionBuilder.standardDot()
               .dotBaseChance(1.0)
               .damageElement(ElementTag.Wind)
               .atkScaling(actualTalentDot)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
             HitDefinitionBuilder.standardDot()
               .dotBaseChance(1.0)
               .damageElement(ElementTag.Lightning)
               .atkScaling(actualTalentDot)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
             HitDefinitionBuilder.standardDot()
               .dotBaseChance(1.0)
               .damageElement(ElementTag.Physical)
               .atkScaling(actualTalentDot)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
             HitDefinitionBuilder.standardDot()
               .dotBaseChance(1.0)
               .damageElement(ElementTag.Physical)
               .atkScaling(actualUltDot)
+              .dotTickCoefficient(r.dotTickCoefficient)
               .build(),
           ],
         },
@@ -321,7 +339,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       x.buff(
         StatKey.DMG_BOOST,
         (e >= 2)
-          ? Math.max(0, Math.min(0.90, 0.15 * Math.floor(TsUtils.precisionRound((t.e2TeammateEhr - 0.60) / 0.10))))
+          ? Math.max(0, Math.min(0.90, 0.15 * Math.floor(precisionRound((t.e2TeammateEhr - 0.60) / 0.10))))
           : 0,
         x.targets(TargetTag.FullTeam).source(SOURCE_E2),
       )
@@ -342,7 +360,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       const r = action.characterConditionals as Conditionals<typeof content>
 
       const ehrValue = x.getActionValue(StatKey.EHR, HysilensEntities.Hysilens)
-      const ehrBoost = (r.ehrToDmg) ? Math.max(0, Math.min(0.90, 0.15 * Math.floor((ehrValue - 0.60) / 0.10))) : 0
+      const ehrBoost = (r.ehrToDmg) ? Math.max(0, Math.min(0.90, 0.15 * floorSafe((ehrValue - 0.60) / 0.10))) : 0
 
       x.buff(StatKey.DMG_BOOST, ehrBoost, x.source(SOURCE_TRACE))
     },
@@ -351,7 +369,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
 
       return `
 if (${wgslTrue(r.ehrToDmg)}) {
-  let dmgBuff = min(0.90, 0.15 * floor((${containerActionVal(SELF_ENTITY_INDEX, StatKey.EHR, action.config)} - 0.60) / 0.10));
+  let dmgBuff = min(0.90, 0.15 * floorSafe((${containerActionVal(SELF_ENTITY_INDEX, StatKey.EHR, action.config)} - 0.60) / 0.10));
   ${buff.action(AKey.DMG_BOOST, 'dmgBuff').wgsl(action)}
 }
 `
@@ -398,7 +416,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_BASIC,
     DEFAULT_DOT,
   ],
-  comboDot: 5,
   errRopeEidolon: 0,
   relicSets: [
     [Sets.PrisonerInDeepConfinement, Sets.PrisonerInDeepConfinement],
@@ -474,11 +491,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 765,
-    y: 900,
-    z: 1.20,
+    x: 794,
+    y: 878,
+    z: 1.2,
   },
-  showcaseColor: '#817aef',
+  showcaseColor: '#a08bf4',
 }
 
 export const Hysilens: CharacterConfig = {

@@ -1,4 +1,3 @@
-import i18next from 'i18next'
 import { Huohuo } from 'lib/conditionals/character/1200/Huohuo'
 import {
   getYaoguangAhaPunchlineValue,
@@ -7,8 +6,8 @@ import {
 import { TrailblazerElationStelle } from 'lib/conditionals/character/8000/TrailblazerElation'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -22,7 +21,6 @@ import { NightOfFright } from 'lib/conditionals/lightcone/5star/NightOfFright'
 import {
   ConditionalActivation,
   ConditionalType,
-  CURRENT_DATA_VERSION,
   Parts,
   Sets,
   Stats,
@@ -35,19 +33,16 @@ import {
   ElementTag,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   DEFAULT_ELATION_SKILL,
-  DEFAULT_SKILL,
   DEFAULT_ULT,
   DEFAULT_UNIQUE,
   END_SKILL,
   NULL_TURN_ABILITY_NAME,
   START_ULT,
-  WHOLE_ELATION_SKILL,
   WHOLE_SKILL,
-  WHOLE_UNIQUE,
 } from 'lib/optimization/rotation/turnAbilityConfig'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
@@ -55,16 +50,18 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
-import { HitDefinition } from 'types/hitConditionalTypes'
-import {
+import type { Eidolon } from 'types/character'
+import type { CharacterConfig } from 'types/characterConfig'
+import type { CharacterConditionalsController } from 'types/conditionals'
+import type { HitDefinition } from 'types/hitConditionalTypes'
+import type {
   ScoringMetadata,
   SimulationMetadata,
 } from 'types/metadata'
-import {
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -80,7 +77,7 @@ export const EvanesciaAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const betaContent = i18next.t('BetaMessage', { ns: 'conditionals', Version: CURRENT_DATA_VERSION })
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Evanescia.Content')
   const { basic, skill, ult, talent, elationSkill } = AbilityEidolon.ULT_BASIC_ELATION_SKILL_3_SKILL_TALENT_ELATION_SKILL_5
   const {
     SOURCE_BASIC,
@@ -110,14 +107,13 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
   const foxTeacherElationScaling = talent(e, 0.25, 0.275)
 
   const elationSkillScaling = elationSkill(e, 1.10, 1.155, 1.21)
-  const foxTeacherVulnStacksMax = 1
 
   const defaults = {
     certifiedBanger: true,
     punchlineStacks: 30,
     certifiedBangerStacks: 600,
     cdToElation: true,
-    foxTeacherVulnStacks: foxTeacherVulnStacksMax,
+    masterFoxVuln: true,
     e1ResPen: true,
     e2CritDmg: true,
     e4DefPen: true,
@@ -125,78 +121,86 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
   }
 
   const teammateDefaults = {
-    foxTeacherVulnStacks: foxTeacherVulnStacksMax,
+    masterFoxVuln: true,
   }
 
   const content: ContentDefinition<typeof defaults> = {
     punchlineStacks: {
       id: 'punchlineStacks',
       formItem: 'slider',
-      text: 'Punchline stacks',
-      content: betaContent,
+      text: t('punchlineStacks.text'),
+      content: t('punchlineStacks.content'),
       min: 0,
       max: 100,
     },
     certifiedBanger: {
       id: 'certifiedBanger',
       formItem: 'switch',
-      text: 'Certified Banger',
-      content: betaContent,
+      text: t('certifiedBanger.text'),
+      content: t('certifiedBanger.content', {
+        skillElationScaling: precisionRound(100 * talentSkillElationScaling),
+        ultElationScaling: precisionRound(100 * talentUltAoeElationScaling),
+        ultBounceElationScaling: precisionRound(100 * talentUltBounceElationScaling),
+        foxElationScaling: precisionRound(100 * foxTeacherElationScaling),
+      }),
     },
     certifiedBangerStacks: {
       id: 'certifiedBangerStacks',
       formItem: 'slider',
-      text: 'Certified Banger stacks',
-      content: betaContent,
+      text: t('certifiedBangerStacks.text'),
+      content: t('certifiedBangerStacks.content', {
+        skillElationScaling: precisionRound(100 * talentSkillElationScaling),
+        ultElationScaling: precisionRound(100 * talentUltAoeElationScaling),
+        ultBounceElationScaling: precisionRound(100 * talentUltBounceElationScaling),
+        foxElationScaling: precisionRound(100 * foxTeacherElationScaling),
+      }),
       min: 0,
       max: 1200,
     },
     cdToElation: {
       id: 'cdToElation',
       formItem: 'switch',
-      text: 'CD to Elation conversion',
-      content: betaContent,
+      text: t('cdToElation.text'),
+      content: t('cdToElation.content'),
     },
-    foxTeacherVulnStacks: {
-      id: 'foxTeacherVulnStacks',
-      formItem: 'slider',
-      text: 'Vulnerability stacks',
-      content: betaContent,
-      min: 0,
-      max: foxTeacherVulnStacksMax,
+    masterFoxVuln: {
+      id: 'masterFoxVuln',
+      formItem: 'switch',
+      text: t('masterFoxVuln.text'),
+      content: t('masterFoxVuln.content'),
     },
     e1ResPen: {
       id: 'e1ResPen',
       formItem: 'switch',
-      text: 'E1 RES PEN',
-      content: betaContent,
+      text: t('e1ResPen.text'),
+      content: t('e1ResPen.content'),
       disabled: e < 1,
     },
     e2CritDmg: {
       id: 'e2CritDmg',
       formItem: 'switch',
-      text: 'E2 Crit DMG',
-      content: betaContent,
+      text: t('e2CritDmg.text'),
+      content: t('e2CritDmg.content'),
       disabled: e < 2,
     },
     e4DefPen: {
       id: 'e4DefPen',
       formItem: 'switch',
-      text: 'E4 DEF PEN',
-      content: betaContent,
+      text: t('e4DefPen.text'),
+      content: t('e4DefPen.content'),
       disabled: e < 4,
     },
     e6Merrymake: {
       id: 'e6Merrymake',
       formItem: 'switch',
-      text: 'E6 Merrymake',
-      content: betaContent,
+      text: t('e6Merrymake.text'),
+      content: t('e6Merrymake.content'),
       disabled: e < 6,
     },
   }
 
   const teammateContent: ContentDefinition<typeof teammateDefaults> = {
-    foxTeacherVulnStacks: content.foxTeacherVulnStacks,
+    masterFoxVuln: content.masterFoxVuln,
   }
 
   return {
@@ -343,7 +347,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
     precomputeMutualEffectsContainer: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
       const m = action.characterConditionals as Conditionals<typeof teammateContent>
 
-      x.buff(StatKey.VULNERABILITY, m.foxTeacherVulnStacks * 0.12, x.targets(TargetTag.FullTeam).source(SOURCE_TRACE))
+      x.buff(StatKey.VULNERABILITY, m.masterFoxVuln ? 0.12 : 0, x.targets(TargetTag.FullTeam).source(SOURCE_TRACE))
     },
 
     finalizeCalculations: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
@@ -482,21 +486,14 @@ const scoring = (): ScoringMetadata => ({
       Stats.CR,
       Stats.CD,
     ],
-    [Parts.Feet]: [
-      Stats.SPD,
-      Stats.ATK_P,
-    ],
-    [Parts.PlanarSphere]: [
-      Stats.Physical_DMG,
-      Stats.ATK_P,
-    ],
+    [Parts.Feet]: [],
+    [Parts.PlanarSphere]: [],
     [Parts.LinkRope]: [
       Stats.ATK_P,
       Stats.ERR,
     ],
   },
   presets: [
-    PresetEffects.BANANA_SET,
     PresetEffects.fnPioneerSet(4),
   ],
   sortOption: SortOption.ELATION_SKILL,
@@ -510,7 +507,7 @@ const display = {
     y: 950,
     z: 1.10,
   },
-  showcaseColor: '#e6aadc',
+  showcaseColor: '#b78fc4',
 }
 
 export const Evanescia: CharacterConfig = {

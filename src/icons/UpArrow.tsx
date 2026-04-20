@@ -1,9 +1,5 @@
-import Icon from '@ant-design/icons'
-import React from 'react'
-
 const IconSVG = () => (
   <svg
-    className='w-6 h-6 text-gray-800 dark:text-white'
     aria-hidden='true'
     xmlns='http://www.w3.org/2000/svg'
     width='14'
@@ -15,6 +11,4 @@ const IconSVG = () => (
   </svg>
 )
 
-export const UpArrow = (props: React.ComponentProps<typeof Icon>) => {
-  return <IconSVG {...props} />
-}
+export const UpArrow = () => <IconSVG />

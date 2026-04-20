@@ -1,16 +1,20 @@
 import { containerActionVal } from 'lib/gpu/injection/injectUtils'
 import { wgsl } from 'lib/gpu/injection/wgslUtils'
 import { Source } from 'lib/optimization/buffSource'
-import { AKey, StatKey } from 'lib/optimization/engine/config/keys'
-import { SELF_ENTITY_INDEX } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
-import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { SuperImpositionLevel } from 'types/lightCone'
-import { LightConeConfig } from 'types/lightConeConfig'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  AKey,
+  StatKey,
+} from 'lib/optimization/engine/config/keys'
+import { SELF_ENTITY_INDEX } from 'lib/optimization/engine/config/tag'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { buff } from 'lib/optimization/engine/container/gpuBuffBuilder'
+import { floorSafe } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
+import {
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
@@ -24,12 +28,12 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
     defaults: () => ({}),
     finalizeCalculations: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
       const defValue = x.getActionValueByIndex(StatKey.DEF, SELF_ENTITY_INDEX)
-      x.buff(StatKey.DMG_BOOST, Math.min(sValuesMax[s], Math.floor(defValue / 100) * sValues[s]), x.source(SOURCE_LC))
+      x.buff(StatKey.DMG_BOOST, Math.min(sValuesMax[s], floorSafe(defValue / 100) * sValues[s]), x.source(SOURCE_LC))
     },
     newGpuFinalizeCalculations: (action: OptimizerAction, context: OptimizerContext) => {
       return wgsl`
 let defValue = ${containerActionVal(SELF_ENTITY_INDEX, StatKey.DEF, action.config)};
-let dmgBuff = min(${sValuesMax[s]}, floor(defValue / 100.0) * ${sValues[s]});
+let dmgBuff = min(${sValuesMax[s]}, floorSafe(defValue / 100.0) * ${sValues[s]});
 ${buff.action(AKey.DMG_BOOST, 'dmgBuff').wgsl(action)}
       `
     },

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import {
-  MainStats,
+  type MainStats,
   Parts,
   Stats,
 } from 'lib/constants/constants'
@@ -9,8 +9,8 @@ import {
   probabilityOfCorrectStat,
 } from 'lib/relics/estTbp/estTbp'
 import { Metadata } from 'lib/state/metadataInitializer'
-import { TsUtils } from 'lib/utils/TsUtils'
-import {
+import { precisionRound } from 'lib/utils/mathUtils'
+import type {
   Relic,
   RelicSubstatMetadata,
 } from 'types/relic'
@@ -122,7 +122,7 @@ test('Simulated relics', () => {
 
   for (let i = 0; i < trials; i++) {
     const relic = generateRelic(part, mainStat)
-    const result = TsUtils.precisionRound(sumSubstatWeights(relic, weights))
+    const result = precisionRound(sumSubstatWeights(relic, weights))
 
     results.push(result)
     if (result > rollsToBeat) {
@@ -130,7 +130,7 @@ test('Simulated relics', () => {
     }
   }
 
-  const histogram = new Array(80).fill(0)
+  const histogram = Array.from({ length: 80 }, () => 0)
   for (const result of results) {
     histogram[Math.floor(result * 10)]++
   }

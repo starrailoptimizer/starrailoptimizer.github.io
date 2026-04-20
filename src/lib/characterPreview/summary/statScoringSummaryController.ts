@@ -2,19 +2,17 @@ import {
   Parts,
   Stats,
 } from 'lib/constants/constants'
-import { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
+import type { SingleRelicByPart } from 'lib/gpu/webgpuTypes'
 import { rollCounter } from 'lib/importer/characterConverter'
-import {
-  RelicScorer,
-  RelicScoringResult,
-} from 'lib/relics/relicScorerPotential'
+import type { RelicScoringResult } from 'lib/relics/scoring/relicScorer'
+import { ScoringCache } from 'lib/relics/scoring/relicScorer'
 import { StatCalculator } from 'lib/relics/statCalculator'
-import { ScoringType } from 'lib/scoring/simScoringUtils'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { EstTbpRunnerOutput } from 'lib/worker/estTbpWorkerRunner'
-import { CharacterId } from 'types/character'
-import { ScoringMetadata } from 'types/metadata'
-import { Relic } from 'types/relic'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { objectHash } from 'lib/utils/objectUtils'
+import type { EstTbpRunnerOutput } from 'lib/worker/estTbpWorkerRunner'
+import type { CharacterId } from 'types/character'
+import type { ScoringMetadata } from 'types/metadata'
+import type { Relic } from 'types/relic'
 
 export type EnrichedRelics = {
   LinkRope?: RelicAnalysis,
@@ -43,22 +41,23 @@ export function enrichRelicAnalysis(
   scoringMetadata: ScoringMetadata,
   characterId: CharacterId,
 ): EnrichedRelics {
+  const scorer = new ScoringCache()
   return {
-    LinkRope: enrichSingleRelicAnalysis(relics.LinkRope, estTbpRunnerOutput.LinkRope, scoringMetadata, characterId),
-    PlanarSphere: enrichSingleRelicAnalysis(relics.PlanarSphere, estTbpRunnerOutput.PlanarSphere, scoringMetadata, characterId),
-    Feet: enrichSingleRelicAnalysis(relics.Feet, estTbpRunnerOutput.Feet, scoringMetadata, characterId),
-    Body: enrichSingleRelicAnalysis(relics.Body, estTbpRunnerOutput.Body, scoringMetadata, characterId),
-    Hands: enrichSingleRelicAnalysis(relics.Hands, estTbpRunnerOutput.Hands, scoringMetadata, characterId),
-    Head: enrichSingleRelicAnalysis(relics.Head, estTbpRunnerOutput.Head, scoringMetadata, characterId),
+    LinkRope: enrichSingleRelicAnalysis(relics.LinkRope, estTbpRunnerOutput.LinkRope, scoringMetadata, characterId, scorer),
+    PlanarSphere: enrichSingleRelicAnalysis(relics.PlanarSphere, estTbpRunnerOutput.PlanarSphere, scoringMetadata, characterId, scorer),
+    Feet: enrichSingleRelicAnalysis(relics.Feet, estTbpRunnerOutput.Feet, scoringMetadata, characterId, scorer),
+    Body: enrichSingleRelicAnalysis(relics.Body, estTbpRunnerOutput.Body, scoringMetadata, characterId, scorer),
+    Hands: enrichSingleRelicAnalysis(relics.Hands, estTbpRunnerOutput.Hands, scoringMetadata, characterId, scorer),
+    Head: enrichSingleRelicAnalysis(relics.Head, estTbpRunnerOutput.Head, scoringMetadata, characterId, scorer),
   }
 }
 
-export function enrichSingleRelicAnalysis(relic: Relic, days: number, scoringMetadata: ScoringMetadata, characterId: CharacterId) {
+export function enrichSingleRelicAnalysis(relic: Relic, days: number, scoringMetadata: ScoringMetadata, characterId: CharacterId, scorer: ScoringCache) {
   if (!relic) return undefined
-  const score = RelicScorer.scoreCurrentRelic(relic, characterId)
-  const potentials = RelicScorer.scoreRelicPotential(relic, characterId)
+  const score = scorer.getCurrentRelicScore(relic, characterId)
+  const potentials = scorer.scoreRelicPotential(relic, characterId)
 
-  const weightedRolls = countRelicRolls(relic, scoringMetadata)
+  const weightedRolls = countRelicRolls(relic, scoringMetadata.stats)
   const valid = validMainStat(relic, scoringMetadata)
 
   if (!valid) {
@@ -88,13 +87,13 @@ export function enrichSingleRelicAnalysis(relic: Relic, days: number, scoringMet
 }
 
 function validMainStat(relic: Relic, scoringMetadata: ScoringMetadata) {
-  if (relic.part == Parts.Head || relic.part == Parts.Hands) return true
+  if (relic.part === Parts.Head || relic.part === Parts.Hands) return true
 
   const acceptableStats = scoringMetadata.parts[relic.part]
   return acceptableStats.includes(relic.main.stat)
 }
 
-function countRelicRolls(relic: Relic, scoringMetadata: ScoringMetadata) {
+export function countRelicRolls(relic: Relic, scoringMetadata: ScoringMetadata['stats']) {
   let weightedRolls = 0
   for (const substat of relic.substats) {
     const stat = substat.stat
@@ -102,33 +101,31 @@ function countRelicRolls(relic: Relic, scoringMetadata: ScoringMetadata) {
       // NO-OP
     } else {
       const rolls = substat.addedRolls! + 1
-      const expectedStep = stat == Stats.SPD ? 0.3 : StatCalculator.getMaxedSubstatValue(stat) / 10
+      const expectedStep = stat === Stats.SPD ? 0.3 : StatCalculator.getMaxedSubstatValue(stat) / 10
       const actualStat = substat.value
       const expectedStat = StatCalculator.getMaxedSubstatValue(stat, 0.8) * rolls
       const diff = Math.max(0, actualStat - expectedStat)
       const roughStep = diff / expectedStep
-      const step = TsUtils.precisionRound(roughStep, 0)
+      const step = precisionRound(roughStep, 0)
 
       const result = rollCounter(rolls, step)
       substat.rolls = result.rolls
     }
 
-    weightedRolls += scoringMetadata.stats[stat] * flatReduction(stat) * (substat.rolls.high + substat.rolls.mid * 0.9 + substat.rolls.low * 0.8)
+    weightedRolls += scoringMetadata[stat] * flatReduction(stat) * (substat.rolls.high + substat.rolls.mid * 0.9 + substat.rolls.low * 0.8)
   }
 
   return weightedRolls
 }
 
 export function flatReduction(stat: string) {
-  return stat == Stats.HP || stat == Stats.DEF || stat == Stats.ATK ? 0.4 : 1
+  return stat === Stats.HP || stat === Stats.DEF || stat === Stats.ATK ? 0.4 : 1
 }
 
-// Scoring type isn't strictly needed in the hash, but it helps work around some rendering issues with switching score type
-export function hashEstTbpRun(displayRelics: SingleRelicByPart, characterId: string, scoringType: ScoringType, scoringMetadata: ScoringMetadata) {
-  return TsUtils.objectHash({
+export function hashEstTbpRun(displayRelics: SingleRelicByPart, characterId: CharacterId, scoringMetadata: ScoringMetadata) {
+  return objectHash({
     weights: scoringMetadata.stats,
     parts: scoringMetadata.parts,
-    scoringType,
     characterId,
     relicsHash: Object.values(displayRelics).map(hashRelic),
   })
@@ -136,7 +133,7 @@ export function hashEstTbpRun(displayRelics: SingleRelicByPart, characterId: str
 
 function hashRelic(relic: Relic) {
   if (!relic) return '-'
-  return TsUtils.objectHash({
+  return objectHash({
     enhance: relic.enhance,
     equippedBy: relic.equippedBy,
     grade: relic.grade,

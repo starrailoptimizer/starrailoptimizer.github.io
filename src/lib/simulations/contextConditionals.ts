@@ -1,12 +1,12 @@
 import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
 import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightConeConditionalsResolver'
-import { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
+import type { DynamicConditional } from 'lib/gpu/conditionals/dynamicConditionals'
 import {
   calculateContextConditionalRegistry,
   wrapTeammateDynamicConditional,
 } from 'lib/optimization/calculateConditionals'
 import { rebuildEntityRegistry } from 'lib/optimization/engine/container/computedStatsContainer'
-import {
+import type {
   CharacterMetadata,
   OptimizerAction,
   OptimizerContext,
@@ -38,11 +38,10 @@ export function initializeContextConditionals(context: OptimizerContext) {
 function calculateTeammateDynamicConditionals(action: OptimizerAction, teammateMetadata: CharacterMetadata, index: number) {
   if (teammateMetadata?.characterId) {
     const teammateCharacterConditionalController = CharacterConditionalsResolver.get(teammateMetadata)
-    const dynamicConditionals = (teammateCharacterConditionalController.teammateDynamicConditionals ?? [])
-      .map((dynamicConditional: DynamicConditional) => {
-        const wrapped = wrapTeammateDynamicConditional(dynamicConditional, index)
-        action.teammateDynamicConditionals.push(wrapped)
-        return wrapped
-      })
+    const dynamicConditionals = teammateCharacterConditionalController.teammateDynamicConditionals ?? []
+    dynamicConditionals.forEach((dynamicConditional: DynamicConditional) => {
+      const wrapped = wrapTeammateDynamicConditional(dynamicConditional, index)
+      action.teammateDynamicConditionals.push(wrapped)
+    })
   }
 }

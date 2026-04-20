@@ -1,31 +1,33 @@
 import {
   Flex,
-  Form as AntdForm,
-  InputNumber,
+  NumberInput,
   Slider,
-  Typography,
-} from 'antd'
-import { getItemName } from 'lib/tabs/tabOptimizer/conditionals/FormSwitch'
-import WithPopover from 'lib/ui/WithPopover'
-import { TsUtils } from 'lib/utils/TsUtils'
+} from '@mantine/core'
+import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
 import {
+  conditionalAlign,
+  conditionalJustify,
+  ConditionalText as Text,
+} from 'lib/tabs/tabOptimizer/conditionals/ConditionalShared'
+import {
+  getItemName,
+  resolveConditionalValue,
+} from 'lib/tabs/tabOptimizer/conditionals/FormSwitch'
+import { handleConditionalChange } from 'lib/tabs/tabOptimizer/optimizerForm/optimizerFormActions'
+import { WithPopover } from 'lib/ui/WithPopover'
+import { precisionRound } from 'lib/utils/mathUtils'
+import type {
   ComponentProps,
   ComponentType,
+} from 'react'
+import {
   useEffect,
-  useRef,
   useState,
 } from 'react'
-import styled from 'styled-components'
 
-const justify = 'flex-start'
-const align = 'center'
 const inputWidth = 61
 const numberWidth = 55
 const sliderWidth = 155
-
-const Text = styled(Typography)`
-    white-space: pre-line;
-`
 
 export interface FormSliderProps {
   disabled?: boolean
@@ -42,66 +44,71 @@ export interface FormSliderProps {
   value?: number
 }
 
-export const FormSlider: ComponentType<FormSliderProps> = (props) => {
-  const [state, setState] = useState(props?.value ?? undefined)
-
-  const multiplier = props.percent ? 100 : 1
-  const step = props.percent ? 0.01 : 1
-  const symbol = props.percent ? '%' : ''
-
-  const minRef = useRef(props.min)
-  const maxRef = useRef(props.max)
-
+export const FormSlider: ComponentType<FormSliderProps> = ({
+  disabled,
+  min,
+  max,
+  text,
+  id,
+  percent,
+  lc,
+  set,
+  teammateIndex,
+  removeForm,
+  onChange,
+  value,
+}) => {
+  const props = { disabled, min, max, text, id, percent, lc, set, teammateIndex, removeForm, onChange, value }
   const itemName = getItemName(props)
 
-  // Update the min and max values of the slider if eidolons change their bounds.
-  useEffect(() => {
-    // @ts-ignore fixing this would involve a large amount of typing across the entire combo pipeline
-    // e.g. replacing usage of string|number with a more explicit/restrained types TODO?
-    const fieldValue = window.optimizerForm.getFieldValue(itemName)
-    if (fieldValue >= props.max || fieldValue == maxRef.current) {
-      // @ts-ignore
-      window.optimizerForm.setFieldValue(itemName, props.max)
-    }
-    if (fieldValue <= props.min || fieldValue == minRef.current) {
-      // @ts-ignore
-      window.optimizerForm.setFieldValue(itemName, props.min)
-    }
+  const storeValue = useOptimizerRequestStore((s) => removeForm ? undefined : resolveConditionalValue(s, itemName as (string | number)[]) as number | undefined)
 
-    minRef.current = props.min
-    maxRef.current = props.max
-  }, [props.min, props.max])
+  const currentValue = removeForm ? value : storeValue
+  const [dragState, setDragState] = useState<number | undefined>(undefined)
+
+  const multiplier = percent ? 100 : 1
+  const step = percent ? 0.01 : 1
+  const symbol = percent ? '%' : ''
+
+  // Clamp the store value when eidolons change the slider bounds.
+  useEffect(() => {
+    if (removeForm) return
+    const fieldValue = (storeValue ?? min) as number
+    const clamped = Math.min(Math.max(fieldValue, min), max)
+    if (clamped !== fieldValue) {
+      handleConditionalChange(itemName as (string | number)[], clamped)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-clamp when bounds change; storeValue read for current value, not as trigger
+  }, [min, max])
+
+  const displayValue = dragState ?? currentValue
+
+  const handleChange = removeForm
+    ? onChange
+    : (val: number) => handleConditionalChange(itemName as (string | number)[], val)
 
   const internalInputNumber = (
-    <InputNumber
-      min={props.min}
-      max={props.max}
-      controls={false}
-      size='small'
-      style={{
-        width: numberWidth,
-      }}
-      parser={(value) => value == null || value == '' ? 0 : TsUtils.precisionRound(parseFloat(value) / multiplier)}
-      formatter={(value) => `${TsUtils.precisionRound((value ?? 0) * multiplier)}${symbol}`}
-      disabled={props.disabled}
+    <NumberInput
+      min={min * multiplier}
+      max={max * multiplier}
+      hideControls
+      style={{ width: numberWidth }}
+      styles={{ input: { height: 24, minHeight: 24 } }}
+      disabled={disabled}
       onChange={(newValue) => {
-        if (props.onChange) {
-          props.onChange(state ?? 0)
+        if (handleChange && newValue != null && typeof newValue === 'number') {
+          handleChange(newValue / multiplier)
         }
       }}
-      onBlur={() => {
-        if (props.onChange) {
-          props.onChange(state ?? 0)
-        }
-      }}
-      value={props.value == null ? undefined : state}
+      value={precisionRound((displayValue ?? 0) * multiplier)}
+      suffix={symbol || undefined}
     />
   )
 
   const internalSlider = (
     <Slider
-      min={props.min}
-      max={props.max}
+      min={min}
+      max={max}
       step={step}
       style={{
         minWidth: sliderWidth,
@@ -109,49 +116,34 @@ export const FormSlider: ComponentType<FormSliderProps> = (props) => {
         marginBottom: 0,
         marginLeft: 1,
       }}
-      tooltip={{
-        formatter: (value) => `${TsUtils.precisionRound((value ?? 0) * multiplier)}${symbol}`,
-      }}
-      disabled={props.disabled}
+      label={(val) => `${precisionRound((val ?? 0) * multiplier)}${symbol}`}
+      disabled={disabled}
       onChange={(newValue) => {
-        if (props.onChange) {
-          setState(newValue)
+        setDragState(newValue)
+      }}
+      onChangeEnd={(newValue) => {
+        setDragState(undefined)
+        if (handleChange) {
+          handleChange(newValue)
         }
       }}
-      onChangeComplete={(newValue) => {
-        if (props.onChange) {
-          props.onChange(newValue)
-        }
-      }}
-      value={props.value == null ? undefined : state}
+      value={(displayValue ?? min) as number}
     />
   )
 
   return (
-    <Flex vertical gap={0} style={{ marginBottom: 0 }}>
-      <Flex justify={justify} align={align}>
+    <Flex direction='column' style={{ marginBottom: 0 }}>
+      <Flex justify={conditionalJustify} align={conditionalAlign}>
         <div style={{ minWidth: inputWidth, display: 'block' }}>
-          {props.removeForm
-            ? internalInputNumber
-            : (
-              <AntdForm.Item name={itemName}>
-                {internalInputNumber}
-              </AntdForm.Item>
-            )}
+          {internalInputNumber}
         </div>
         <Text style={{ lineHeight: '16px' }}>
-          {props.text}
+          {text}
         </Text>
       </Flex>
 
-      <Flex align='center' justify='flex-start' gap={5} style={{ height: 14 }}>
-        {props.removeForm
-          ? internalSlider
-          : (
-            <AntdForm.Item name={itemName}>
-              {internalSlider}
-            </AntdForm.Item>
-          )}
+      <Flex align='center' gap={5} h={14}>
+        {internalSlider}
         <Text
           style={{
             minWidth: 20,
@@ -159,7 +151,7 @@ export const FormSlider: ComponentType<FormSliderProps> = (props) => {
             textAlign: 'center',
           }}
         >
-          {`${TsUtils.precisionRound(props.max * multiplier)}${symbol}`}
+          {`${precisionRound(max * multiplier)}${symbol}`}
         </Text>
       </Flex>
     </Flex>

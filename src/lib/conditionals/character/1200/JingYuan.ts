@@ -7,8 +7,8 @@ import {
 } from 'lib/conditionals/conditionalFinalizers'
 import {
   AbilityEidolon,
-  Conditionals,
-  ContentDefinition,
+  type Conditionals,
+  type ContentDefinition,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import { HitDefinitionBuilder } from 'lib/conditionals/hitDefinitionBuilder'
@@ -23,7 +23,7 @@ import {
   DamageTag,
   ElementTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import { type ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import { SortOption } from 'lib/optimization/sortOptions'
 import { PresetEffects } from 'lib/scoring/presetEffects'
 import {
@@ -31,13 +31,13 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
+import { type Eidolon } from 'types/character'
+import { type CharacterConfig } from 'types/characterConfig'
 import {
-  ScoringMetadata,
-  SimulationMetadata,
+  type ScoringMetadata,
+  type SimulationMetadata,
 } from 'types/metadata'
 
 import { Robin } from 'lib/conditionals/character/1300/Robin'
@@ -54,10 +54,10 @@ import {
   START_ULT,
   WHOLE_SKILL,
 } from 'lib/optimization/rotation/turnAbilityConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { type CharacterConditionalsController } from 'types/conditionals'
 import {
-  OptimizerAction,
-  OptimizerContext,
+  type OptimizerAction,
+  type OptimizerContext,
 } from 'types/optimizer'
 
 export const JingYuanEntities = createEnum('JingYuan', 'LightningLord')
@@ -70,7 +70,7 @@ export const JingYuanAbilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.JingYuan')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.JingYuan')
   const { basic, skill, ult, talent } = AbilityEidolon.ULT_BASIC_3_SKILL_TALENT_5
   const {
     SOURCE_BASIC,
@@ -308,7 +308,6 @@ const simulation = (): SimulationMetadata => ({
     WHOLE_SKILL,
     DEFAULT_FUA,
   ],
-  comboDot: 0,
   relicSets: [
     [Sets.TheAshblazingGrandDuke, Sets.TheAshblazingGrandDuke],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
@@ -386,11 +385,11 @@ const scoring = (): ScoringMetadata => ({
 
 const display = {
   imageCenter: {
-    x: 1024,
-    y: 1024,
-    z: 1.1,
+    x: 1028,
+    y: 1026,
+    z: 1.17,
   },
-  showcaseColor: '#94e6f1',
+  showcaseColor: '#aeebe8',
 }
 
 export const JingYuan: CharacterConfig = {

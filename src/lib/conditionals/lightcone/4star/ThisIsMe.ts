@@ -1,12 +1,13 @@
-import { ContentDefinition } from 'lib/conditionals/conditionalUtils'
+import { type ContentDefinition } from 'lib/conditionals/conditionalUtils'
 import { Source } from 'lib/optimization/buffSource'
-import { TsUtils } from 'lib/utils/TsUtils'
-import { LightConeConditionalsController } from 'types/conditionals'
-import { LightConeConfig } from 'types/lightConeConfig'
-import { SuperImpositionLevel } from 'types/lightCone'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
+import { precisionRound } from 'lib/utils/mathUtils'
+import { type LightConeConditionalsController } from 'types/conditionals'
+import { type SuperImpositionLevel } from 'types/lightCone'
+import { type LightConeConfig } from 'types/lightConeConfig'
 
 const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeConditionalsController => {
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ThisIsMe')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Lightcones.ThisIsMe')
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { SOURCE_LC } = Source.lightCone(ThisIsMe.id)
 
@@ -22,7 +23,7 @@ const conditionals = (s: SuperImpositionLevel, withContent: boolean): LightConeC
       id: 'defScalingUltDmg',
       formItem: 'switch',
       text: t('Content.defScalingUltDmg.text'),
-      content: t('Content.defScalingUltDmg.content', { Multiplier: TsUtils.precisionRound(100 * sValues[s]) }),
+      content: t('Content.defScalingUltDmg.content', { Multiplier: precisionRound(100 * sValues[s]) }),
     },
   }
 

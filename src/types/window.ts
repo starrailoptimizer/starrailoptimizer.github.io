@@ -1,46 +1,5 @@
-import { AgGridReact } from 'ag-grid-react'
-import { FormInstance } from 'antd/es/form/hooks/useForm'
-import { MessageInstance } from 'antd/es/message/interface'
-import { NotificationInstance } from 'antd/es/notification/interface'
-import { HookAPI } from 'antd/lib/modal/useModal'
-import { CharacterConditionalsResolver } from 'lib/conditionals/resolver/characterConditionalsResolver'
-import { LightConeConditionalsResolver } from 'lib/conditionals/resolver/lightConeConditionalsResolver'
-import { Constants } from 'lib/constants/constants'
-import { CharacterConverter } from 'lib/importer/characterConverter'
-import { Hint } from 'lib/interactions/hint'
-import { Message } from 'lib/interactions/message'
-import {
-  BufferPacker,
-  OptimizerDisplayData,
-} from 'lib/optimization/bufferPacker'
-import { RelicAugmenter } from 'lib/relics/relicAugmenter'
-import { RelicFilters } from 'lib/relics/relicFilters'
-import { RelicRollFixer } from 'lib/relics/relicRollFixer'
-import { RelicScorer } from 'lib/relics/relicScorerPotential'
-import { ScoredRelic } from 'lib/relics/scoreRelics'
-import { StatCalculator } from 'lib/relics/statCalculator'
-import { Assets } from 'lib/rendering/assets'
-import { Gradient } from 'lib/rendering/gradient'
-import { Renderer } from 'lib/rendering/renderer'
-import { ColorThemeOverrides } from 'lib/rendering/theme'
-import { DB } from 'lib/state/db'
-import { Metadata } from 'lib/state/metadataInitializer'
-import { SaveState } from 'lib/state/saveState'
-import { OptimizerTabController } from 'lib/tabs/tabOptimizer/optimizerTabController'
-import { ShowcaseTabForm } from 'lib/tabs/tabShowcase/showcaseTabController'
-import { Utils } from 'lib/utils/utils'
-import { WorkerPool } from 'lib/worker/workerPool'
-import { RefObject } from 'react'
-import {
-  Build,
-  Character,
-} from 'types/character'
-import { Form } from 'types/form'
-import { HsrOptimizerStore } from 'types/store'
-import {
-  StoreApi,
-  UseBoundStore,
-} from 'zustand'
+// This file must be a module for `declare global` to work
+export {}
 
 type Jipt = {
   start(): void,
@@ -62,49 +21,17 @@ type SaveFilePickerOptions = {
 
 declare global {
   interface Window {
-    // only exists on dreary-quibbles\
-    // added by github CI
+    // Crowdin in-context translation tool (added by CI)
     jipt?: Jipt
-    notificationApi: NotificationInstance
-    messageApi: MessageInstance
-    modalApi: HookAPI
-    store: UseBoundStore<StoreApi<HsrOptimizerStore>>
-    colorTheme: ColorThemeOverrides
 
-    characterGrid: RefObject<AgGridReact<Character>>
-    relicsGrid: RefObject<AgGridReact<ScoredRelic>>
-    optimizerGrid: RefObject<AgGridReact<OptimizerDisplayData>>
-
-    showcaseTabForm: FormInstance<ShowcaseTabForm>
-
-    // TODO see OptimizerForm
-    onOptimizerFormValuesChange: (changedValues: Form, allValues: Form, bypass?: boolean) => void
-    optimizerStartClicked: () => void
-    optimizerForm: FormInstance<Form>
-
+    // File System API
     showSaveFilePicker: (options?: SaveFilePickerOptions) => Promise<FileSystemFileHandle>
 
+    // i18n YAML parser
     yaml: unknown
-    WorkerPool: typeof WorkerPool
-    Constants: typeof Constants
-    DataParser: typeof Metadata
-    DB: typeof DB
-    Utils: typeof Utils
-    Assets: typeof Assets
-    RelicAugmenter: typeof RelicAugmenter
-    StatCalculator: typeof StatCalculator
-    Gradient: typeof Gradient
-    SaveState: typeof SaveState
-    RelicFilters: typeof RelicFilters
-    Renderer: typeof Renderer
-    Message: typeof Message
-    Hint: typeof Hint
-    CharacterConverter: typeof CharacterConverter
-    RelicScorer: typeof RelicScorer
-    CharacterConditionals: typeof CharacterConditionalsResolver
-    LightConeConditionals: typeof LightConeConditionalsResolver
-    BufferPacker: typeof BufferPacker
-    RelicRollFixer: typeof RelicRollFixer
+
+    // Debug console access — consolidated from individual window.X exports
+    __HSR_DEBUG: Record<string, unknown>
 
     title: string
     WEBGPU_DEBUG: boolean
@@ -112,4 +39,7 @@ declare global {
 
   var WEBGPU_DEBUG: boolean
   var SEQUENTIAL_BENCHMARKS: boolean
+  var CARD_DEBUG: boolean
+  var CHANGELOG_CTA_DEBUG: boolean
+  var openChangelogModal: () => void
 }

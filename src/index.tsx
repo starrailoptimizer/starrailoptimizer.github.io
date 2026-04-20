@@ -1,9 +1,17 @@
-import { Typography } from 'antd'
-import WrappedApp from 'App'
+import { App } from 'App'
 import 'lib/i18n/i18n'
 import { Constants } from 'lib/constants/constants'
 import { verifyWebgpuSupport } from 'lib/gpu/webgpuDevice'
+// Use .layer.css variants to wrap Mantine styles in @layer mantine { ... }.
+// Without this, Vite dev and prod builds can order CSS chunks differently,
+// causing CSS module overrides to win in dev but lose in prod (or vice versa).
+// Layered styles always lose to unlayered styles regardless of source order.
+import '@mantine/core/styles.layer.css'
+import '@mantine/notifications/styles.layer.css'
 import 'overlayscrollbars/overlayscrollbars.css'
+import { exportShowcaseColors } from 'lib/dev/exportShowcaseColors'
+import { populateAllCharacters } from 'lib/dev/populateAllCharacters'
+import { resetShowcaseColors } from 'lib/dev/resetShowcaseColors'
 import { CharacterConverter } from 'lib/importer/characterConverter'
 import { Hint } from 'lib/interactions/hint'
 import { Message } from 'lib/interactions/message'
@@ -11,47 +19,94 @@ import { BufferPacker } from 'lib/optimization/bufferPacker'
 import { RelicAugmenter } from 'lib/relics/relicAugmenter'
 import { RelicFilters } from 'lib/relics/relicFilters'
 import { RelicRollFixer } from 'lib/relics/relicRollFixer'
-import { RelicScorer } from 'lib/relics/relicScorerPotential'
+import { RelicScorer } from 'lib/relics/scoring/relicScorer'
 import { StatCalculator } from 'lib/relics/statCalculator'
 import { Assets } from 'lib/rendering/assets'
 import { Gradient } from 'lib/rendering/gradient'
 import { Renderer } from 'lib/rendering/renderer'
-import { Themes } from 'lib/rendering/theme'
-import { DB } from 'lib/state/db'
 import { Metadata } from 'lib/state/metadataInitializer'
 import { SaveState } from 'lib/state/saveState'
 
-import { WorkerPool } from 'lib/worker/workerPool'
+import { workerPool } from 'lib/worker/workerPool'
 import { OverlayScrollbars } from 'overlayscrollbars'
 import ReactDOM from 'react-dom/client'
-import { ErrorBoundary } from 'react-error-boundary'
-import 'style/style.css'
+import {
+  ErrorBoundary,
+  type FallbackProps,
+} from 'react-error-boundary'
+import 'style/tokens.css'
+import 'style/global.css'
+import 'style/ag-grid-overrides.css'
+import {
+  CellStyleModule,
+  ClientSideRowModelApiModule,
+  ClientSideRowModelModule,
+  ColumnApiModule,
+  ExternalFilterModule,
+  InfiniteRowModelModule,
+  LocaleModule,
+  ModuleRegistry,
+  PaginationModule,
+  PinnedRowModule,
+  provideGlobalGridOptions,
+  RenderApiModule,
+  RowApiModule,
+  RowSelectionModule,
+  ScrollApiModule,
+} from 'ag-grid-community'
 
-window.WorkerPool = WorkerPool
-window.Constants = Constants
-window.DataParser = Metadata
-window.DB = DB
-window.Assets = Assets
-window.RelicAugmenter = RelicAugmenter
-window.StatCalculator = StatCalculator
-window.Gradient = Gradient
-window.SaveState = SaveState
-window.RelicFilters = RelicFilters
-window.Renderer = Renderer
-window.Message = Message
-window.Hint = Hint
-window.CharacterConverter = CharacterConverter
-window.RelicScorer = RelicScorer
-window.BufferPacker = BufferPacker
-window.RelicRollFixer = RelicRollFixer
+ModuleRegistry.registerModules([
+  CellStyleModule,
+  ClientSideRowModelApiModule,
+  ClientSideRowModelModule,
+  ColumnApiModule,
+  ExternalFilterModule,
+  InfiniteRowModelModule,
+  LocaleModule,
+  PaginationModule,
+  PinnedRowModule,
+  RenderApiModule,
+  RowApiModule,
+  RowSelectionModule,
+  ScrollApiModule,
+])
+provideGlobalGridOptions({ theme: 'legacy' })
+import 'style/selecto.css'
+import 'style/components.css'
+import 'style/mantine-overrides.css'
 
-window.colorTheme = Themes.BLUE
+window.__HSR_DEBUG = {
+  workerPool,
+  Constants,
+  DataParser: Metadata,
+  Assets,
+  RelicAugmenter,
+  StatCalculator,
+  Gradient,
+  SaveState,
+  RelicFilters,
+  Renderer,
+  Message,
+  Hint,
+  CharacterConverter,
+  RelicScorer,
+  BufferPacker,
+  RelicRollFixer,
+  populateAllCharacters,
+  resetShowcaseColors,
+  exportShowcaseColors,
+}
 
 Metadata.initialize()
 SaveState.load(false, false)
+
 void verifyWebgpuSupport(false)
 
-const defaultErrorRender = ({ error }: { error: { message: string } }) => <Typography>Something went wrong: {error.message}</Typography>
+const defaultErrorRender = ({ error }: FallbackProps) => (
+  <div>
+    Something went wrong: {error instanceof Error ? error.message : String(error)}
+  </div>
+)
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
@@ -59,6 +114,6 @@ OverlayScrollbars(document.body, {})
 
 root.render(
   <ErrorBoundary fallbackRender={defaultErrorRender}>
-    <WrappedApp />
+    <App />
   </ErrorBoundary>,
 )

@@ -1,11 +1,12 @@
-import i18next from 'i18next'
 import { Jiaoqiu } from 'lib/conditionals/character/1200/Jiaoqiu'
 import { Acheron } from 'lib/conditionals/character/1300/Acheron'
 import { PermansorTerrae } from 'lib/conditionals/character/1400/PermansorTerrae'
-import {
-  AbilityEidolon,
+import type {
   Conditionals,
   ContentDefinition,
+} from 'lib/conditionals/conditionalUtils'
+import {
+  AbilityEidolon,
   createEnum,
 } from 'lib/conditionals/conditionalUtils'
 import {
@@ -19,7 +20,6 @@ import { ThoughWorldsApart } from 'lib/conditionals/lightcone/5star/ThoughWorlds
 import {
   ConditionalActivation,
   ConditionalType,
-  CURRENT_DATA_VERSION,
   Parts,
   Sets,
   Stats,
@@ -34,7 +34,7 @@ import {
   SELF_ENTITY_INDEX,
   TargetTag,
 } from 'lib/optimization/engine/config/tag'
-import { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
+import type { ComputedStatsContainer } from 'lib/optimization/engine/container/computedStatsContainer'
 import {
   AbilityKind,
   END_SKILL,
@@ -48,16 +48,20 @@ import {
   SPREAD_ORNAMENTS_2P_GENERAL_CONDITIONALS,
   SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
 } from 'lib/scoring/scoringConstants'
-import { TsUtils } from 'lib/utils/TsUtils'
-
-import { Eidolon } from 'types/character'
-import { CharacterConfig } from 'types/characterConfig'
-import { CharacterConditionalsController } from 'types/conditionals'
+import { wrappedFixedT } from 'lib/utils/i18nUtils'
 import {
+  floorSafe,
+  precisionRound,
+} from 'lib/utils/mathUtils'
+
+import type { Eidolon } from 'types/character'
+import type { CharacterConfig } from 'types/characterConfig'
+import type { CharacterConditionalsController } from 'types/conditionals'
+import type {
   ScoringMetadata,
   SimulationMetadata,
 } from 'types/metadata'
-import {
+import type {
   OptimizerAction,
   OptimizerContext,
 } from 'types/optimizer'
@@ -71,8 +75,7 @@ export const WeltB1Abilities: AbilityKind[] = [
 ]
 
 const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsController => {
-  const betaContent = i18next.t('BetaMessage', { ns: 'conditionals', Version: CURRENT_DATA_VERSION })
-  const t = TsUtils.wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.Welt')
+  const t = wrappedFixedT(withContent).get(null, 'conditionals', 'Characters.WeltB1.Content')
   const { basic, skill, ult, talent } = AbilityEidolon.SKILL_BASIC_3_ULT_TALENT_5
   const {
     SOURCE_BASIC,
@@ -121,62 +124,62 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
     enemySlowed: {
       id: 'enemySlowed',
       formItem: 'switch',
-      text: t('Content.enemySlowed.text'),
-      content: betaContent,
+      text: t('enemySlowed.text'),
+      content: t('enemySlowed.content', { talentAdditionalScaling: precisionRound(100 * talentScaling) }),
     },
     enemyWeightless: {
       id: 'enemyWeightless',
       formItem: 'switch',
-      text: 'Enemy Weightless',
-      content: betaContent,
+      text: t('enemyWeightless.text'),
+      content: t('enemyWeightless.content'),
     },
     retributionDmgStacks: {
       id: 'retributionDmgStacks',
       formItem: 'slider',
-      text: 'Retribution DMG stacks',
-      content: betaContent,
+      text: t('retributionDmgStacks.text'),
+      content: t('retributionDmgStacks.content'),
       min: 0,
-      max: 15,
+      max: 10,
     },
     ehrToAtkBoost: {
       id: 'ehrToAtkBoost',
       formItem: 'switch',
-      text: 'EHR to ATK boost',
-      content: betaContent,
+      text: t('ehrToAtkBoost.text'),
+      content: t('ehrToAtkBoost.content'),
     },
     traceAdditionalDmg: {
       id: 'traceAdditionalDmg',
       formItem: 'switch',
-      text: 'Trace Additional DMG',
-      content: betaContent,
+      text: t('traceAdditionalDmg.text'),
+      content: t('traceAdditionalDmg.content'),
     },
     skillExtraHits: {
       id: 'skillExtraHits',
       formItem: 'slider',
-      text: t('Content.skillExtraHits.text'),
-      content: t('Content.skillExtraHits.content', { skillScaling: TsUtils.precisionRound(100 * skillScaling) }),
+      text: t('skillExtraHits.text'),
+      content: t('skillExtraHits.content', { skillScaling: precisionRound(100 * skillScaling) }),
       min: 0,
       max: skillExtraHitsMax,
     },
     e1WeightlessAdditionalDmg: {
       id: 'e1WeightlessAdditionalDmg',
       formItem: 'switch',
-      text: 'E1 Weightless Additional DMG',
-      content: betaContent,
+      text: t('e1WeightlessAdditionalDmg.text'),
+      content: t('e1WeightlessAdditionalDmg.content'),
       disabled: (e < 1),
     },
     e4WeightlessResPen: {
       id: 'e4WeightlessResPen',
       formItem: 'switch',
-      text: 'E4 RES PEN',
-      content: betaContent,
+      text: t('e4WeightlessResPen.text'),
+      content: t('e4WeightlessResPen.content'),
       disabled: (e < 4),
     },
     e6SlowedCrCdBoost: {
       id: 'e6SlowedCrCdBoost',
       formItem: 'switch',
-      text: 'E6 Slowed CR/CD boost',
-      content: betaContent,
+      text: t('e6SlowedCrCdBoost.text'),
+      content: t('e6SlowedCrCdBoost.content'),
       disabled: (e < 6),
     },
   }
@@ -321,15 +324,18 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
       const r = action.characterConditionals as Conditionals<typeof content>
 
       // E6: Skill/Ult hitting Slow target → CR +30%, CD +60%
-      x.buff(StatKey.CR, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.30 : 0, x.damageType(DamageTag.SKILL | DamageTag.ULT).source(SOURCE_E6))
-      x.buff(StatKey.CD, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.60 : 0, x.damageType(DamageTag.SKILL | DamageTag.ULT).source(SOURCE_E6))
+      const e6DamageTags = DamageTag.SKILL | DamageTag.ULT | DamageTag.ADDITIONAL
+      x.buff(StatKey.CR, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.30 : 0, x.actionKind(AbilityKind.SKILL).damageType(e6DamageTags).source(SOURCE_E6))
+      x.buff(StatKey.CR, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.30 : 0, x.actionKind(AbilityKind.ULT).damageType(e6DamageTags).source(SOURCE_E6))
+      x.buff(StatKey.CD, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.60 : 0, x.actionKind(AbilityKind.SKILL).damageType(e6DamageTags).source(SOURCE_E6))
+      x.buff(StatKey.CD, (e >= 6 && r.e6SlowedCrCdBoost) ? 0.60 : 0, x.actionKind(AbilityKind.ULT).damageType(e6DamageTags).source(SOURCE_E6))
     },
 
     precomputeMutualEffectsContainer: (x: ComputedStatsContainer, action: OptimizerAction, context: OptimizerContext) => {
       const m = action.characterConditionals as Conditionals<typeof teammateContent>
 
       // Trace: Retribution - DMG boost 6% per stack when attacking Weightless, max 15 stacks
-      x.buff(StatKey.DMG_BOOST, (m.enemyWeightless) ? 0.06 * m.retributionDmgStacks : 0, x.targets(TargetTag.FullTeam).source(SOURCE_TRACE))
+      x.buff(StatKey.DMG_BOOST, (m.enemyWeightless) ? 0.10 * m.retributionDmgStacks : 0, x.targets(TargetTag.FullTeam).source(SOURCE_TRACE))
 
       // Talent: Weightless DEF shred 40%
       x.buff(StatKey.DEF_PEN, (m.enemyWeightless) ? 0.40 : 0, x.targets(TargetTag.FullTeam).source(SOURCE_TALENT))
@@ -362,7 +368,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
           action,
           context,
           SOURCE_TRACE,
-          (convertibleValue) => Math.min(0.80, 0.20 * Math.floor((convertibleValue - 0.40) / 0.10)) * context.baseATK,
+          (convertibleValue) => Math.min(0.80, 0.20 * floorSafe((convertibleValue - 0.40) / 0.10)) * context.baseATK,
         )
       },
       gpu: function(action: OptimizerAction, context: OptimizerContext) {
@@ -375,7 +381,7 @@ const conditionals = (e: Eidolon, withContent: boolean): CharacterConditionalsCo
           this,
           action,
           context,
-          `min(0.80, 0.20 * floor((convertibleValue - 0.40) / 0.10)) * baseATK`,
+          `min(0.80, 0.20 * floorSafe((convertibleValue - 0.40) / 0.10)) * baseATK`,
           `${wgslTrue(r.ehrToAtkBoost)} && ${containerActionVal(SELF_ENTITY_INDEX, StatKey.EHR, config)} > 0.40`,
         )
       },
@@ -419,7 +425,6 @@ const simulation = (): SimulationMetadata => ({
   errRopeEidolon: 0,
   relicSets: [
     [Sets.PioneerDiverOfDeadWaters, Sets.PioneerDiverOfDeadWaters],
-    [Sets.ScholarLostInErudition, Sets.ScholarLostInErudition],
     ...SPREAD_RELICS_4P_GENERAL_CONDITIONALS,
   ],
   ornamentSets: [
@@ -502,7 +507,8 @@ const display = {
     y: 950,
     z: 1,
   },
-  showcaseColor: '#6385d8',
+  disableSpine: true,
+  showcaseColor: '#948ff8',
 }
 
 export const WeltB1: CharacterConfig = {

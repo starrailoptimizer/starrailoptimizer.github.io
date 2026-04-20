@@ -1,24 +1,23 @@
 import {
-  ReloadOutlined,
-  UploadOutlined,
-} from '@ant-design/icons'
-import {
+  Accordion,
   Alert,
   Button,
   Checkbox,
-  Collapse,
   Divider,
   Flex,
-  Input,
-  Popconfirm,
-  Steps,
   Switch,
+  TextInput,
+  Timeline,
   Tooltip,
-  Typography,
-  Upload,
-} from 'antd'
+} from '@mantine/core'
+import { modals } from '@mantine/modals'
 import {
-  HoyolabData,
+  IconRefresh,
+  IconUpload,
+} from '@tabler/icons-react'
+import { AppPages } from 'lib/constants/appPages'
+import {
+  type HoyolabData,
   hoyolabParser,
 } from 'lib/importer/hoyoLabFormatParser'
 import {
@@ -27,29 +26,35 @@ import {
   ScannerSourceToParser,
   ValidScannerSources,
 } from 'lib/importer/importConfig'
-import { ScannerParserJson } from 'lib/importer/kelzFormatParser'
+import { type ScannerParserJson } from 'lib/importer/kelzFormatParser'
 import { Message } from 'lib/interactions/message'
-import DB, { AppPages } from 'lib/state/db'
+import * as persistenceService from 'lib/services/persistenceService'
 import { SaveState } from 'lib/state/saveState'
+import { useGlobalStore } from 'lib/stores/app/appStore'
+import {
+  getCharacterById,
+  getCharacters,
+} from 'lib/stores/character/characterStore'
 import {
   importerTabButtonWidth,
   importerTabSpinnerMs,
 } from 'lib/tabs/tabImport/importerTabUiConstants'
 import { ReliquaryDescription } from 'lib/tabs/tabImport/ReliquaryDescription'
 import { ColorizedLinkWithIcon } from 'lib/ui/ColorizedLink'
-import { useState } from 'react'
+import {
+  useRef,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
-import { CharacterId } from 'types/character'
-import { Form } from 'types/form'
-import { Relic } from 'types/relic'
+import type { CharacterId } from 'types/character'
+import type { Form } from 'types/form'
+import type { Relic } from 'types/relic'
+import { useShallow } from 'zustand/react/shallow'
+import classes from './ScannerImportSubmenu.module.css'
 import {
   DEFAULT_WEBSOCKET_URL,
   useScannerState,
 } from './ScannerWebsocketClient'
-
-// FIXME MED
-
-const { Text } = Typography
 
 type ParsedCharacter = {
   characterId: CharacterId,
@@ -81,25 +86,32 @@ export function ScannerImportSubmenu() {
     setIngestWarpResources,
     websocketUrl,
     setWebsocketUrl,
-  } = useScannerState()
+  } = useScannerState(useShallow((s) => ({
+    connected: s.connected,
+    ingest: s.ingest,
+    setIngest: s.setIngest,
+    ingestCharacters: s.ingestCharacters,
+    setIngestCharacters: s.setIngestCharacters,
+    ingestWarpResources: s.ingestWarpResources,
+    setIngestWarpResources: s.setIngestWarpResources,
+    websocketUrl: s.websocketUrl,
+    setWebsocketUrl: s.setWebsocketUrl,
+  })))
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const isLiveImporting = connected && ingest
 
-  function beforeUpload(file: Blob): Promise<any> {
-    return new Promise(() => {
-      const reader = new FileReader()
-      reader.readAsText(file)
-      reader.onload = () => {
-        const fileUploadText = String(reader.result)
-        void uploadedText(fileUploadText)
-      }
-      return false
-    })
+  function beforeUpload(file: Blob) {
+    const reader = new FileReader()
+    reader.readAsText(file)
+    reader.onload = () => {
+      const fileUploadText = String(reader.result)
+      void uploadedText(fileUploadText)
+    }
   }
 
   function uploadedText(text: string) {
     try {
       const json = JSON.parse(text) as (ScannerParserJson & { data: never }) | (HoyolabData & { source: never })
-      console.log('JSON', json)
 
       setLoading1(true)
 
@@ -114,7 +126,7 @@ export function ScannerImportSubmenu() {
         let characters = out.characters
         // We sort by the characters ingame level before setting their level to 80 for the optimizer, so the default char order is more natural
         characters = characters.sort((a, b) => b.characterLevel - a.characterLevel)
-        characters.map((c) => {
+        characters.forEach((c) => {
           c.characterLevel = 80
           c.lightConeLevel = 80
         })
@@ -139,7 +151,7 @@ export function ScannerImportSubmenu() {
 
       // We sort by the characters ingame level before setting their level to 80 for the optimizer, so the default char order is more natural
       characters = characters.sort((a, b) => b.characterLevel - a.characterLevel)
-      characters.map((c) => {
+      characters.forEach((c) => {
         c.characterLevel = 80
         c.lightConeLevel = 80
       })
@@ -170,7 +182,7 @@ export function ScannerImportSubmenu() {
   function mergeRelicsConfirmed() {
     setLoading2(true)
     setTimeout(() => {
-      DB.mergeRelicsWithState(currentRelics ?? [], [])
+      persistenceService.mergeRelics(currentRelics ?? [], [])
       SaveState.delayedSave()
 
       setTimeout(() => {
@@ -184,10 +196,10 @@ export function ScannerImportSubmenu() {
     setLoading2(true)
     setTimeout(() => {
       const charactersToImport = onlyImportExisting
-        ? currentCharacters?.filter((char) => DB.getCharacterById(char.characterId))
+        ? currentCharacters?.filter((char) => getCharacterById(char.characterId))
         : currentCharacters
 
-      DB.mergeRelicsWithState(currentRelics ?? [], (charactersToImport ?? []) as Form[])
+      persistenceService.mergeRelics(currentRelics ?? [], (charactersToImport ?? []) as Form[])
       SaveState.delayedSave()
 
       setTimeout(() => {
@@ -199,12 +211,12 @@ export function ScannerImportSubmenu() {
 
   function uploadScannerFile() {
     return (
-      <Flex style={{ minHeight: 100, marginBottom: 30 }} gap={30}>
-        <Flex vertical gap={10}>
-          <Text>
+      <Flex className={classes.uploadStage} gap={30}>
+        <Flex direction='column' gap={10}>
+          <div>
             {t('Import.Stage1.Header')}
-          </Text>
-          <Text>
+          </div>
+          <div>
             <ul>
               <ReliquaryDescription />
               <li>
@@ -225,7 +237,7 @@ export function ScannerImportSubmenu() {
                 <ColorizedLinkWithIcon
                   text={t('Import.Stage1.ScorerDesc.Link')}
                   linkIcon={true}
-                  onClick={() => window.store.getState().setActiveKey(AppPages.SHOWCASE)}
+                  onClick={() => useGlobalStore.getState().setActiveKey(AppPages.SHOWCASE)}
                 />
                 )
                 <ul>
@@ -247,29 +259,39 @@ export function ScannerImportSubmenu() {
                 </ul>
               </li>
             </ul>
-          </Text>
-          <Flex vertical align='flex-start'>
+          </div>
+          <Flex direction='column' align='flex-start'>
             <Flex gap={10} align='center'>
-              <Upload
+              <input
+                type='file'
                 accept='.json'
-                name='file'
-                beforeUpload={beforeUpload}
+                ref={fileInputRef}
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    beforeUpload(file)
+                  }
+                  e.target.value = ''
+                }}
+              />
+              <Button
                 disabled={isLiveImporting}
+                style={{ width: importerTabButtonWidth }}
+                leftSection={<IconUpload size={16} />}
+                loading={loading1}
+                onClick={() => {
+                  setCurrentStage(Stages.LOAD_FILE)
+                  fileInputRef.current?.click()
+                }}
+                variant='default'
               >
-                <Button
-                  disabled={isLiveImporting}
-                  style={{ width: importerTabButtonWidth }}
-                  icon={<UploadOutlined />}
-                  loading={loading1}
-                  onClick={() => setCurrentStage(Stages.LOAD_FILE)}
-                >
-                  {t('Import.Stage1.ButtonText')}
-                </Button>
-              </Upload>
+                {t('Import.Stage1.ButtonText')}
+              </Button>
 
               {t('Import.Stage1.Or')}
 
-              <Input
+              <TextInput
                 style={{ width: importerTabButtonWidth }}
                 className='centered-placeholder'
                 placeholder={t('Import.Stage1.Placeholder')}
@@ -278,19 +300,17 @@ export function ScannerImportSubmenu() {
                 onChange={(e) => {
                   const text = e.target.value
                   try {
-                    const json = JSON.parse(text)
+                    JSON.parse(text)
                     uploadedText(text)
-                  } catch (e) {
+                  } catch {
                     // Not valid json, ignore
                   }
                 }}
               />
             </Flex>
-            <Divider>
-              {t('Import.LiveImport.Title') /* Live Import Controls */}
-            </Divider>
-            <Flex vertical gap={10}>
-              <Text>
+            <Divider w='100%' my={20} label={t('Import.LiveImport.Title') /* Live Import Controls */} labelPosition='center' />
+            <Flex direction='column' gap={10}>
+              <div>
                 {
                   t(
                     'Import.LiveImport.Description.l1',
@@ -304,61 +324,56 @@ export function ScannerImportSubmenu() {
                   linkIcon={true}
                 />
                 )
-              </Text>
+              </div>
 
               <Alert
-                message='New version notice'
-                description={
-                  <div>
-                    If your live import fails to connect, download the new version of{' '}
-                    <ColorizedLinkWithIcon
-                      text={'Reliquary Archiver'}
-                      url={ReliquaryArchiverConfig.releases}
-                      linkIcon={true}
-                    />
-                    {websocketUrl != DEFAULT_WEBSOCKET_URL && (() => {
-                      try {
-                        return new URL(websocketUrl).port === '53313' && (
-                          <>
-                            <br />
-                            If you have a custom ws url set, the default port has changed from 53313 to 23313.
-                          </>
-                        )
-                      } catch {
-                        return null
-                      }
-                    })()}
-                  </div>
-                }
-                type='info'
-                style={{ marginBottom: 10 }}
-              />
+                title='New version notice'
+                color='blue'
+                className={classes.alertNotice}
+              >
+                <div>
+                  If your live import fails to connect, download the new version of{' '}
+                  <ColorizedLinkWithIcon
+                    text={'Reliquary Archiver'}
+                    url={ReliquaryArchiverConfig.releases}
+                    linkIcon={true}
+                  />
+                  {websocketUrl !== DEFAULT_WEBSOCKET_URL && (() => {
+                    try {
+                      return new URL(websocketUrl).port === '53313' && (
+                        <>
+                          <br />
+                          If you have a custom ws url set, the default port has changed from 53313 to 23313.
+                        </>
+                      )
+                    } catch {
+                      return null
+                    }
+                  })()}
+                </div>
+              </Alert>
 
               <Flex gap={10} align='center' flex='1 0'>
                 <Switch
                   checked={ingest}
-                  onChange={(checked) => setIngest(checked)}
+                  onChange={(event) => setIngest(event.currentTarget.checked)}
                 />
 
-                <Text>{t('Import.LiveImport.Enable') /* Enable Live Import (Recommended) */}</Text>
+                <div>{t('Import.LiveImport.Enable') /* Enable Live Import (Recommended) */}</div>
 
-                <Divider dashed style={{ margin: 0, flex: 1, minWidth: 0 }} />
+                <Divider variant='dashed' className={classes.dividerLine} />
 
                 <Tooltip
-                  placement='topRight'
-                  open={ingest && !connected ? undefined : false} // Only show tooltip if ingest is enabled but we are haven't been able to connect
-                  title={t('Import.LiveImport.DisconnectedHint') /* Unable to connect to the scanner. Please check that it is running. */}
+                  position='top-end'
+                  opened={ingest && !connected ? undefined : false} // Only show tooltip if ingest is enabled but we are haven't been able to connect
+                  label={t('Import.LiveImport.DisconnectedHint') /* Unable to connect to the scanner. Please check that it is running. */}
                 >
                   <Flex gap={10} align='center'>
-                    <Text>{connected ? t('Import.LiveImport.Connected') /* Connected */ : t('Import.LiveImport.Disconnected') /* Disconnected */}</Text>
+                    <div>{connected ? t('Import.LiveImport.Connected') /* Connected */ : t('Import.LiveImport.Disconnected') /* Disconnected */}</div>
 
                     <div
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        backgroundColor: connected ? '#52c41a' : '#ff4d4f',
-                      }}
+                      className={classes.connectionDot}
+                      style={{ backgroundColor: connected ? '#52c41a' : '#ff4d4f' }}
                     />
                   </Flex>
                 </Tooltip>
@@ -367,45 +382,45 @@ export function ScannerImportSubmenu() {
               <Flex gap={10} align='center'>
                 <Switch
                   checked={ingestCharacters}
-                  onChange={(checked) => setIngestCharacters(checked)}
+                  onChange={(event) => setIngestCharacters(event.currentTarget.checked)}
                 />
 
-                <Text>{t('Import.LiveImport.UpdateCharacters') /* Enable updating characters' equipped relics and lightcones */}</Text>
+                <div>{t('Import.LiveImport.UpdateCharacters') /* Enable updating characters' equipped relics and lightcones */}</div>
               </Flex>
 
               <Flex gap={10} align='center'>
                 <Switch
                   checked={ingestWarpResources}
-                  onChange={(checked) => setIngestWarpResources(checked)}
+                  onChange={(event) => setIngestWarpResources(event.currentTarget.checked)}
                 />
 
-                <Text>{t('Import.LiveImport.UpdateWarpResources') /* Enable importing Warp resources (jades, passes, pity) */}</Text>
+                <div>{t('Import.LiveImport.UpdateWarpResources') /* Enable importing Warp resources (jades, passes, pity) */}</div>
               </Flex>
 
-              <Collapse
-                size='small'
-                items={[{
-                  key: '1',
-                  label: t('Import.LiveImport.AdvancedSettings.Title'), /* Advanced Settings */
-                  children: (
-                    <Flex vertical gap={10}>
-                      <Flex vertical>
-                        <Text>{t('Import.LiveImport.AdvancedSettings.WebsocketUrl') /* Websocket URL */}</Text>
+              <Accordion>
+                <Accordion.Item value='1'>
+                  <Accordion.Control>{t('Import.LiveImport.AdvancedSettings.Title') /* Advanced Settings */}</Accordion.Control>
+                  <Accordion.Panel>
+                    <Flex direction='column' gap={10}>
+                      <Flex direction='column'>
+                        <div>{t('Import.LiveImport.AdvancedSettings.WebsocketUrl') /* Websocket URL */}</div>
                         <Flex gap={10}>
-                          <Input
+                          <TextInput
                             id='websocket-url'
                             value={websocketUrl}
                             onChange={(e) => setWebsocketUrl(e.target.value)}
                           />
-                          <Tooltip title={t('Import.LiveImport.AdvancedSettings.WebsocketUrlReset') /* Reset to default */}>
-                            <Button icon={<ReloadOutlined />} onClick={() => setWebsocketUrl(DEFAULT_WEBSOCKET_URL)} />
+                          <Tooltip label={t('Import.LiveImport.AdvancedSettings.WebsocketUrlReset') /* Reset to default */}>
+                            <Button onClick={() => setWebsocketUrl(DEFAULT_WEBSOCKET_URL)} variant='default'>
+                              <IconRefresh size={16} />
+                            </Button>
                           </Tooltip>
                         </Flex>
                       </Flex>
                     </Flex>
-                  ),
-                }]}
-              />
+                  </Accordion.Panel>
+                </Accordion.Item>
+              </Accordion>
             </Flex>
           </Flex>
         </Flex>
@@ -416,8 +431,8 @@ export function ScannerImportSubmenu() {
   function confirmDataMerge() {
     if (!currentRelics) {
       return (
-        <Flex style={{ minHeight: 100 }}>
-          <Flex vertical gap={10} style={{ display: currentStage >= 1 ? 'flex' : 'none' }}>
+        <Flex className={classes.stageContainer}>
+          <Flex direction='column' gap={10} style={{ display: currentStage >= 1 ? 'flex' : 'none' }}>
             {t('Import.Stage2.NoRelics')}
           </Flex>
         </Flex>
@@ -425,61 +440,59 @@ export function ScannerImportSubmenu() {
     }
 
     return (
-      <Flex style={{ minHeight: 250 }}>
-        <Flex vertical gap={10} style={{ display: currentStage >= 1 ? 'flex' : 'none' }}>
-          <Text>
+      <Flex className={classes.confirmStage}>
+        <Flex direction='column' gap={10} style={{ display: currentStage >= 1 ? 'flex' : 'none' }}>
+          <div>
             {t('Import.Stage2.FileInfo', {
               relicCount: currentRelics.length ?? 0,
               characterCount: currentCharacters?.length ?? 0,
             })}
-          </Text>
+          </div>
 
-          <Text>
+          <div>
             {t('Import.Stage2.RelicsImport.Label', { relicCount: currentRelics.length ?? 0 })}
-          </Text>
+          </div>
 
           <Button
             style={{ width: importerTabButtonWidth }}
-            type='primary'
             onClick={mergeRelicsConfirmed}
             loading={loading2}
           >
             {t('Import.Stage2.RelicsImport.ButtonText', { relicCount: currentRelics.length ?? 0 })}
           </Button>
 
-          <Divider>
-            <Text style={{ fontSize: 12 }}>{t('Import.Stage2.Or')}</Text>
-          </Divider>
-          <Text>
+          <Divider label={<span className={classes.dividerText}>{t('Import.Stage2.Or')}</span>} labelPosition='center' />
+          <div>
             {t('Import.Stage2.CharactersImport.Label', {
               relicCount: currentRelics.length ?? 0,
               characterCount: currentCharacters?.length ?? 0,
             })}
-          </Text>
+          </div>
 
           <Checkbox
             checked={onlyImportExisting}
-            disabled={loading2 || !DB.getCharacters().length}
-            onChange={(e) => setOnlyImportExisting(e.target.checked)}
-          >
-            {t('Import.Stage2.CharactersImport.OnlyImportExisting') /* Only import existing characters */}
-          </Checkbox>
+            disabled={loading2 || !getCharacters().length}
+            onChange={(e) => setOnlyImportExisting(e.currentTarget.checked)}
+            label={t('Import.Stage2.CharactersImport.OnlyImportExisting') /* Only import existing characters */}
+          />
 
-          <Popconfirm
-            title={t('Import.Stage2.CharactersImport.WarningTitle')}
-            description={t('Import.Stage2.CharactersImport.WarningDescription')}
-            onConfirm={mergeCharactersConfirmed}
-            placement='bottom'
-            okText={t('common:Yes')}
-            cancelText={t('common:Cancel')}
-          >
-            <Button style={{ width: importerTabButtonWidth }} type='primary' loading={loading2}>
-              {t('Import.Stage2.CharactersImport.ButtonText', {
-                relicCount: currentRelics.length ?? 0,
-                characterCount: currentCharacters?.length ?? 0,
+          <Button
+            style={{ width: importerTabButtonWidth }}
+            loading={loading2}
+            onClick={() =>
+              modals.openConfirmModal({
+                title: t('Import.Stage2.CharactersImport.WarningTitle'),
+                children: t('Import.Stage2.CharactersImport.WarningDescription'),
+                labels: { confirm: t('common:Yes'), cancel: t('common:Cancel') },
+                centered: true,
+                onConfirm: mergeCharactersConfirmed,
               })}
-            </Button>
-          </Popconfirm>
+          >
+            {t('Import.Stage2.CharactersImport.ButtonText', {
+              relicCount: currentRelics.length ?? 0,
+              characterCount: currentCharacters?.length ?? 0,
+            })}
+          </Button>
         </Flex>
       </Flex>
     )
@@ -487,11 +500,11 @@ export function ScannerImportSubmenu() {
 
   function mergeCompleted() {
     return (
-      <Flex style={{ minHeight: 100 }}>
-        <Flex vertical gap={10} style={{ display: currentStage >= 2 ? 'flex' : 'none' }}>
-          <Text>
+      <Flex className={classes.stageContainer}>
+        <Flex direction='column' gap={10} style={{ display: currentStage >= 2 ? 'flex' : 'none' }}>
+          <div>
             {t('Import.Stage3.SuccessMessage')}
-          </Text>
+          </div>
         </Flex>
       </Flex>
     )
@@ -499,24 +512,11 @@ export function ScannerImportSubmenu() {
 
   return (
     <Flex gap={5}>
-      <Steps
-        direction='vertical'
-        current={currentStage}
-        items={[
-          {
-            title: '',
-            description: uploadScannerFile(),
-          },
-          {
-            title: '',
-            description: confirmDataMerge(),
-          },
-          {
-            title: '',
-            description: mergeCompleted(),
-          },
-        ]}
-      />
+      <Timeline active={currentStage} bulletSize={24} lineWidth={2}>
+        <Timeline.Item>{uploadScannerFile()}</Timeline.Item>
+        <Timeline.Item>{confirmDataMerge()}</Timeline.Item>
+        <Timeline.Item>{mergeCompleted()}</Timeline.Item>
+      </Timeline>
     </Flex>
   )
 }
