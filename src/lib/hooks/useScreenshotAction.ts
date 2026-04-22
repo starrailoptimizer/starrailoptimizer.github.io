@@ -11,14 +11,15 @@ export function useScreenshotAction(elementId: string) {
 
   const trigger = useCallback((action: 'clipboard' | 'download', name?: string | null) => {
     setLoading(true)
-    setTimeout(() => {
+    // Defer one frame so React can flush loading state before capture blocks main thread
+    requestAnimationFrame(() => {
       void screenshotElementById(elementId, action, name)
-        .catch((e) => {
+        .catch((e: unknown) => {
           console.error(e)
           Message.error(i18next.t('charactersTab:ScreenshotMessages.ScreenshotFailed'))
         })
         .finally(() => setLoading(false))
-    }, 100)
+    })
   }, [elementId])
 
   return { loading, trigger }

@@ -1,3 +1,4 @@
+// Requires secure context (HTTPS or localhost)
 export function uuid(): string {
   return crypto.randomUUID()
 }
