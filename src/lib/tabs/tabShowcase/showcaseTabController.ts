@@ -90,21 +90,21 @@ export function parseShowcaseUrlId(): string | null {
 }
 
 /**
- * Called once on mount — handles URL parameter and saved session auto-load.
- * URL parameter takes priority over saved session.
+ * Called on tab activation — handles URL parameter and saved session auto-load.
+ * Idempotent: skips fetch if already loading or if the same ID is already loaded.
  */
 export function initializeShowcaseOnMount(): void {
   const urlId = parseShowcaseUrlId()
-  const { savedSession, availableCharacters } = useShowcaseTabStore.getState()
+  const { savedSession, availableCharacters, loading } = useShowcaseTabStore.getState()
+
+  if (loading) return
 
   if (urlId) {
-    // URL parameter takes priority — load that profile
+    if (availableCharacters?.length && savedSession.scorerId === urlId) return
     submitForm({ scorerId: urlId }, { skipCooldown: true })
   } else if (!availableCharacters?.length && savedSession.scorerId) {
-    // No URL param, no data yet, but saved session has a UID — auto-load
     submitForm({ scorerId: savedSession.scorerId }, { skipCooldown: true })
   }
-  // Otherwise: stay on Landing screen, wait for user input
 }
 
 /**
@@ -131,15 +131,21 @@ export function syncShowcaseUrl(): void {
  * Keep: null characterId check.
  * Dropped: duplicate character restriction (users can simulate same character on multiple slots).
  */
-export function handleCharacterModalOk(form: CharacterModalForm): void {
+export function handleCharacterModalOk(form: CharacterModalForm): boolean {
   const t = i18next.getFixedT(null, 'relicScorerTab', 'Messages')
 
-  if (!form.characterId || !form.lightCone) {
-    return Message.error(t('NoCharacterSelected') /* No selected character */)
+  if (!form.characterId) {
+    Message.error(t('NoCharacterSelected'))
+    return false
+  }
+  if (!form.lightCone) {
+    Message.error(t('NoSelectedLightCone'))
+    return false
   }
 
   // Safe cast: after guards, characterId and lightCone are non-null
   useShowcaseTabStore.getState().applyCharacterOverride(form as ShowcaseTabCharacter['form'])
+  return true
 }
 
 /**

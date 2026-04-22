@@ -23,8 +23,10 @@ import {
 
 // ---- Factories ----
 
-function makeStat(stat: RelicSubstatMetadata['stat'], value: number): RelicSubstatMetadata {
-  return { stat, value }
+function makeStat(stat: RelicSubstatMetadata['stat'], value: number, rolls?: RelicSubstatMetadata['rolls']): RelicSubstatMetadata {
+  if (!rolls) return { stat, value }
+  const addedRolls = Math.max(0, rolls.high + rolls.mid + rolls.low - 1)
+  return { stat, value, rolls, addedRolls }
 }
 
 function makeRelic(overrides: Partial<Relic> = {}): Relic {
@@ -34,7 +36,7 @@ function makeRelic(overrides: Partial<Relic> = {}): Relic {
     part: Parts.Head,
     grade: 5,
     enhance: 15,
-    main: { stat: Stats.HP as Relic['main']['stat'], value: 705 },
+    main: { stat: Stats.HP, value: 705 },
     substats: [
       makeStat(Stats.ATK, 38.1),
       makeStat(Stats.CR, 6.48),
@@ -201,5 +203,140 @@ describe('findRelicMatch (additional)', () => {
       substats: [makeStat(Stats.ATK, 30), makeStat(Stats.CR, 6.4)],
     })
     expect(findRelicMatch(newRelic, [oldRelic])).toBe(oldRelic)
+  })
+})
+
+describe('findRelicMatch — best-fit selection', () => {
+  // Regression for the "showcase re-import duplicates equipped relic" bug: when the
+  // save contains both an enh=0 precursor and the enh=15 upgraded twin, greedy
+  // first-match would promote the precursor and orphan the real upgrade.
+  it('returns the enh=15 exact match over an enh=0 precursor when both are valid', () => {
+    const precursor = makeRelic({
+      id: 'precursor',
+      enhance: 0,
+      main: { stat: Stats.ATK, value: 56.448 },
+      substats: [
+        makeStat(Stats.DEF_P, 4.32, { high: 0, mid: 0, low: 1 }),
+        makeStat(Stats.CR, 2.916, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.CD, 5.832, { high: 0, mid: 1, low: 0 }),
+      ],
+    })
+    const upgradedSubstats = [
+      makeStat(Stats.DEF_P, 9.18, { high: 0, mid: 1, low: 1 }),
+      makeStat(Stats.SPD, 7.5, { high: 2, mid: 1, low: 0 }),
+      makeStat(Stats.CR, 3.24, { high: 1, mid: 0, low: 0 }),
+      makeStat(Stats.CD, 10.368, { high: 0, mid: 0, low: 2 }),
+    ]
+    const exactMatch = makeRelic({
+      id: 'exact',
+      enhance: 15,
+      main: { stat: Stats.ATK, value: 352.8 },
+      substats: upgradedSubstats,
+    })
+    const incoming = makeRelic({
+      id: 'incoming',
+      enhance: 15,
+      main: { stat: Stats.ATK, value: 352.8 },
+      substats: upgradedSubstats,
+    })
+    expect(findRelicMatch(incoming, [precursor, exactMatch])).toBe(exactMatch)
+  })
+
+  it('picks the higher-enhance candidate among multiple valid progressions', () => {
+    const lowEnhance = makeRelic({
+      id: 'low',
+      enhance: 3,
+      substats: [
+        makeStat(Stats.ATK, 16.935, { high: 0, mid: 0, low: 1 }),
+        makeStat(Stats.CR, 2.916, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.CD, 5.832, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.SPD, 2.3, { high: 0, mid: 0, low: 1 }),
+      ],
+    })
+    const highEnhance = makeRelic({
+      id: 'high',
+      enhance: 12,
+      substats: [
+        makeStat(Stats.ATK, 33.87, { high: 0, mid: 0, low: 2 }),
+        makeStat(Stats.CR, 2.916, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.CD, 8.2, { high: 0, mid: 1, low: 1 }),
+        makeStat(Stats.SPD, 4.9, { high: 0, mid: 1, low: 1 }),
+      ],
+    })
+    const incoming = makeRelic({
+      enhance: 15,
+      substats: [
+        makeStat(Stats.ATK, 33.87, { high: 0, mid: 0, low: 2 }),
+        makeStat(Stats.CR, 6.156, { high: 1, mid: 1, low: 0 }),
+        makeStat(Stats.CD, 8.2, { high: 0, mid: 1, low: 1 }),
+        makeStat(Stats.SPD, 4.9, { high: 0, mid: 1, low: 1 }),
+      ],
+    })
+    expect(findRelicMatch(incoming, [lowEnhance, highEnhance])).toBe(highEnhance)
+    expect(findRelicMatch(incoming, [highEnhance, lowEnhance])).toBe(highEnhance)
+  })
+})
+
+describe('findRelicMatch — roll-quality constraint', () => {
+  // A substat's initial-roll quality (low/mid/high) is fixed at drop time. Subsequent
+  // enhance tiers only ADD rolls, so new.rolls must be a per-bucket superset of old.
+  it('rejects candidate when a same-count substat has different roll quality', () => {
+    // CR stays at addedRolls=0 on both sides, but quality flips mid → high: impossible.
+    const old = makeRelic({
+      enhance: 0,
+      substats: [
+        makeStat(Stats.ATK, 16.935, { high: 0, mid: 0, low: 1 }),
+        makeStat(Stats.CR, 2.916, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.CD, 5.832, { high: 0, mid: 1, low: 0 }),
+      ],
+    })
+    const incoming = makeRelic({
+      enhance: 15,
+      substats: [
+        makeStat(Stats.ATK, 16.935, { high: 0, mid: 0, low: 1 }),
+        makeStat(Stats.CR, 3.24, { high: 1, mid: 0, low: 0 }),
+        makeStat(Stats.CD, 5.832, { high: 0, mid: 1, low: 0 }),
+        makeStat(Stats.SPD, 2.6, { high: 0, mid: 0, low: 1 }),
+      ],
+    })
+    expect(findRelicMatch(incoming, [old])).toBeUndefined()
+  })
+
+  it('rejects when old rolls distribution is not a subset of new', () => {
+    // Old: 1 high roll. New: 2 low rolls. New would have to drop the initial high.
+    const old = makeRelic({
+      enhance: 3,
+      substats: [makeStat(Stats.CR, 3.24, { high: 1, mid: 0, low: 0 })],
+    })
+    const incoming = makeRelic({
+      enhance: 6,
+      substats: [makeStat(Stats.CR, 5.1, { high: 0, mid: 0, low: 2 })],
+    })
+    expect(findRelicMatch(incoming, [old])).toBeUndefined()
+  })
+
+  it('accepts candidate when new rolls distribution extends old in every bucket', () => {
+    const old = makeRelic({
+      enhance: 3,
+      substats: [makeStat(Stats.ATK, 19, { high: 0, mid: 1, low: 0 })],
+    })
+    const incoming = makeRelic({
+      enhance: 6,
+      substats: [makeStat(Stats.ATK, 35, { high: 0, mid: 1, low: 1 })],
+    })
+    expect(findRelicMatch(incoming, [old])).toBe(old)
+  })
+
+  it('falls back to value-only comparison when rolls metadata is missing on either side', () => {
+    // Non-verified importers may omit rolls; matching must still succeed via values.
+    const old = makeRelic({
+      enhance: 3,
+      substats: [makeStat(Stats.ATK, 19)],
+    })
+    const incoming = makeRelic({
+      enhance: 6,
+      substats: [makeStat(Stats.ATK, 35)],
+    })
+    expect(findRelicMatch(incoming, [old])).toBe(old)
   })
 })

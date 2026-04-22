@@ -328,6 +328,7 @@ const display = {
     y: 1075,
     z: 1.25,
   },
+  disableSpine: true,
   showcaseColor: '#7054c5',
 }
 

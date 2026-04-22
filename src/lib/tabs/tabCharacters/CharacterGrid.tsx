@@ -109,11 +109,6 @@ const dropAnimationConfig: DropAnimation = {
   }),
 }
 
-// Progressive image loading: set src on the first visible rows immediately,
-// then trickle one-by-one to avoid concurrent requests competing for bandwidth.
-const INITIAL_LOAD_COUNT = 12
-const TRICKLE_DELAY = 50
-
 export function CharacterGrid() {
   const gridRef = useRef<HTMLDivElement>(null)
   const osRef = useCallback((instance: OverlayScrollbarsComponentRef<'div'> | null) => {
@@ -236,13 +231,12 @@ export function CharacterGrid() {
         onDragCancel={handleDragCancel}
       >
         <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-          {filteredCharacters.map((character, i) => (
+          {filteredCharacters.map((character) => (
             <SortableCharacterRow
               key={character.id}
               character={character}
               rank={rankMap.get(character.id) ?? 0}
               isFocused={character.id === displayFocus}
-              loadDelay={i < INITIAL_LOAD_COUNT ? 0 : (i - INITIAL_LOAD_COUNT + 1) * TRICKLE_DELAY}
               onClick={handleRowClick}
               onDoubleClick={handleRowDoubleClick}
               onEdit={handleEdit}
@@ -267,7 +261,6 @@ type CharacterRowProps = {
   character: Character,
   rank: number,
   isFocused: boolean,
-  loadDelay: number,
   onClick: (id: CharacterId) => void,
   onDoubleClick: (id: CharacterId) => void,
   onEdit: (id: CharacterId) => void,
@@ -275,27 +268,40 @@ type CharacterRowProps = {
 }
 
 const SortableCharacterRow = memo(
-  function SortableCharacterRow({ character, rank, isFocused, loadDelay, onClick, onDoubleClick, onEdit, onRemove }: CharacterRowProps) {
+  function SortableCharacterRow({ character, rank, isFocused, onClick, onDoubleClick, onEdit, onRemove }: CharacterRowProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
       id: character.id,
       animateLayoutChanges: () => false,
     })
     const scrollRef = useRef<HTMLDivElement>(null)
 
-    // Per-row staggered image loading — replaces parent-level trickle to avoid parent re-renders
-    const [loadImages, setLoadImages] = useState(loadDelay === 0)
-    useEffect(() => {
-      if (loadDelay === 0) return
-      const timer = setTimeout(() => setLoadImages(true), loadDelay)
-      return () => clearTimeout(timer)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // mount-only: delay is captured from initial render
+    // Load-once, gated on viewport intersection. Never reverts — keeps `src`
+    // set to avoid re-decode flashes on scroll or tab-switch.
+    const [loadImages, setLoadImages] = useState(false)
 
     useEffect(() => {
       if (isFocused) {
         scrollRef.current?.scrollIntoView({ block: 'nearest' })
       }
     }, [isFocused])
+
+    useEffect(() => {
+      const el = scrollRef.current
+      if (!el) return
+      const observer = new IntersectionObserver(
+        ([entry], obs) => {
+          if (entry.isIntersecting) {
+            setLoadImages(true)
+            obs.disconnect() // load-once — no point watching after src is set
+          }
+        },
+        { rootMargin: '500px 0px', threshold: 0 },
+      )
+      observer.observe(el)
+      return () => {
+        observer.disconnect()
+      }
+    }, [character.id])
 
     const mergedRef = useMergedRef(setNodeRef, scrollRef)
 
@@ -330,7 +336,7 @@ const SortableCharacterRow = memo(
           <CharacterRowContent
             character={character}
             rank={rank}
-            loadImages={loadImages}
+            loadImages={loadImages || isFocused}
             onEdit={onEdit}
             onRemove={onRemove}
           />
@@ -403,6 +409,7 @@ const CharacterRowContent = memo(function CharacterRowContent({ character, rank,
           alt=''
           draggable={false}
           decoding='async'
+          onLoad={showImageOnLoad}
           style={getCharacterConfig(character.id)?.display.gridPortraitOffset
             ? { marginTop: -(getCharacterConfig(character.id)?.display.gridPortraitOffset ?? 0) }
             : undefined}
@@ -443,7 +450,13 @@ const CharacterRowContent = memo(function CharacterRowContent({ character, rank,
         {/* Light cone icon */}
         {lightConeId && (
           <div className={classes.lcWrap} data-lc-style='shadow'>
-            <img src={loadImages ? Assets.getLightConeIconById(lightConeId) : undefined} alt='' draggable={false} decoding='async' onLoad={showImageOnLoad} />
+            <img
+              src={loadImages ? Assets.getLightConeIconById(lightConeId) : undefined}
+              alt=''
+              draggable={false}
+              decoding='async'
+              onLoad={showImageOnLoad}
+            />
           </div>
         )}
       </div>

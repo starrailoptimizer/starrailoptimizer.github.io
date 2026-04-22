@@ -81,17 +81,13 @@ export function partialHashRelic(relic: Relic) {
 }
 
 export function findRelicMatch(relic: Relic, oldRelics: Relic[]) {
-  // part set grade mainstat substatStats
-  const oldRelicPartialHashes: Record<string, Relic[]> = {}
-  for (const oldRelic of oldRelics) {
-    const hash = partialHashRelic(oldRelic)
-    if (!oldRelicPartialHashes[hash]) oldRelicPartialHashes[hash] = []
-    oldRelicPartialHashes[hash].push(oldRelic)
-  }
   const partialHash = partialHashRelic(relic)
-  const partialMatches = oldRelicPartialHashes[partialHash] || []
+  const partialMatches = oldRelics.filter((r) => partialHashRelic(r) === partialHash)
 
-  let match: Relic | undefined = undefined
+  // Score every valid candidate and return the best fit. First-match-wins would
+  // pick a low-enhance precursor when the already-upgraded twin is also in the
+  // store, orphaning the twin and producing a visible duplicate.
+  const validCandidates: Array<{ relic: Relic, enhanceDelta: number, substatCountDelta: number }> = []
   for (const partialMatch of partialMatches) {
     if (relic.enhance < partialMatch.enhance) continue
     if (relic.substats.length < partialMatch.substats.length) continue
@@ -102,20 +98,31 @@ export function findRelicMatch(relic: Relic, oldRelics: Relic[]) {
       const matchSubstat = partialMatch.substats[i]
       const newSubstat = relic.substats.find((x) => x.stat === matchSubstat.stat)
 
-      // Different substats mean different relics - break
       if (!newSubstat) {
         exit = true
         break
       }
-      if (compareSameTypeSubstat(matchSubstat, newSubstat) === -1) {
+      const cmp = compareSameTypeSubstat(matchSubstat, newSubstat)
+      if (cmp === -1) {
         exit = true
         break
       }
 
-      // Track if the number of stat increases make sense
-      if (compareSameTypeSubstat(matchSubstat, newSubstat) === 1) {
-        upgrades++
+      // A substat's initial-roll quality is fixed at drop; later tiers only ADD
+      // rolls. So new.rolls must be a per-bucket superset of old — otherwise
+      // they're different relics even when the new values are strictly higher.
+      if (matchSubstat.rolls && newSubstat.rolls) {
+        if (
+          newSubstat.rolls.low < matchSubstat.rolls.low
+          || newSubstat.rolls.mid < matchSubstat.rolls.mid
+          || newSubstat.rolls.high < matchSubstat.rolls.high
+        ) {
+          exit = true
+          break
+        }
       }
+
+      if (cmp === 1) upgrades++
     }
 
     if (exit) continue
@@ -123,11 +130,21 @@ export function findRelicMatch(relic: Relic, oldRelics: Relic[]) {
     const possibleUpgrades = Math.round((Math.floor(relic.enhance / 3) * 3 - Math.floor(partialMatch.enhance / 3) * 3) / 3)
     if (upgrades > possibleUpgrades) continue
 
-    // If it passes all the tests, keep it
-    match = partialMatch
-    break
+    const enhanceDelta = relic.enhance - partialMatch.enhance
+    const substatCountDelta = relic.substats.length - partialMatch.substats.length
+    // Exact match on both dimensions is provably optimal — no need to score the rest.
+    if (enhanceDelta === 0 && substatCountDelta === 0) return partialMatch
+    validCandidates.push({ relic: partialMatch, enhanceDelta, substatCountDelta })
   }
-  return match
+
+  if (validCandidates.length === 0) return undefined
+
+  // Smallest enhance gap, then smallest substat-count gap.
+  validCandidates.sort((a, b) =>
+    a.enhanceDelta - b.enhanceDelta
+    || a.substatCountDelta - b.substatCountDelta
+  )
+  return validCandidates[0].relic
 }
 
 // -1: old > new, 0: old === new, 1: new > old

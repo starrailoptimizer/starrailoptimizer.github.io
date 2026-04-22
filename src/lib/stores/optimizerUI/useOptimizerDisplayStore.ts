@@ -8,6 +8,7 @@ import type {
   OptimizerDisplayState,
   PermutationDetails,
 } from 'lib/stores/optimizerUI/optimizerUITypes'
+import { initialMenuState } from 'lib/tabs/tabOptimizer/optimizerForm/layout/optimizerMenuIds'
 import type {
   Build,
   CharacterId,
@@ -74,7 +75,7 @@ const initialState: OptimizerDisplayState = {
   selectedStatSimulations: [],
   characterSelectModalOpen: false,
   lightConeSelectModalOpen: false,
-  menuState: {},
+  menuState: { ...initialMenuState },
 }
 
 export const useOptimizerDisplayStore = createTabAwareStore<OptimizerDisplayStore>((set) => ({

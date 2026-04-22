@@ -299,6 +299,7 @@ describe('loadSaveData', () => {
   // menuState loading must create a new object, not mutate the store reference in-place
   it('loadSaveData creates new menuState object reference not in-place mutation', () => {
     const menuStateBefore = useOptimizerDisplayStore.getState().menuState
+    const snapshotBefore = { ...menuStateBefore }
 
     const saveData = emptySaveData({
       optimizerMenuState: {
@@ -309,8 +310,13 @@ describe('loadSaveData', () => {
 
     loadSaveData(saveData, false, false)
 
-    // The original reference should NOT have been mutated
-    expect(menuStateBefore[OptimizerMenuIds.characterOptions]).toBeUndefined()
+    const menuStateAfter = useOptimizerDisplayStore.getState().menuState
+
+    // A new object reference should have been created
+    expect(menuStateAfter).not.toBe(menuStateBefore)
+    // The original reference must be untouched — catches in-place mutation
+    // even when the caller re-writes the store with a fresh object afterwards
+    expect(menuStateBefore).toEqual(snapshotBefore)
   })
 
   it('loadSaveData merges settings with DefaultSettingOptions for missing keys', () => {

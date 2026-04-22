@@ -96,12 +96,6 @@ export function submitForm(form: ShowcaseTabForm, options?: { skipCooldown?: boo
         ) => self.map((x) => x.id).indexOf(value.id) === index)
       converted.forEach((x, index) => x.index = index)
 
-      // Preload portrait + avatar images
-      for (const char of converted) {
-        new Image().src = Assets.getCharacterPortraitById(char.id)
-        new Image().src = Assets.getCharacterAvatarById(char.id)
-      }
-
       // Set data immediately — ShowcaseLoaded mounts hidden behind the loading spinner
       const wasOnLoadingScreen = useShowcaseTabStore.getState().screen === ShowcaseScreen.Loading
       setFetchResult(converted)

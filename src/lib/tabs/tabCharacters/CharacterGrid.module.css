@@ -77,6 +77,12 @@
   flex-shrink: 0;
   cursor: grab;
   user-select: none;
+
+  /* Skip paint/layout/style for off-screen rows. Intrinsic size is fixed to
+     the row-height token so dnd-kit's layout math stays correct and density
+     changes (68 ↔ 48 px) propagate to skipped rows without a cache stale. */
+  content-visibility: auto;
+  contain-intrinsic-size: var(--cr-row-height, 68px);
 }
 
 /* Visual frame — clips children and does the hover lift while .root stays
@@ -127,6 +133,9 @@
     calc(-1 * var(--cr-portrait-y, 31%))
   );
   display: block;
+  /* Hidden until `showImageOnLoad` reveals it — avoids broken-glyph flash
+     while the `<img src>` is in-flight. */
+  opacity: 0;
 }
 
 .root:hover .portraitBg {

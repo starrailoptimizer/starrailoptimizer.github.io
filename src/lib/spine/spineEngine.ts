@@ -12,6 +12,10 @@ import {
 
 export interface SpineInstance {
   dispose(): void
+  /** Stop the rAF loop. No-op if already paused or disposed. */
+  pause(): void
+  /** Restart the rAF loop. No-op if already running or disposed. */
+  resume(): void
 }
 
 interface SkeletonEntry {
@@ -61,14 +65,22 @@ export async function createSpineInstance(
   canvas: HTMLCanvasElement,
   baseUrl: string,
   files: { skelFile: string, atlasFile: string }[],
+  signal?: AbortSignal,
 ): Promise<SpineInstance> {
+  // Fast-path if already aborted before we did any work.
+  if (signal?.aborted) {
+    throw new DOMException('Spine load aborted', 'AbortError')
+  }
+
   // --- WebGL context ---
 
   // premultipliedAlpha:true because blending naturally produces premultiplied
   // output on a cleared framebuffer — tells browser not to multiply again.
   // drawSkeleton uses PMA=false because atlas textures are straight (un-premultiplied).
-  const glContext = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true, preserveDrawingBuffer: true })
-    || canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: true, preserveDrawingBuffer: true })
+  // antialias/preserveDrawingBuffer off: we redraw every frame (nothing to
+  // preserve) and spine edges are alpha-blended bitmaps (MSAA is moot).
+  const glContext = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: false, preserveDrawingBuffer: false })
+    || canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, preserveDrawingBuffer: false })
   if (!glContext) throw new Error('WebGL not available')
   const gl = glContext
 
@@ -87,6 +99,13 @@ export async function createSpineInstance(
   try {
     await new Promise<void>((resolve, reject) => {
       function check() {
+        // Bail out each rAF tick if the caller aborted — skips all downstream
+        // skeleton parsing, shader compilation, and rAF bootstrap for doomed
+        // loads during rapid character switching.
+        if (signal?.aborted) {
+          reject(new DOMException('Spine load aborted', 'AbortError'))
+          return
+        }
         if (assetManager.isLoadingComplete()) {
           if (assetManager.hasErrors()) {
             reject(new Error(JSON.stringify(assetManager.getErrors())))
@@ -181,8 +200,11 @@ export async function createSpineInstance(
   renderer.camera.setViewport(canvasSize, canvasSize)
   renderer.camera.update()
 
+  // Lifecycle invariant: `rafId != null` iff the loop is scheduled.
+  // `rafId == null && !disposed` means paused. `disposed` is terminal.
   let rafId: number | null = null
   let lastTime = performance.now()
+  let disposed = false
 
   function loop(now: number) {
     const delta = Math.min((now - lastTime) / 1000, 0.1) // clamp to 100ms to avoid animation jumps on tab-resume
@@ -207,13 +229,34 @@ export async function createSpineInstance(
     rafId = requestAnimationFrame(loop)
   }
 
+  if (signal?.aborted) {
+    renderer.dispose()
+    assetManager.dispose()
+    throw new DOMException('Spine load aborted', 'AbortError')
+  }
+
   rafId = requestAnimationFrame(loop)
 
   // --- Cleanup handle ---
 
   return {
+    pause() {
+      if (disposed || rafId == null) return
+      cancelAnimationFrame(rafId)
+      rafId = null
+    },
+    resume() {
+      if (disposed || rafId != null) return
+      lastTime = performance.now() // avoid a large delta on the resumed frame
+      rafId = requestAnimationFrame(loop)
+    },
     dispose() {
-      if (rafId != null) cancelAnimationFrame(rafId)
+      if (disposed) return
+      disposed = true
+      if (rafId != null) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
       renderer.dispose()
       assetManager.dispose()
     },
