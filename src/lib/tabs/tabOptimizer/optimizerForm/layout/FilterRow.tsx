@@ -1,4 +1,5 @@
 import { Flex } from '@mantine/core'
+import { useBlurCommittedNumberInput } from 'lib/hooks/useBlurCommittedNumberInput'
 import type {
   RatingFilterState,
   StatFilterState,
@@ -6,14 +7,6 @@ import type {
 import { useOptimizerRequestStore } from 'lib/stores/optimizerForm/useOptimizerRequestStore'
 import { FormStatTextStyled } from 'lib/tabs/tabOptimizer/optimizerForm/components/FormStatTextStyled'
 import { InputNumberStyled } from 'lib/tabs/tabOptimizer/optimizerForm/components/InputNumberStyled'
-
-// Mantine NumberInput sends '' when cleared and intermediate strings like '133.' while typing decimals.
-// Only update the store for final numeric values or explicit clears.
-function filterValue(val: number | string): number | undefined | null {
-  if (typeof val === 'number') return val
-  if (val === '') return undefined
-  return null // intermediate string — don't update store
-}
 
 export function FilterRow({ name, label, type }: { name: string, label: string, type?: 'stat' | 'rating' }) {
   const minKey = `min${name}` as keyof StatFilterState & keyof RatingFilterState
@@ -36,26 +29,27 @@ export function FilterRow({ name, label, type }: { name: string, label: string, 
     }
   }
 
+  const min = useBlurCommittedNumberInput(minValue, (v) => setFilter(minKey, v))
+  const max = useBlurCommittedNumberInput(maxValue, (v) => setFilter(maxKey, v))
+
   return (
     <Flex justify='space-between' style={{ margin: 0 }}>
       <InputNumberStyled
         hideControls
         style={{ margin: 0, width: 63 }}
-        value={minValue}
-        onChange={(val) => {
-          const v = filterValue(val)
-          if (v !== null) setFilter(minKey, v as number | undefined)
-        }}
+        value={min.value}
+        onChange={min.onChange}
+        onFocus={min.onFocus}
+        onBlur={min.onBlur}
       />
       <FormStatTextStyled>{label}</FormStatTextStyled>
       <InputNumberStyled
         hideControls
         style={{ margin: 0, width: 63 }}
-        value={maxValue}
-        onChange={(val) => {
-          const v = filterValue(val)
-          if (v !== null) setFilter(maxKey, v as number | undefined)
-        }}
+        value={max.value}
+        onChange={max.onChange}
+        onFocus={max.onFocus}
+        onBlur={max.onBlur}
       />
     </Flex>
   )
