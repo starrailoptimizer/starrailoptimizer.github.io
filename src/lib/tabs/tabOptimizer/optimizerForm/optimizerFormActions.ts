@@ -5,6 +5,7 @@ import {
   DEFAULT_STAT_DISPLAY,
 } from 'lib/constants/constants'
 import { SavedSessionKeys } from 'lib/constants/constantsSession'
+import { SettingOptions } from 'lib/constants/settingsConstants'
 import { Message } from 'lib/interactions/message'
 import { generateContext } from 'lib/optimization/context/calculateContext'
 import { getDefaultForm } from 'lib/optimization/defaultForm'
@@ -207,6 +208,7 @@ let permutationRafId: number | null = null
 useOptimizerRequestStore.subscribe((state, prev) => {
   for (const key of PERMUTATION_KEYS) {
     if (state[key] !== prev[key]) {
+      if (useOptimizerDisplayStore.getState().optimizationInProgress) return
       if (permutationRafId != null) cancelAnimationFrame(permutationRafId)
       permutationRafId = requestAnimationFrame(() => {
         permutationRafId = null
@@ -360,16 +362,20 @@ export function updateCharacter(characterId: CharacterId): void {
   // Load form into store (replaces formToDisplay + setFieldsValue)
   useOptimizerRequestStore.getState().loadForm(form)
 
-  // Sync rank to character's current position in the list (saved rank may be stale if characters were reordered)
+  // Sync rank to character's current position in the list (saved rank may be stale if characters were reordered).
+  // Characters not yet in the store use the NewCharacterDefaultRank setting.
   const characters = useCharacterStore.getState().characters
   const currentRank = characters.findIndex((c) => c.id === characterId)
   if (currentRank >= 0) {
     useOptimizerRequestStore.getState().setRelicFilterField('rank', currentRank)
+  } else {
+    const defaultRank = useGlobalStore.getState().settings.NewCharacterDefaultRank
+    useOptimizerRequestStore.getState().setRelicFilterField('rank', defaultRank === SettingOptions.NewCharacterDefaultRank.Last ? characters.length : 0)
   }
 
   useOptimizerDisplayStore.getState().setFocusCharacterId(characterId)
   useOptimizerRequestStore.getState().setStatDisplay(form.statDisplay ?? DEFAULT_STAT_DISPLAY)
-  useOptimizerDisplayStore.getState().setStatSimulations(form.statSim?.simulations ?? [])
+  useOptimizerDisplayStore.getState().setStatSimulations((form.statSim?.simulations ?? []).filter((sim) => sim.request?.stats))
   useOptimizerDisplayStore.getState().setOptimizerSelectedRowData(null)
   gridStore.optimizerGridApi()?.deselectAll()
 
@@ -415,9 +421,9 @@ export function startOptimization(): void {
   OptimizerTabController.clearFilterModel()
 
   // Delay the DB save so it doesn't block the optimizer start with a characters tab re-render
-  requestIdleCallback(() => {
+  setTimeout(() => {
     persistenceService.upsertCharacterFromForm(form)
-  })
+  }, 0)
   SaveState.delayedSave()
 
   const optimizationId = uuid()

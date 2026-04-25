@@ -459,7 +459,8 @@ export function upsertCharacterFromForm(form: Form): Character {
       form: { ...defaultForm, ...form },
       equipped: {},
     } as Character
-    useCharacterStore.getState().addCharacter(newChar)
+    const prepend = useGlobalStore.getState().settings.NewCharacterDefaultRank === SettingOptions.NewCharacterDefaultRank.First
+    useCharacterStore.getState().addCharacter(newChar, prepend)
     return newChar
   }
 }
