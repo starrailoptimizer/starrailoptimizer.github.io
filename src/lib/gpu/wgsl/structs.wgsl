@@ -75,6 +75,13 @@ struct Action {
 }
 
 struct Params {
+  threshold: f32,
+  batchOffset: u32,
+  _pad0: u32,
+  _pad1: u32,
+}
+
+struct NaiveParams {
   xl: f32,
   xp: f32,
   xf: f32,
@@ -82,5 +89,16 @@ struct Params {
   xg: f32,
   xh: f32,
   threshold: f32,
-  permLimit: f32,
+  permLimit: u32,
+}
+
+struct Assignment {
+  xh: u32, hSize: u32,
+  xg: u32, gSize: u32,
+  xb: u32, bSize: u32,
+  xf: u32, fSize: u32,
+  pSize: u32, lSize: u32,
+  permLimit: u32,
+  startOffset: u32,
+  _pad0: u32, _pad1: u32, _pad2: u32, _pad3: u32,
 }

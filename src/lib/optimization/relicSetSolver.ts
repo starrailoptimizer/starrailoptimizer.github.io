@@ -1,7 +1,10 @@
 import {
   Constants,
+  Parts,
   RelicSetFilterOptions,
 } from 'lib/constants/constants'
+import type { RelicsByPart } from 'lib/gpu/webgpuTypes'
+import type { PartCountsBySet } from 'lib/relics/relicFilters'
 import {
   OrnamentSetToIndex,
   RelicSetToIndex,
@@ -15,6 +18,7 @@ import {
   arrayOfZeroes,
 } from 'lib/utils/arrayUtils'
 import { type Form } from 'types/form'
+import { type Relic } from 'types/relic'
 
 // Here be dragons
 export function generateRelicSetSolutions(request: Form) {
@@ -145,12 +149,222 @@ function convertRelicSetIndicesTo1D(setIndices: number[][]) {
     const y = setIndices[i] // [5,5,2,3]
     const permutations = permutator(y)
     for (const x of permutations) {
-      const index1D = x[0] + x[1] * Math.pow(len, 1) + x[2] * Math.pow(len, 2) + x[3] * Math.pow(len, 3)
+      const index1D = encodeRelicSetKey(x[0], x[1], x[2], x[3])
       arr[index1D] = 1
     }
   }
 
   return arr
+}
+
+/**
+ * Counts valid relic+ornament permutations accounting for set constraints.
+ * Sums `Head[h] × Hands[g] × Body[b] × Feet[f]` over valid (h,g,b,f) set-tuples.
+ */
+export function computeValidPermutationCount(
+  countsBySet: PartCountsBySet,
+  relicSetSolutions: number[],
+  ornamentSetSolutions: number[],
+): number {
+  const parts = computeValidPermutationParts(countsBySet, relicSetSolutions, ornamentSetSolutions)
+  return parts.relicValid * parts.ornamentValid
+}
+
+/**
+ * Returns relic and ornament valid counts separately (used by zero-permutation diagnostics).
+ */
+export function computeValidPermutationParts(
+  countsBySet: PartCountsBySet,
+  relicSetSolutions: number[],
+  ornamentSetSolutions: number[],
+): { relicValid: number, ornamentValid: number } {
+  const relicLen = SetsRelicsNames.length
+  const ornLen = SetsOrnamentsNames.length
+
+  const cHead = countsBySet[Parts.Head]
+  const cHands = countsBySet[Parts.Hands]
+  const cBody = countsBySet[Parts.Body]
+  const cFeet = countsBySet[Parts.Feet]
+  const cSphere = countsBySet[Parts.PlanarSphere]
+  const cRope = countsBySet[Parts.LinkRope]
+
+  let relicValid = 0
+  for (let h = 0; h < relicLen; h++) {
+    const vH = cHead[h]
+    if (!vH) continue
+    for (let g = 0; g < relicLen; g++) {
+      const vG = cHands[g]
+      if (!vG) continue
+      for (let b = 0; b < relicLen; b++) {
+        const vB = cBody[b]
+        if (!vB) continue
+        for (let f = 0; f < relicLen; f++) {
+          const vF = cFeet[f]
+          if (!vF) continue
+          const key = encodeRelicSetKey(h, g, b, f)
+          if (relicSetSolutions[key] !== 1) continue
+          relicValid += vH * vG * vB * vF
+        }
+      }
+    }
+  }
+
+  let ornamentValid = 0
+  for (let p = 0; p < ornLen; p++) {
+    const vP = cSphere[p]
+    if (!vP) continue
+    for (let l = 0; l < ornLen; l++) {
+      const vL = cRope[l]
+      if (!vL) continue
+      const key = p + l * ornLen
+      if (ornamentSetSolutions[key] !== 1) continue
+      ornamentValid += vP * vL
+    }
+  }
+
+  return { relicValid, ornamentValid }
+}
+
+// Encodes a (Head, Hands, Body, Feet) set-index 4-tuple into a flat index for relicSetSolutions.
+// Safe regardless of dimension order because relicSetSolutions is permutation-invariant.
+function encodeRelicSetKey(sH: number, sG: number, sB: number, sF: number): number {
+  const R = SetsRelicsNames.length
+  return sH + sG * R + sB * R * R + sF * R * R * R
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Semi-join reduction: eliminate relics whose set can't appear in any valid tuple
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export function applySemiJoinReduction(
+  relics: RelicsByPart,
+  relicSetSolutions: number[],
+  ornamentSetSolutions: number[],
+): RelicsByPart {
+  const R = SetsRelicsNames.length
+  const O = SetsOrnamentsNames.length
+
+  // Project valid relic set indices per slot
+  const validH = new Uint8Array(R)
+  const validG = new Uint8Array(R)
+  const validB = new Uint8Array(R)
+  const validF = new Uint8Array(R)
+
+  for (let sH = 0; sH < R; sH++) {
+    for (let sG = 0; sG < R; sG++) {
+      for (let sB = 0; sB < R; sB++) {
+        for (let sF = 0; sF < R; sF++) {
+          if (relicSetSolutions[encodeRelicSetKey(sH, sG, sB, sF)] === 1) {
+            validH[sH] = 1
+            validG[sG] = 1
+            validB[sB] = 1
+            validF[sF] = 1
+          }
+        }
+      }
+    }
+  }
+
+  // Project valid ornament set indices per slot (P, L)
+  // Key encoding: sP + sL*O
+  const validP = new Uint8Array(O)
+  const validL = new Uint8Array(O)
+
+  for (let sP = 0; sP < O; sP++) {
+    for (let sL = 0; sL < O; sL++) {
+      const key = sP + sL * O
+      if (ornamentSetSolutions[key] === 1) {
+        validP[sP] = 1
+        validL[sL] = 1
+      }
+    }
+  }
+
+  const filterRelic = (r: Relic, valid: Uint8Array) => valid[RelicSetToIndex[r.set as SetsRelics]] === 1
+  const filterOrnament = (r: Relic, valid: Uint8Array) => valid[OrnamentSetToIndex[r.set as SetsOrnaments]] === 1
+
+  const filtered: RelicsByPart = {
+    Head: relics.Head.filter((r) => filterRelic(r, validH)),
+    Hands: relics.Hands.filter((r) => filterRelic(r, validG)),
+    Body: relics.Body.filter((r) => filterRelic(r, validB)),
+    Feet: relics.Feet.filter((r) => filterRelic(r, validF)),
+    PlanarSphere: relics.PlanarSphere.filter((r) => filterOrnament(r, validP)),
+    LinkRope: relics.LinkRope.filter((r) => filterOrnament(r, validL)),
+  }
+
+  return filtered
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tuple dispatch: set ranges + valid triple enumeration
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type SetRanges = { setStart: Int32Array, setEnd: Int32Array }
+
+export type PerSlotSetRanges = {
+  Head: SetRanges,
+  Hands: SetRanges,
+  Body: SetRanges,
+  Feet: SetRanges,
+  PlanarSphere: SetRanges,
+  LinkRope: SetRanges,
+}
+
+function buildSetRangesForSlot(
+  sortedRelics: Relic[],
+  setIndexOf: (set: string) => number,
+  setCount: number,
+): SetRanges {
+  const setStart = new Int32Array(setCount).fill(-1)
+  const setEnd = new Int32Array(setCount).fill(-1)
+  for (let i = 0; i < sortedRelics.length; i++) {
+    const s = setIndexOf(sortedRelics[i].set)
+    if (setStart[s] === -1) setStart[s] = i
+    setEnd[s] = i + 1
+  }
+  return { setStart, setEnd }
+}
+
+export function buildPerSlotSetRanges(relics: RelicsByPart): PerSlotSetRanges {
+  const relicSetCount = SetsRelicsNames.length
+  const ornamentSetCount = SetsOrnamentsNames.length
+  const relicIdx = (set: string) => RelicSetToIndex[set as SetsRelics]
+  const ornIdx = (set: string) => OrnamentSetToIndex[set as SetsOrnaments]
+
+  return {
+    Head: buildSetRangesForSlot(relics.Head, relicIdx, relicSetCount),
+    Hands: buildSetRangesForSlot(relics.Hands, relicIdx, relicSetCount),
+    Body: buildSetRangesForSlot(relics.Body, relicIdx, relicSetCount),
+    Feet: buildSetRangesForSlot(relics.Feet, relicIdx, relicSetCount),
+    PlanarSphere: buildSetRangesForSlot(relics.PlanarSphere, ornIdx, ornamentSetCount),
+    LinkRope: buildSetRangesForSlot(relics.LinkRope, ornIdx, ornamentSetCount),
+  }
+}
+
+export type ValidQuad = { sH: number, sG: number, sB: number, sF: number }
+
+export function enumerateValidQuadsD4(
+  relicSetSolutions: number[],
+  ranges: PerSlotSetRanges,
+): ValidQuad[] {
+  const R = SetsRelicsNames.length
+  const out: ValidQuad[] = []
+  for (let sH = 0; sH < R; sH++) {
+    if (ranges.Head.setStart[sH] < 0) continue
+    for (let sG = 0; sG < R; sG++) {
+      if (ranges.Hands.setStart[sG] < 0) continue
+      for (let sB = 0; sB < R; sB++) {
+        if (ranges.Body.setStart[sB] < 0) continue
+        for (let sF = 0; sF < R; sF++) {
+          if (ranges.Feet.setStart[sF] < 0) continue
+          if (relicSetSolutions[encodeRelicSetKey(sH, sG, sB, sF)] === 1) {
+            out.push({ sH, sG, sB, sF })
+          }
+        }
+      }
+    }
+  }
+  return out
 }
 
 export function bitpackBooleanArray(arr: number[]) {

@@ -2,17 +2,33 @@ import { COMPUTE_ENGINE_GPU_EXPERIMENTAL } from 'lib/constants/constants'
 import { FixedSizeNumericMinQueue } from 'lib/dataStructures/fixedSizeMinQueue'
 import { generateWgsl } from 'lib/gpu/injection/generateWgsl'
 import {
+  buildWorkgroupAssignments,
+  computeTupleParams,
+  type FullSizes,
   generateParamsMatrix,
   mergeRelicsIntoArray,
+  serializeAssignments,
+  type WorkgroupEntry,
 } from 'lib/gpu/webgpuDataTransform'
 import { uniformCompatible } from 'lib/gpu/webgpuDevice'
 import {
   type GpuExecutionContext,
   type RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
-import { bitpackBooleanArray } from 'lib/optimization/relicSetSolver'
+import {
+  bitpackBooleanArray,
+  buildPerSlotSetRanges,
+  enumerateValidQuadsD4,
+} from 'lib/optimization/relicSetSolver'
+import {
+  OrnamentSetToIndex,
+  RelicSetToIndex,
+  type SetsOrnaments,
+  type SetsRelics,
+} from 'lib/sets/setConfigRegistry'
 import { type Form } from 'types/form'
 import { type OptimizerContext } from 'types/optimizer'
+import { type Relic } from 'types/relic'
 
 export async function initializeGpuPipeline(
   device: GPUDevice,
@@ -49,8 +65,11 @@ export async function initializeGpuPipeline(
   // Top-N results to keep
   const RESULTS_LIMIT = request.resultsLimit ?? 1024
 
-  // Compact buffer sizing multiplier over RESULTS_LIMIT
-  const COMPACT_OVERFLOW_FACTOR = 4
+  const hasRelicFilter = (request.relicSets?.length ?? 0) > 0
+  const TUPLE_MODE = hasRelicFilter && !DEBUG
+
+  // Tuple mode has near-100% pass rate — needs larger compact buffer to avoid overflow revisits
+  const COMPACT_OVERFLOW_FACTOR = TUPLE_MODE ? 64 : 4
 
   // Max compact entries per dispatch before overflow triggers revisit
   const COMPACT_LIMIT = RESULTS_LIMIT * COMPACT_OVERFLOW_FACTOR
@@ -62,15 +81,13 @@ export async function initializeGpuPipeline(
     RESULTS_LIMIT,
     COMPACT_LIMIT,
     DEBUG,
+    TUPLE_MODE,
   })
-
-  if (window.location.hostname === 'localhost') {
-    console.log(wgsl)
-  }
 
   const computePipeline = await generatePipeline(device, wgsl)
 
-  const paramsMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * 8
+  // Params buffer: 16 bytes for tuple mode (threshold + batchOffset + padding), 32 bytes for naive (8 floats)
+  const paramsMatrixBufferSize = TUPLE_MODE ? 16 : Float32Array.BYTES_PER_ELEMENT * 8
   const resultMatrixBufferSize = Float32Array.BYTES_PER_ELEMENT * BLOCK_SIZE * CYCLES_PER_INVOCATION
   // Only DEBUG mode needs the full results buffer
   const resultBufferSize = DEBUG ? resultMatrixBufferSize : 4
@@ -83,8 +100,46 @@ export async function initializeGpuPipeline(
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST,
   })
 
-  const hasRelicFilter = (request.relicSets?.length ?? 0) > 0
   const hasOrnamentFilter = (request.ornamentSets?.length ?? 0) > 0
+
+  // Sorts relics in-place by set — required for contiguous set ranges in tuple dispatch.
+  // Mutates the caller's arrays; outputResults reads from the same sorted references.
+  if (TUPLE_MODE) {
+    const byRelicSet = (a: Relic, b: Relic) => RelicSetToIndex[a.set as SetsRelics] - RelicSetToIndex[b.set as SetsRelics]
+    const byOrnamentSet = (a: Relic, b: Relic) => OrnamentSetToIndex[a.set as SetsOrnaments] - OrnamentSetToIndex[b.set as SetsOrnaments]
+
+    relics.Head.sort(byRelicSet)
+    relics.Hands.sort(byRelicSet)
+    relics.Body.sort(byRelicSet)
+    relics.Feet.sort(byRelicSet)
+    relics.PlanarSphere.sort(byOrnamentSet)
+    relics.LinkRope.sort(byOrnamentSet)
+  }
+
+  // Build tuple assignments for set-filtered dispatch
+  let assignmentBuffer: GPUBuffer | null = null
+  let assignments: WorkgroupEntry[] = []
+
+  if (TUPLE_MODE) {
+    const ranges = buildPerSlotSetRanges(relics)
+    const quads = enumerateValidQuadsD4(relicSetSolutions, ranges)
+    const fullSizes: FullSizes = {
+      pSize: relics.PlanarSphere.length,
+      lSize: relics.LinkRope.length,
+    }
+    const wgCapacity = WORKGROUP_SIZE * CYCLES_PER_INVOCATION
+    const tupleParams = quads.map((q) => computeTupleParams(q, ranges))
+    assignments = buildWorkgroupAssignments(tupleParams, fullSizes, wgCapacity)
+    const serialized = serializeAssignments(assignments)
+
+    assignmentBuffer = device.createBuffer({
+      mappedAtCreation: true,
+      size: serialized.byteLength,
+      usage: GPUBufferUsage.STORAGE,
+    })
+    new Uint32Array(assignmentBuffer.getMappedRange()).set(new Uint32Array(serialized))
+    assignmentBuffer.unmap()
+  }
 
   const mergedRelics = mergeRelicsIntoArray(relics)
 
@@ -97,11 +152,15 @@ export async function initializeGpuPipeline(
     : null
   const precomputedStatsBuffer = createGpuBuffer(device, context.precomputedStatsData!, uniformCompatible() ? GPUBufferUsage.UNIFORM : GPUBufferUsage.STORAGE)
 
+  const bindGroup0Entries: GPUBindGroupEntry[] = [
+    { binding: 0, resource: { buffer: paramsMatrixBuffer } },
+  ]
+  if (TUPLE_MODE && assignmentBuffer) {
+    bindGroup0Entries.push({ binding: 1, resource: { buffer: assignmentBuffer } })
+  }
   const bindGroup0 = device.createBindGroup({
     layout: computePipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer: paramsMatrixBuffer } },
-    ],
+    entries: bindGroup0Entries,
   })
 
   const bindGroup1 = device.createBindGroup({
@@ -115,10 +174,14 @@ export async function initializeGpuPipeline(
   })
 
   // Atomic compaction buffers
-  const COMPACT_ENTRY_BYTES = 8 // CompactEntry: i32 index (4B) + f32 value (4B)
+  const COMPACT_ENTRY_BYTES = 8 // CompactEntry: u32 index (4B) + f32 value (4B)
   const compactResultsBufferSize = COMPACT_LIMIT * COMPACT_ENTRY_BYTES
 
   const compactCountBuffers: [GPUBuffer, GPUBuffer] = [
+    device.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST }),
+    device.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST }),
+  ]
+  const validCountBuffers: [GPUBuffer, GPUBuffer] = [
     device.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST }),
     device.createBuffer({ size: 4, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST }),
   ]
@@ -127,8 +190,8 @@ export async function initializeGpuPipeline(
     device.createBuffer({ size: compactResultsBufferSize, usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC }),
   ]
 
-  // Merged read buffer: [u32 count (4 bytes)][CompactEntry[] (compactResultsBufferSize bytes)]
-  const compactReadBufferSize = 4 + compactResultsBufferSize
+  // Merged read buffer: [compactCount(4B) | CompactEntry[](N*8B) | validCount(4B)]
+  const compactReadBufferSize = 4 + compactResultsBufferSize + 4
   const compactReadBuffers: [GPUBuffer, GPUBuffer] = [
     device.createBuffer({ size: compactReadBufferSize, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }),
     device.createBuffer({ size: compactReadBufferSize, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }),
@@ -145,6 +208,7 @@ export async function initializeGpuPipeline(
           : [
             { binding: 1, resource: { buffer: compactCountBuffers[i] } },
             { binding: 2, resource: { buffer: compactResultsBuffers[i] } },
+            { binding: 3, resource: { buffer: validCountBuffers[i] } },
           ]
       ),
     })
@@ -192,12 +256,17 @@ export async function initializeGpuPipeline(
 
     gpuReadBuffers,
 
+    TUPLE_MODE,
+    assignmentBuffer,
+    assignments,
+
     COMPACT_LIMIT,
     compactResultsBufferSize,
     compactReadBufferSize,
     compactCountBuffers,
     compactResultsBuffers,
     compactReadBuffers,
+    validCountBuffers,
   }
 }
 
@@ -206,53 +275,56 @@ export type ExecutionPassResult = {
   compactReadBuffer: GPUBuffer,
 }
 
-export function generateExecutionPass(gpuContext: GpuExecutionContext, offset: number, bufferIndex: number = 0): ExecutionPassResult {
-  const newParamsMatrix = generateParamsMatrix(offset, gpuContext.relics, gpuContext)
-
+export function submitGpuDispatch(gpuContext: GpuExecutionContext, paramsData: ArrayBuffer, workgroupCount: number, bufferIndex: number): void {
   const device = gpuContext.device
-  const computePipeline = gpuContext.computePipeline
-  const bindGroup0 = gpuContext.bindGroup0
-  const bindGroup1 = gpuContext.bindGroup1
-  const bindGroup2 = gpuContext.bindGroups2[bufferIndex]
-  const resultMatrixBufferSize = gpuContext.resultMatrixBufferSize
-  const resultMatrixBuffer = gpuContext.resultMatrixBuffers[bufferIndex]
-  const gpuReadBuffer = gpuContext.gpuReadBuffers[bufferIndex]
+  device.queue.writeBuffer(gpuContext.paramsMatrixBuffer, 0, paramsData)
 
   const compactCountBuffer = gpuContext.compactCountBuffers[bufferIndex]
   const compactResultsBuffer = gpuContext.compactResultsBuffers[bufferIndex]
   const compactReadBuffer = gpuContext.compactReadBuffers[bufferIndex]
-
-  device.queue.writeBuffer(gpuContext.paramsMatrixBuffer, 0, newParamsMatrix)
+  const validCountBuffer = gpuContext.validCountBuffers[bufferIndex]
 
   const commandEncoder = device.createCommandEncoder()
 
   if (!gpuContext.DEBUG) {
-    // Clear the atomic counter to 0 before dispatch
     commandEncoder.clearBuffer(compactCountBuffer, 0, 4)
+    commandEncoder.clearBuffer(validCountBuffer, 0, 4)
   }
 
   const passEncoder = commandEncoder.beginComputePass()
-  passEncoder.setPipeline(computePipeline)
-  passEncoder.setBindGroup(0, bindGroup0)
-  passEncoder.setBindGroup(1, bindGroup1)
-  passEncoder.setBindGroup(2, bindGroup2)
-  passEncoder.dispatchWorkgroups(gpuContext.NUM_WORKGROUPS)
+  passEncoder.setPipeline(gpuContext.computePipeline)
+  passEncoder.setBindGroup(0, gpuContext.bindGroup0)
+  passEncoder.setBindGroup(1, gpuContext.bindGroup1)
+  passEncoder.setBindGroup(2, gpuContext.bindGroups2[bufferIndex])
+  passEncoder.dispatchWorkgroups(workgroupCount)
   passEncoder.end()
 
   if (!gpuContext.DEBUG) {
-    // Copy compact count + results into merged read buffer: [count(4B) | results(N*8B)]
     commandEncoder.copyBufferToBuffer(compactCountBuffer, 0, compactReadBuffer, 0, 4)
     commandEncoder.copyBufferToBuffer(compactResultsBuffer, 0, compactReadBuffer, 4, gpuContext.compactResultsBufferSize)
+    commandEncoder.copyBufferToBuffer(validCountBuffer, 0, compactReadBuffer, 4 + gpuContext.compactResultsBufferSize, 4)
   }
 
   if (gpuContext.DEBUG) {
-    // DEBUG mode: also copy the full results buffer
-    commandEncoder.copyBufferToBuffer(resultMatrixBuffer, 0, gpuReadBuffer, 0, resultMatrixBufferSize)
+    commandEncoder.copyBufferToBuffer(
+      gpuContext.resultMatrixBuffers[bufferIndex],
+      0,
+      gpuContext.gpuReadBuffers[bufferIndex],
+      0,
+      gpuContext.resultMatrixBufferSize,
+    )
   }
 
   device.queue.submit([commandEncoder.finish()])
+}
 
-  return { gpuReadBuffer, compactReadBuffer }
+export function generateExecutionPass(gpuContext: GpuExecutionContext, offset: number, bufferIndex: number = 0): ExecutionPassResult {
+  const paramsData = generateParamsMatrix(offset, gpuContext.relics, gpuContext)
+  submitGpuDispatch(gpuContext, paramsData, gpuContext.NUM_WORKGROUPS, bufferIndex)
+  return {
+    gpuReadBuffer: gpuContext.gpuReadBuffers[bufferIndex],
+    compactReadBuffer: gpuContext.compactReadBuffers[bufferIndex],
+  }
 }
 
 async function generatePipeline(device: GPUDevice, wgsl: string) {
@@ -301,8 +373,10 @@ export function destroyPipeline(gpuContext: GpuExecutionContext) {
   gpuContext.precomputedStatsBuffer.destroy()
   gpuContext.relicSetSolutionsMatrixBuffer?.destroy()
   gpuContext.ornamentSetSolutionsMatrixBuffer?.destroy()
+  gpuContext.assignmentBuffer?.destroy()
 
   gpuContext.compactCountBuffers.forEach((b) => b.destroy())
   gpuContext.compactResultsBuffers.forEach((b) => b.destroy())
   gpuContext.compactReadBuffers.forEach((b) => b.destroy())
+  gpuContext.validCountBuffers.forEach((b) => b.destroy())
 }

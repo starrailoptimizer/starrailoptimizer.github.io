@@ -1,10 +1,12 @@
 import { type ComputeEngine } from 'lib/constants/constants'
+import { type WorkgroupEntry } from 'lib/gpu/webgpuDataTransform'
 import { debugWebgpuOutput } from 'lib/gpu/webgpuDebugger'
 import {
   destroyPipeline,
   type ExecutionPassResult,
   generateExecutionPass,
   initializeGpuPipeline,
+  submitGpuDispatch,
 } from 'lib/gpu/webgpuInternals'
 import {
   type GpuExecutionContext,
@@ -38,11 +40,12 @@ export async function gpuOptimize(props: {
   request: Form,
   relics: RelicsByPart,
   permutations: number,
+  validPermutations: number,
   computeEngine: string,
   relicSetSolutions: number[],
   ornamentSetSolutions: number[],
 }) {
-  const { context, request, relics, permutations, computeEngine, relicSetSolutions, ornamentSetSolutions } = props
+  const { context, request, relics, permutations, validPermutations, computeEngine, relicSetSolutions, ornamentSetSolutions } = props
 
   const device = props.device
   if (device == null) {
@@ -76,16 +79,33 @@ export async function gpuOptimize(props: {
     Message.warning('Debug mode is ON', 5)
   }
 
-  // Double-buffered loop: while CPU reads buffer N, GPU writes buffer N+1.
+  let permutationsSearched = 0
 
+  if (gpuContext.TUPLE_MODE) {
+    permutationsSearched = await runTupleDispatch(gpuContext)
+  } else {
+    permutationsSearched = await runNaiveDispatch(gpuContext)
+  }
+
+  if (useOptimizerDisplayStore.getState().optimizationInProgress) {
+    useOptimizerDisplayStore.getState().setPermutationsSearched(validPermutations)
+    useOptimizerDisplayStore.getState().setOptimizerProgress(1)
+  }
+  useOptimizerDisplayStore.getState().setOptimizationInProgress(false)
+  useOptimizerDisplayStore.getState().setPermutationsResults(gpuContext.resultsQueue.size())
+
+  setTimeout(() => {
+    outputResults(gpuContext)
+    destroyPipeline(gpuContext)
+  }, 1)
+}
+
+async function runNaiveDispatch(gpuContext: GpuExecutionContext): Promise<number> {
   const permStride = gpuContext.BLOCK_SIZE * gpuContext.CYCLES_PER_INVOCATION
-
-  // Overflowed dispatches are revisited after the main loop. seenIndices deduplicates partial captures vs revisit results.
   const overflowedOffsets: number[] = []
   const seenIndices = new Set<number>()
   let permutationsSearched = 0
 
-  // Submit the first dispatch (buffer A)
   let currentBufferIndex = 0
   let currentPassResult = generateExecutionPass(gpuContext, 0, currentBufferIndex)
 
@@ -94,17 +114,14 @@ export async function gpuOptimize(props: {
     const maxPermNumber = offset + permStride
     const passResult = currentPassResult
 
-    // Determine if there will be a next iteration
     const hasNext = iteration + 1 < gpuContext.iterations && gpuContext.permutations > maxPermNumber
 
-    // Submit next dispatch BEFORE awaiting current results
     const nextBufferIndex = 1 - currentBufferIndex
     let nextPassResult: ExecutionPassResult | undefined
     if (hasNext) {
       nextPassResult = generateExecutionPass(gpuContext, (iteration + 1) * permStride, nextBufferIndex)
     }
 
-    // Await current dispatch and read results
     if (gpuContext.DEBUG) {
       await passResult.gpuReadBuffer.mapAsync(GPUMapMode.READ)
       readBufferMapped(offset, passResult.gpuReadBuffer, gpuContext)
@@ -117,17 +134,17 @@ export async function gpuOptimize(props: {
       const count = Math.min(rawCount, gpuContext.COMPACT_LIMIT)
       const isOverflow = rawCount > gpuContext.COMPACT_LIMIT
 
+      const gpuValidCount = new Uint32Array(mappedRange, 4 + gpuContext.compactResultsBufferSize, 1)[0]
+
       if (isOverflow) {
         overflowedOffsets.push(offset)
-      } else {
-        permutationsSearched += permStride
       }
+      permutationsSearched += gpuValidCount
 
       processCompactResults(offset, count, mappedRange, gpuContext, isOverflow ? seenIndices : undefined)
       passResult.compactReadBuffer.unmap()
     }
 
-    // Reset start time after first dispatch to exclude shader compilation from perms/sec
     if (iteration === 0) {
       useOptimizerDisplayStore.getState().setOptimizerStartTime(Date.now())
     }
@@ -138,11 +155,14 @@ export async function gpuOptimize(props: {
     }
 
     const searchedSnapshot = permutationsSearched
+    const progressSnapshot = (iteration + 1) / gpuContext.iterations
     setTimeout(() => {
-      const uiState = useOptimizerDisplayStore.getState()
-      uiState.setOptimizerEndTime(Date.now())
-      uiState.setPermutationsResults(gpuContext.resultsQueue.size())
-      uiState.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
+      useOptimizerDisplayStore.setState({
+        optimizerEndTime: Date.now(),
+        permutationsResults: gpuContext.resultsQueue.size(),
+        permutationsSearched: searchedSnapshot,
+        optimizerProgress: progressSnapshot,
+      })
     }, 0)
 
     if (gpuContext.permutations <= maxPermNumber || !useOptimizerDisplayStore.getState().optimizationInProgress) {
@@ -151,19 +171,181 @@ export async function gpuOptimize(props: {
     }
   }
 
-  // Revisit overflowed dispatches now that the threshold is established.
-  await revisitOverflowedDispatches(overflowedOffsets, gpuContext, seenIndices, permStride, permutationsSearched)
+  await revisitOverflowedDispatches(overflowedOffsets, gpuContext, seenIndices, permutationsSearched)
 
-  if (useOptimizerDisplayStore.getState().optimizationInProgress) {
-    useOptimizerDisplayStore.getState().setPermutationsSearched(gpuContext.permutations)
+  return permutationsSearched
+}
+
+/** Absolute relic counts per slot, used to convert tuple-relative indices to flat global indices. */
+export type RelicPartSizes = {
+  lSize: number,
+  pSize: number,
+  fSize: number,
+  bSize: number,
+  gSize: number,
+}
+
+export function decodeTupleGlobalIndex(
+  packedIndex: number,
+  batchStart: number,
+  assignments: WorkgroupEntry[],
+  sizes: RelicPartSizes,
+  localBits: number,
+): number {
+  const wgInBatch = packedIndex >>> localBits
+  const localOffset = packedIndex & ((1 << localBits) - 1)
+  const assignmentIdx = batchStart + wgInBatch
+  const a = assignments[assignmentIdx]
+  const totalOffset = a.startOffset + localOffset
+
+  const l = totalOffset % a.lSize
+  const c1 = (totalOffset - l) / a.lSize
+  const p = c1 % a.pSize
+  const c2 = (c1 - p) / a.pSize
+  const f = c2 % a.fSize
+  const c3 = (c2 - f) / a.fSize
+  const b = c3 % a.bSize
+  const c4 = (c3 - b) / a.bSize
+  const g = c4 % a.gSize
+  const h = (c4 - g) / a.gSize
+
+  // D=4: F, B, G, H are tuple-relative, convert to absolute positions
+  const absF = a.xf + f
+  const absB = a.xb + b
+  const absG = a.xg + g
+  const absH = a.xh + h
+
+  const { lSize, pSize, fSize, bSize, gSize } = sizes
+  return l
+    + p * lSize
+    + absF * lSize * pSize
+    + absB * lSize * pSize * fSize
+    + absG * lSize * pSize * fSize * bSize
+    + absH * lSize * pSize * fSize * bSize * gSize
+}
+
+function submitTupleBatch(gpuContext: GpuExecutionContext, batchStart: number, batchSize: number, bufferIndex: number): void {
+  const threshold = gpuContext.resultsQueue.size() >= gpuContext.RESULTS_LIMIT
+    ? gpuContext.resultsQueue.topPriority()
+    : 0
+  const paramsBuf = new ArrayBuffer(16)
+  new Float32Array(paramsBuf)[0] = threshold
+  new Uint32Array(paramsBuf, 4)[0] = batchStart
+  submitGpuDispatch(gpuContext, paramsBuf, batchSize, bufferIndex)
+}
+
+function processTupleBatch(
+  gpuContext: GpuExecutionContext,
+  bufferIndex: number,
+  batchStart: number,
+  assignments: WorkgroupEntry[],
+  sizes: RelicPartSizes,
+  localBits: number,
+  seenIndices?: Set<number>,
+): { rawCount: number, validCount: number } {
+  const compactReadBuffer = gpuContext.compactReadBuffers[bufferIndex]
+  const mappedRange = compactReadBuffer.getMappedRange()
+  const rawCount = new Uint32Array(mappedRange, 0, 1)[0]
+  const validCount = new Uint32Array(mappedRange, 4 + gpuContext.compactResultsBufferSize, 1)[0]
+  const count = Math.min(rawCount, gpuContext.COMPACT_LIMIT)
+
+  pushCompactResultsToQueue(mappedRange, count, gpuContext, (raw) => decodeTupleGlobalIndex(raw, batchStart, assignments, sizes, localBits), seenIndices)
+
+  compactReadBuffer.unmap()
+  return { rawCount, validCount }
+}
+
+async function runTupleDispatch(gpuContext: GpuExecutionContext): Promise<number> {
+  if (gpuContext.assignments.length === 0) return 0
+
+  const localBits = Math.ceil(Math.log2(gpuContext.WORKGROUP_SIZE * gpuContext.CYCLES_PER_INVOCATION))
+  const BATCH_WGS = Math.min(2048, gpuContext.assignments.length)
+
+  // Packed index = (workgroup_in_batch << localBits) | threadLocalOffset — must fit u32
+  if (localBits + Math.ceil(Math.log2(BATCH_WGS + 1)) > 32) {
+    throw new Error(`Packed index overflow: ${localBits} local bits + ${BATCH_WGS} max workgroups exceeds u32`)
   }
-  useOptimizerDisplayStore.getState().setOptimizationInProgress(false)
-  useOptimizerDisplayStore.getState().setPermutationsResults(gpuContext.resultsQueue.size())
+  const totalBatches = Math.ceil(gpuContext.assignments.length / BATCH_WGS)
+  const assignments = gpuContext.assignments
+  const relics = gpuContext.relics
+  const sizes: RelicPartSizes = {
+    lSize: relics.LinkRope.length,
+    pSize: relics.PlanarSphere.length,
+    fSize: relics.Feet.length,
+    bSize: relics.Body.length,
+    gSize: relics.Hands.length,
+  }
+  const overflowedBatches: number[] = []
+  const seenIndices = new Set<number>()
+  let permutationsSearched = 0
 
-  setTimeout(() => {
-    outputResults(gpuContext)
-    destroyPipeline(gpuContext)
-  }, 1)
+  // Double-buffered: submit batch N+1 while reading batch N
+  let currentBuf = 0
+
+  // Reset start time before first dispatch to exclude pipeline setup from perms/sec
+  useOptimizerDisplayStore.getState().setOptimizerStartTime(Date.now())
+
+  // Submit first batch
+  const firstBatchSize = Math.min(BATCH_WGS, gpuContext.assignments.length)
+  submitTupleBatch(gpuContext, 0, firstBatchSize, currentBuf)
+
+  for (let batch = 0; batch < totalBatches; batch++) {
+    const batchStart = batch * BATCH_WGS
+    const readBuf = currentBuf
+
+    // Determine next batch
+    const hasNext = batch + 1 < totalBatches
+    if (hasNext) {
+      const nextBuf = 1 - currentBuf
+      const nextBatchStart = (batch + 1) * BATCH_WGS
+      const nextBatchSize = Math.min(BATCH_WGS, gpuContext.assignments.length - nextBatchStart)
+      submitTupleBatch(gpuContext, nextBatchStart, nextBatchSize, nextBuf)
+      currentBuf = nextBuf
+    }
+
+    await gpuContext.compactReadBuffers[readBuf].mapAsync(GPUMapMode.READ)
+
+    const { rawCount, validCount } = processTupleBatch(gpuContext, readBuf, batchStart, assignments, sizes, localBits)
+    permutationsSearched += validCount
+    if (rawCount > gpuContext.COMPACT_LIMIT) {
+      overflowedBatches.push(batchStart)
+    }
+
+    const searchedSnapshot = permutationsSearched
+    const progressSnapshot = (batch + 1) / totalBatches
+    setTimeout(() => {
+      useOptimizerDisplayStore.setState({
+        optimizerEndTime: Date.now(),
+        permutationsResults: gpuContext.resultsQueue.size(),
+        permutationsSearched: searchedSnapshot,
+        optimizerProgress: progressSnapshot,
+      })
+    }, 0)
+
+    if (!useOptimizerDisplayStore.getState().optimizationInProgress) {
+      gpuContext.cancelled = true
+      break
+    }
+  }
+
+  // Revisit overflowed batches with tighter threshold
+  if (overflowedBatches.length > 0) {
+    for (const batchStart of overflowedBatches) {
+      if (!useOptimizerDisplayStore.getState().optimizationInProgress) break
+
+      const batchSize = Math.min(BATCH_WGS, gpuContext.assignments.length - batchStart)
+      let rawCount: number
+      let retries = 0
+      do {
+        submitTupleBatch(gpuContext, batchStart, batchSize, 0)
+        await gpuContext.compactReadBuffers[0].mapAsync(GPUMapMode.READ)
+        const result = processTupleBatch(gpuContext, 0, batchStart, assignments, sizes, localBits, seenIndices)
+        rawCount = result.rawCount
+      } while (rawCount > gpuContext.COMPACT_LIMIT && retries++ < 100000)
+    }
+  }
+
+  return permutationsSearched
 }
 
 // Reads results from an already-mapped buffer
@@ -219,33 +401,35 @@ function processResults(offset: number, array: Float32Array, gpuContext: GpuExec
   }
 }
 
-// Reads compact results from merged mapped buffer: [count(4B) | CompactEntry[](N*8B)]
-function processCompactResults(offset: number, count: number, mappedRange: ArrayBuffer, gpuContext: GpuExecutionContext, seenIndices?: Set<number>) {
+function pushCompactResultsToQueue(
+  mappedRange: ArrayBuffer,
+  count: number,
+  gpuContext: GpuExecutionContext,
+  resolveIndex: (rawIndex: number) => number,
+  seenIndices?: Set<number>,
+): void {
   if (count === 0) return
 
-  // Results start at byte offset 4 (after the u32 count)
-  const i32View = new Int32Array(mappedRange, 4)
+  const u32View = new Uint32Array(mappedRange, 4)
   const f32View = new Float32Array(mappedRange, 4)
-
   const resultsQueue = gpuContext.resultsQueue
   let top = resultsQueue.size() > 0 ? resultsQueue.topPriority() : 0
 
-  // Split to skip size check when queue is full
   if (resultsQueue.size() >= gpuContext.RESULTS_LIMIT) {
     for (let i = 0; i < count; i++) {
-      const globalIndex = offset + i32View[i * 2]
-      if (seenIndices?.has(globalIndex)) continue
       const value = f32View[i * 2 + 1]
       if (value <= top) continue
+      const globalIndex = resolveIndex(u32View[i * 2])
+      if (seenIndices?.has(globalIndex)) continue
       top = resultsQueue.fixedSizePushOvercapped(globalIndex, value)
       seenIndices?.add(globalIndex)
     }
   } else {
     for (let i = 0; i < count; i++) {
-      const globalIndex = offset + i32View[i * 2]
-      if (seenIndices?.has(globalIndex)) continue
       const value = f32View[i * 2 + 1]
       if (value <= top && resultsQueue.size() >= gpuContext.RESULTS_LIMIT) continue
+      const globalIndex = resolveIndex(u32View[i * 2])
+      if (seenIndices?.has(globalIndex)) continue
       resultsQueue.fixedSizePush(globalIndex, value)
       top = resultsQueue.topPriority()
       seenIndices?.add(globalIndex)
@@ -253,11 +437,14 @@ function processCompactResults(offset: number, count: number, mappedRange: Array
   }
 }
 
+function processCompactResults(offset: number, count: number, mappedRange: ArrayBuffer, gpuContext: GpuExecutionContext, seenIndices?: Set<number>) {
+  pushCompactResultsToQueue(mappedRange, count, gpuContext, (raw) => offset + raw, seenIndices)
+}
+
 async function revisitOverflowedDispatches(
   overflowedOffsets: number[],
   gpuContext: GpuExecutionContext,
   seenIndices: Set<number>,
-  permStride: number,
   permutationsSearched: number,
 ) {
   if (overflowedOffsets.length > 0 && useOptimizerDisplayStore.getState().optimizationInProgress) {
@@ -277,14 +464,13 @@ async function revisitOverflowedDispatches(
         passResult.compactReadBuffer.unmap()
       } while (rawCount > gpuContext.COMPACT_LIMIT && retries++ < 100000)
 
-      permutationsSearched += permStride
+      // Update results count but NOT endTime — the main loop's last endTime is the correct final value
       const searchedSnapshot = permutationsSearched
       await new Promise<void>((resolve) =>
         setTimeout(() => {
           const uiState = useOptimizerDisplayStore.getState()
-          uiState.setOptimizerEndTime(Date.now())
           uiState.setPermutationsResults(gpuContext.resultsQueue.size())
-          uiState.setPermutationsSearched(Math.min(gpuContext.permutations, searchedSnapshot))
+          uiState.setPermutationsSearched(searchedSnapshot)
           resolve()
         }, 0)
       )
@@ -300,7 +486,6 @@ function outputResults(gpuContext: GpuExecutionContext) {
   const fSize = relics.Feet.length
   const bSize = relics.Body.length
   const gSize = relics.Hands.length
-  const hSize = relics.Head.length
 
   const optimizerContext = gpuContext.context
   initializeContextConditionals(optimizerContext)

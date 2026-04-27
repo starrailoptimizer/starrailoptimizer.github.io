@@ -1,4 +1,5 @@
 import { type FixedSizeNumericMinQueue } from 'lib/dataStructures/fixedSizeMinQueue'
+import { type WorkgroupEntry } from 'lib/gpu/webgpuDataTransform'
 import { type Form } from 'types/form'
 import { type OptimizerContext } from 'types/optimizer'
 import { type Relic } from 'types/relic'
@@ -15,6 +16,7 @@ export type GpuConstants = {
   RESULTS_LIMIT: number,
   COMPACT_LIMIT: number,
   DEBUG: boolean,
+  TUPLE_MODE: boolean,
 }
 
 export type GpuExecutionContext = {
@@ -55,6 +57,11 @@ export type GpuExecutionContext = {
 
   gpuReadBuffers: [GPUBuffer, GPUBuffer],
 
+  // Tuple dispatch
+  TUPLE_MODE: boolean,
+  assignmentBuffer: GPUBuffer | null,
+  assignments: WorkgroupEntry[],
+
   // Atomic compaction buffers
   COMPACT_LIMIT: number,
   compactResultsBufferSize: number,
@@ -62,6 +69,7 @@ export type GpuExecutionContext = {
   compactCountBuffers: [GPUBuffer, GPUBuffer],
   compactResultsBuffers: [GPUBuffer, GPUBuffer],
   compactReadBuffers: [GPUBuffer, GPUBuffer],
+  validCountBuffers: [GPUBuffer, GPUBuffer],
 }
 
 export type RelicsByPart = {

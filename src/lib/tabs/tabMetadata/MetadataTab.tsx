@@ -25,6 +25,7 @@ import { Assets } from 'lib/rendering/assets'
 import { getGameMetadata } from 'lib/state/gameMetadata'
 import { useCharacterStore } from 'lib/stores/character/characterStore'
 import { ImageCenterEditorSection } from 'lib/tabs/tabMetadata/ImageCenterEditor'
+import { SetBenchmarkAuditor } from 'lib/tabs/tabMetadata/setAuditor/SetBenchmarkAuditor'
 import { toI18NVisual } from 'lib/utils/displayUtils'
 import {
   Fragment,
@@ -49,8 +50,14 @@ export function MetadataTab(): ReactElement {
         Metadata viewer
       </h1>
       <Accordion multiple>
+        <Accordion.Item value='set-auditor'>
+          <Accordion.Control>Set benchmark auditor</Accordion.Control>
+          <Accordion.Panel>
+            <SetBenchmarkAuditor />
+          </Accordion.Panel>
+        </Accordion.Item>
         <Accordion.Item value='color-grid'>
-          <Accordion.Control>Character Color Grid</Accordion.Control>
+          <Accordion.Control>Character color grid</Accordion.Control>
           <Accordion.Panel>
             <CharacterColorGridDashboard />
           </Accordion.Panel>
@@ -80,7 +87,7 @@ export function MetadataTab(): ReactElement {
           </Accordion.Panel>
         </Accordion.Item>
         <Accordion.Item value='4'>
-          <Accordion.Control>Conditional sets presets</Accordion.Control>
+          <Accordion.Control>Conditional set presets</Accordion.Control>
           <Accordion.Panel>
             <ConditionalSetsPresetsDashboard />
           </Accordion.Panel>

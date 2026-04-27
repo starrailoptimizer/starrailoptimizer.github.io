@@ -2,13 +2,16 @@ import {
   type GpuExecutionContext,
   type RelicsByPart,
 } from 'lib/gpu/webgpuTypes'
+import {
+  type PerSlotSetRanges,
+  type ValidQuad,
+} from 'lib/optimization/relicSetSolver'
 import { BasicKey } from 'lib/optimization/basicStatsArray'
 import {
   OrnamentSetToIndex,
   RelicSetToIndex,
   type SetsOrnaments,
   type SetsRelics,
-  SetsRelicsNames,
 } from 'lib/sets/setConfigRegistry'
 import { type StringToNumberMap } from 'types/common'
 import { type Relic } from 'types/relic'
@@ -38,17 +41,20 @@ export function generateParamsMatrix(
 
   const permStride = gpuContext.BLOCK_SIZE * gpuContext.CYCLES_PER_INVOCATION
   const permLimit = Math.min(permStride, gpuContext.permutations - offset)
+  const threshold = gpuContext.resultsQueue.size() >= gpuContext.RESULTS_LIMIT ? gpuContext.resultsQueue.topPriority() : 0
 
-  return new Float32Array([
-    l,
-    p,
-    f,
-    b,
-    g,
-    h,
-    gpuContext.resultsQueue.size() >= gpuContext.RESULTS_LIMIT ? gpuContext.resultsQueue.topPriority() : 0,
-    permLimit,
-  ])
+  const buf = new ArrayBuffer(32)
+  const f32 = new Float32Array(buf)
+  const u32 = new Uint32Array(buf)
+  f32[0] = l
+  f32[1] = p
+  f32[2] = f
+  f32[3] = b
+  f32[4] = g
+  f32[5] = h
+  f32[6] = threshold
+  u32[7] = permLimit
+  return buf
 }
 
 export function mergeRelicsIntoArray(relics: RelicsByPart) {
@@ -105,8 +111,124 @@ function relicsToArray(relics: Relic[]) {
   return output
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Tuple dispatch: workgroup assignment builder
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type TupleParams = {
+  xh: number, hSize: number,
+  xg: number, gSize: number,
+  xb: number, bSize: number,
+  xf: number, fSize: number,
+}
+
+export type FullSizes = {
+  pSize: number, lSize: number,
+}
+
+export type WorkgroupEntry = {
+  xh: number, hSize: number,
+  xg: number, gSize: number,
+  xb: number, bSize: number,
+  xf: number, fSize: number,
+  pSize: number, lSize: number,
+  permLimit: number,
+  startOffset: number,
+}
+
+export function computeTupleParams(quad: ValidQuad, ranges: PerSlotSetRanges): TupleParams {
+  return {
+    xh: ranges.Head.setStart[quad.sH],
+    hSize: ranges.Head.setEnd[quad.sH] - ranges.Head.setStart[quad.sH],
+    xg: ranges.Hands.setStart[quad.sG],
+    gSize: ranges.Hands.setEnd[quad.sG] - ranges.Hands.setStart[quad.sG],
+    xb: ranges.Body.setStart[quad.sB],
+    bSize: ranges.Body.setEnd[quad.sB] - ranges.Body.setStart[quad.sB],
+    xf: ranges.Feet.setStart[quad.sF],
+    fSize: ranges.Feet.setEnd[quad.sF] - ranges.Feet.setStart[quad.sF],
+  }
+}
+
+const MAX_TUPLE_WEIGHT = 2 ** 31 - 1
+
+export function buildWorkgroupAssignments(
+  tuples: TupleParams[],
+  fullSizes: FullSizes,
+  wgCapacity: number,
+): WorkgroupEntry[] {
+  const safeTuples = splitOversizedTuples(tuples, fullSizes)
+  const assignments: WorkgroupEntry[] = []
+  for (const t of safeTuples) {
+    const weight = t.hSize * t.gSize * t.bSize * t.fSize * fullSizes.pSize * fullSizes.lSize
+    const numWGs = Math.ceil(weight / wgCapacity)
+    for (let wg = 0; wg < numWGs; wg++) {
+      const start = wg * wgCapacity
+      const limit = Math.min(wgCapacity, weight - start)
+      assignments.push({
+        xh: t.xh, hSize: t.hSize,
+        xg: t.xg, gSize: t.gSize,
+        xb: t.xb, bSize: t.bSize,
+        xf: t.xf, fSize: t.fSize,
+        pSize: fullSizes.pSize, lSize: fullSizes.lSize,
+        permLimit: limit,
+        startOffset: start,
+      })
+    }
+  }
+  return assignments
+}
+
+function splitOversizedTuples(tuples: TupleParams[], fullSizes: FullSizes): TupleParams[] {
+  const result: TupleParams[] = []
+  const queue = [...tuples]
+  while (queue.length > 0) {
+    const t = queue.pop()!
+    const weight = t.hSize * t.gSize * t.bSize * t.fSize * fullSizes.pSize * fullSizes.lSize
+    if (weight <= MAX_TUPLE_WEIGHT) {
+      result.push(t)
+      continue
+    }
+    const dims: { key: 'hSize' | 'gSize' | 'bSize' | 'fSize', xKey: 'xh' | 'xg' | 'xb' | 'xf' }[] = [
+      { key: 'hSize', xKey: 'xh' },
+      { key: 'gSize', xKey: 'xg' },
+      { key: 'bSize', xKey: 'xb' },
+      { key: 'fSize', xKey: 'xf' },
+    ]
+    const largest = dims.reduce((a, b) => t[a.key] >= t[b.key] ? a : b)
+    const size = t[largest.key]
+    if (size <= 1) {
+      result.push(t)
+      continue
+    }
+    const half = Math.floor(size / 2)
+    queue.push({ ...t, [largest.key]: half })
+    queue.push({ ...t, [largest.xKey]: t[largest.xKey] + half, [largest.key]: size - half })
+  }
+  return result
+}
+
+const ASSIGNMENT_ENTRY_U32S = 16
+
+export function serializeAssignments(assignments: WorkgroupEntry[]): ArrayBuffer {
+  const buf = new ArrayBuffer(assignments.length * ASSIGNMENT_ENTRY_U32S * 4)
+  const u = new Uint32Array(buf)
+  for (let i = 0; i < assignments.length; i++) {
+    const a = assignments[i]
+    const off = i * ASSIGNMENT_ENTRY_U32S
+    u[off + 0] = a.xh;     u[off + 1] = a.hSize
+    u[off + 2] = a.xg;     u[off + 3] = a.gSize
+    u[off + 4] = a.xb;     u[off + 5] = a.bSize
+    u[off + 6] = a.xf;     u[off + 7] = a.fSize
+    u[off + 8] = a.pSize;  u[off + 9] = a.lSize
+    u[off + 10] = a.permLimit
+    u[off + 11] = a.startOffset
+    // 12-15: padding (zero)
+  }
+  return buf
+}
+
 function relicSetToIndex(relic: Relic) {
-  if (SetsRelicsNames.some((name) => name === relic.set)) {
+  if (relic.set in RelicSetToIndex) {
     return RelicSetToIndex[relic.set as SetsRelics]
   }
   return OrnamentSetToIndex[relic.set as SetsOrnaments]
