@@ -1,1 +1,0 @@
-var e=fetch;export{e as default};
