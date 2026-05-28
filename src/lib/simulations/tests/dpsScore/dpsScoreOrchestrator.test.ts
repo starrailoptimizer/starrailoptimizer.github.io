@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
-import { SilverWolf } from 'lib/conditionals/character/1000/SilverWolf'
+import { SilverWolfB1 } from 'lib/conditionals/character/1000/SilverWolfB1'
 import { Pela } from 'lib/conditionals/character/1100/Pela'
 import { Serval } from 'lib/conditionals/character/1100/Serval'
-import { Huohuo } from 'lib/conditionals/character/1200/Huohuo'
+import { HuohuoB1 } from 'lib/conditionals/character/1200/HuohuoB1'
 import { Lingsha } from 'lib/conditionals/character/1200/Lingsha'
 import { Acheron } from 'lib/conditionals/character/1300/Acheron'
 import { Aventurine } from 'lib/conditionals/character/1300/Aventurine'
@@ -53,7 +53,7 @@ test('Acheron benchmark', async () => {
     generateE6S5Test({
       character: testCharacter(Acheron.id, AlongThePassingShore.id),
       teammate0: testCharacter(Pela.id, ResolutionShinesAsPearlsOfSweat.id),
-      teammate1: testCharacter(SilverWolf.id, IncessantRain.id),
+      teammate1: testCharacter(SilverWolfB1.id, IncessantRain.id),
       teammate2: testCharacter(Aventurine.id, TrendOfTheUniversalMarket.id),
       sets: testSets(Sets.PioneerDiverOfDeadWaters, Sets.PioneerDiverOfDeadWaters, Sets.IzumoGenseiAndTakamaDivineRealm),
       mains: testMains(Stats.CD, Stats.ATK_P, Stats.Lightning_DMG, Stats.ATK_P),
@@ -71,7 +71,7 @@ test('Anaxa benchmark', async () => {
       character: testCharacter(Anaxa.id, LifeShouldBeCastToFlames.id),
       teammate0: testCharacter(Sunday.id, AGroundedAscent.id),
       teammate1: testCharacter(Robin.id, FlowingNightglow.id),
-      teammate2: testCharacter(Huohuo.id, NightOfFright.id),
+      teammate2: testCharacter(HuohuoB1.id, NightOfFright.id),
       sets: testSets(Sets.ScholarLostInErudition, Sets.ScholarLostInErudition, Sets.RutilantArena),
       mains: testMains(Stats.CD, Stats.SPD, Stats.Wind_DMG, Stats.ATK_P),
       stats: testStatSpread(),
@@ -86,7 +86,7 @@ test('Anaxa benchmarked @ 0 spd', async () => {
       character: testCharacter(Anaxa.id, LifeShouldBeCastToFlames.id),
       teammate0: testCharacter(Sunday.id, AGroundedAscent.id),
       teammate1: testCharacter(Robin.id, FlowingNightglow.id),
-      teammate2: testCharacter(Huohuo.id, NightOfFright.id),
+      teammate2: testCharacter(HuohuoB1.id, NightOfFright.id),
       sets: testSets(Sets.ScholarLostInErudition, Sets.ScholarLostInErudition, Sets.RutilantArena),
       mains: testMains(Stats.CD, Stats.SPD, Stats.Wind_DMG, Stats.ATK_P),
       stats: testStatSpread(),
@@ -102,7 +102,7 @@ test('Anaxa benchmarked @ 133.333 spd', async () => {
       character: testCharacter(Anaxa.id, LifeShouldBeCastToFlames.id),
       teammate0: testCharacter(Sunday.id, AGroundedAscent.id),
       teammate1: testCharacter(Robin.id, FlowingNightglow.id),
-      teammate2: testCharacter(Huohuo.id, NightOfFright.id),
+      teammate2: testCharacter(HuohuoB1.id, NightOfFright.id),
       sets: testSets(Sets.ScholarLostInErudition, Sets.ScholarLostInErudition, Sets.RutilantArena),
       mains: testMains(Stats.CD, Stats.SPD, Stats.Wind_DMG, Stats.ATK_P),
       stats: testStatSpread(),
@@ -118,7 +118,7 @@ test('Anaxa benchmarked @ 200 spd', async () => {
       character: testCharacter(Anaxa.id, LifeShouldBeCastToFlames.id),
       teammate0: testCharacter(Sunday.id, AGroundedAscent.id),
       teammate1: testCharacter(Robin.id, FlowingNightglow.id),
-      teammate2: testCharacter(Huohuo.id, NightOfFright.id),
+      teammate2: testCharacter(HuohuoB1.id, NightOfFright.id),
       sets: testSets(Sets.ScholarLostInErudition, Sets.ScholarLostInErudition, Sets.RutilantArena),
       mains: testMains(Stats.CD, Stats.SPD, Stats.Wind_DMG, Stats.ATK_P),
       stats: testStatSpread(),
@@ -235,7 +235,7 @@ test('Tribbie benchmark poet 88.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(0),
     }),
-    0.8821384217458543,
+    0.9009106288793595,
   )
 }, TIMEOUT)
 
@@ -250,7 +250,7 @@ test('Tribbie benchmark poet 101.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(5),
     }),
-    0.7116109697654351,
+    0.7286561551228741,
   )
 }, TIMEOUT)
 
@@ -265,7 +265,7 @@ test('Tribbie benchmark poet 114.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(10),
     }),
-    0.38504548492980584,
+    0.39831101296360977,
   )
 }, TIMEOUT)
 
@@ -282,7 +282,7 @@ test('Tribbie benchmark poet 88.3 @ 88.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(0),
     }),
-    0.8821384217458543,
+    0.9009106288793595,
     88.3,
   )
 }, TIMEOUT)
@@ -298,7 +298,7 @@ test('Tribbie benchmark poet 101.3 @ 88.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(5),
     }),
-    0.6916855241765822,
+    0.7082534362374845,
     88.3,
   )
 }, TIMEOUT)
@@ -314,7 +314,7 @@ test('Tribbie benchmark poet 114.3 @ 88.3', async () => {
       mains: testMains(Stats.CD, Stats.HP_P, Stats.Quantum_DMG, Stats.HP_P),
       stats: testStatSpreadSpd(10),
     }),
-    0.37426402822779453,
+    0.3871581151676927,
     88.3,
   )
 }, TIMEOUT)
