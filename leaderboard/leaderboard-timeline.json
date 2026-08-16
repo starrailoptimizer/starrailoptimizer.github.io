@@ -1,42 +1,88 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-16T16:36:37.663Z",
+  "generatedAt": "2026-08-16T22:37:10.614Z",
   "events": [
+    {
+      "characterId": "1410",
+      "configType": "dps",
+      "candidateId": "f06366634dc8",
+      "date": "2026-08-16T21:41:45.000Z",
+      "score": 1.6293853316113773,
+      "rank": 10,
+      "buildId": "fa8d9cb67d09",
+      "type": "new_best",
+      "previousScore": 1.618226541948205,
+      "previousRank": 64
+    },
+    {
+      "characterId": "1405",
+      "configType": "dps",
+      "candidateId": "c99805e4a0f1",
+      "date": "2026-08-16T20:54:21.000Z",
+      "score": 1.5635602354247777,
+      "rank": 46,
+      "buildId": "89460a93ab3a",
+      "type": "new_character",
+      "entryCount": 24500
+    },
+    {
+      "characterId": "1506",
+      "configType": "dps",
+      "candidateId": "4468ed8c6bb8",
+      "date": "2026-08-16T20:40:47.000Z",
+      "score": 1.7289457877265213,
+      "rank": 67,
+      "buildId": "d7cc5c14ea28",
+      "type": "new_character",
+      "entryCount": 67537
+    },
     {
       "characterId": "1404",
       "configType": "dps",
-      "candidateId": "45077664f88e",
+      "candidateId": "0580b3a3db8e",
+      "date": "2026-08-16T16:35:55.000Z",
+      "score": 1.5682259986529723,
+      "rank": 27,
+      "buildId": "f009dd7960a3",
+      "type": "new_best",
+      "previousScore": 1.5065122248802136,
+      "previousRank": 75
+    },
+    {
+      "characterId": "1404",
+      "configType": "dps",
       "date": "2026-08-16T15:21:24.000Z",
       "score": 1.5760588042265757,
       "rank": 24,
       "buildId": "d1dd9d1a1e5c",
       "type": "new_best",
       "previousScore": 1.5519244578014018,
-      "previousRank": 83
+      "previousRank": 83,
+      "candidateId": "45077664f88e"
     },
     {
       "characterId": "1415",
       "configType": "dps",
-      "candidateId": "e878cc60279f",
       "date": "2026-08-16T13:32:58.000Z",
       "score": 1.5496662263166114,
       "rank": 76,
       "buildId": "4addca3f514d",
       "type": "new_best",
       "previousScore": 1.5458392825726905,
-      "previousRank": 94
+      "previousRank": 94,
+      "candidateId": "e878cc60279f"
     },
     {
       "characterId": "1409",
       "configType": "heal",
-      "candidateId": "ada833a8c089",
       "date": "2026-08-16T11:40:58.000Z",
       "score": 1.5932504123989375,
       "rank": 3,
       "buildId": "0dde4b2cc99a",
       "type": "new_best",
       "previousScore": 1.5908656163099153,
-      "previousRank": 3
+      "previousRank": 3,
+      "candidateId": "ada833a8c089"
     },
     {
       "characterId": "1505",
@@ -1112,52 +1158,6 @@
       "type": "new_character",
       "entryCount": 45937,
       "candidateId": "160be29df614"
-    },
-    {
-      "characterId": "1506",
-      "configType": "dps",
-      "date": "2026-08-08T06:52:21.000Z",
-      "score": 1.7396867999426926,
-      "rank": 53,
-      "buildId": "02097a419823",
-      "type": "new_best",
-      "previousScore": 1.7376366906004426,
-      "previousRank": 55,
-      "candidateId": "bd9b1f040d61"
-    },
-    {
-      "characterId": "1415",
-      "configType": "dps",
-      "date": "2026-08-08T06:10:13.000Z",
-      "score": 1.5458392825726905,
-      "rank": 81,
-      "buildId": "4addca3f514d",
-      "type": "new_best",
-      "previousScore": 1.5389004088424745,
-      "previousRank": 93,
-      "candidateId": "e878cc60279f"
-    },
-    {
-      "characterId": "1504",
-      "configType": "dps",
-      "date": "2026-08-08T05:04:01.000Z",
-      "score": 1.5091128837651935,
-      "rank": 89,
-      "buildId": "c6fca1f919f3",
-      "type": "new_character",
-      "entryCount": 20368,
-      "candidateId": "0f217a4f3e2b"
-    },
-    {
-      "characterId": "1415",
-      "configType": "dps",
-      "date": "2026-08-08T04:52:00.000Z",
-      "score": 1.5573566104417687,
-      "rank": 63,
-      "buildId": "9a8a8a3ed8dd",
-      "type": "new_character",
-      "entryCount": 56526,
-      "candidateId": "783f331bc008"
     }
   ]
 }
