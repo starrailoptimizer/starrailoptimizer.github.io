@@ -1,18 +1,42 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-08-16T10:35:58.139Z",
+  "generatedAt": "2026-08-16T16:36:37.663Z",
   "events": [
+    {
+      "characterId": "1404",
+      "configType": "dps",
+      "candidateId": "45077664f88e",
+      "date": "2026-08-16T15:21:24.000Z",
+      "score": 1.5760588042265757,
+      "rank": 24,
+      "buildId": "d1dd9d1a1e5c",
+      "type": "new_best",
+      "previousScore": 1.5519244578014018,
+      "previousRank": 83
+    },
+    {
+      "characterId": "1415",
+      "configType": "dps",
+      "candidateId": "e878cc60279f",
+      "date": "2026-08-16T13:32:58.000Z",
+      "score": 1.5496662263166114,
+      "rank": 76,
+      "buildId": "4addca3f514d",
+      "type": "new_best",
+      "previousScore": 1.5458392825726905,
+      "previousRank": 94
+    },
     {
       "characterId": "1409",
       "configType": "heal",
       "candidateId": "ada833a8c089",
-      "date": "2026-08-16T09:17:53.000Z",
-      "score": 1.5908656163099153,
+      "date": "2026-08-16T11:40:58.000Z",
+      "score": 1.5932504123989375,
       "rank": 3,
       "buildId": "0dde4b2cc99a",
       "type": "new_best",
-      "previousScore": 1.5310579096404338,
-      "previousRank": 8
+      "previousScore": 1.5908656163099153,
+      "previousRank": 3
     },
     {
       "characterId": "1505",
@@ -1134,29 +1158,6 @@
       "type": "new_character",
       "entryCount": 56526,
       "candidateId": "783f331bc008"
-    },
-    {
-      "characterId": "1409",
-      "configType": "dps",
-      "date": "2026-08-08T03:49:13.000Z",
-      "score": 1.7425856958197992,
-      "rank": 1,
-      "buildId": "60be858180da",
-      "type": "new_best",
-      "previousScore": 1.7087850648251777,
-      "previousRank": 1,
-      "candidateId": "12bd24a8da6e"
-    },
-    {
-      "characterId": "1501",
-      "configType": "dps",
-      "date": "2026-08-08T01:55:05.000Z",
-      "score": 1.585760109170255,
-      "rank": 17,
-      "buildId": "091c83cdb8e0",
-      "type": "new_character",
-      "entryCount": 38662,
-      "candidateId": "90e3e46093f7"
     }
   ]
 }
