@@ -1,42 +1,134 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-26T04:20:03.511Z",
+  "generatedAt": "2026-11-26T05:21:13.245Z",
   "events": [
+    {
+      "characterId": "1308",
+      "configType": "dps",
+      "candidateId": "7109ec43761a",
+      "date": "2026-11-26T05:00:20.000Z",
+      "score": 1.5002389737814756,
+      "rank": 860,
+      "buildId": "dda3a0f44a02",
+      "type": "new_character",
+      "entryCount": 65776
+    },
+    {
+      "characterId": "1511",
+      "configType": "dps",
+      "candidateId": "4b6afebb47bd",
+      "date": "2026-11-26T04:53:11.000Z",
+      "score": 1.5036263224268918,
+      "rank": 354,
+      "buildId": "7866f71ab51a",
+      "type": "new_best",
+      "previousScore": 1.4464435498882882,
+      "previousRank": 683
+    },
+    {
+      "characterId": "1511",
+      "configType": "dps",
+      "candidateId": "b34d55a3bc1f",
+      "date": "2026-11-26T04:51:42.000Z",
+      "score": 1.5142123466393231,
+      "rank": 313,
+      "buildId": "42544b3d29b3",
+      "type": "new_character",
+      "entryCount": 27965
+    },
+    {
+      "characterId": "1404",
+      "configType": "dps",
+      "candidateId": "df6f160b5a17",
+      "date": "2026-11-26T04:47:05.000Z",
+      "score": 1.5579702277477425,
+      "rank": 76,
+      "buildId": "0a6fe986057d",
+      "type": "new_best",
+      "previousScore": 1.4375505287811843,
+      "previousRank": 349
+    },
+    {
+      "characterId": "1408",
+      "configType": "dps",
+      "candidateId": "ee54bc9d0666",
+      "date": "2026-11-26T04:46:28.000Z",
+      "score": 1.614928087169818,
+      "rank": 357,
+      "buildId": "d1addaf736b5",
+      "type": "new_character",
+      "entryCount": 60482
+    },
+    {
+      "characterId": "1511",
+      "configType": "dps",
+      "candidateId": "a2c174bf7777",
+      "date": "2026-11-26T04:43:40.000Z",
+      "score": 1.5523436894343816,
+      "rank": 175,
+      "buildId": "803a1423539e",
+      "type": "new_best",
+      "previousScore": 1.4121750058375977,
+      "previousRank": 985
+    },
+    {
+      "characterId": "1407",
+      "configType": "dps",
+      "candidateId": "620f40635f19",
+      "date": "2026-11-26T04:23:41.000Z",
+      "score": 1.5764493795545982,
+      "rank": 778,
+      "buildId": "4ab7b4d66827",
+      "type": "new_character",
+      "entryCount": 95429
+    },
+    {
+      "characterId": "1014",
+      "configType": "dps",
+      "candidateId": "6d6cf441edfc",
+      "date": "2026-11-26T04:20:36.000Z",
+      "score": 1.5337142141030449,
+      "rank": 130,
+      "buildId": "f4b3a648ec55",
+      "type": "new_best",
+      "previousScore": 1.48749697578551,
+      "previousRank": 243
+    },
     {
       "characterId": "1506",
       "configType": "dps",
-      "candidateId": "16c966f88ce6",
       "date": "2026-11-26T03:58:36.000Z",
       "score": 1.7326668794500817,
       "rank": 433,
       "buildId": "5d1cdef67efc",
       "type": "new_best",
       "previousScore": 1.7089910532273207,
-      "previousRank": 607
+      "previousRank": 607,
+      "candidateId": "16c966f88ce6"
     },
     {
       "characterId": "1308",
       "configType": "dps",
-      "candidateId": "d25ba50850b3",
       "date": "2026-11-26T03:48:16.000Z",
       "score": 1.5283329597329183,
       "rank": 600,
       "buildId": "06cfb5be51ba",
       "type": "new_best",
       "previousScore": 1.5192607452871796,
-      "previousRank": 658
+      "previousRank": 658,
+      "candidateId": "d25ba50850b3"
     },
     {
       "characterId": "1502",
       "configType": "dps",
-      "candidateId": "64678d97466d",
       "date": "2026-11-26T03:44:27.000Z",
       "score": 1.507084814900749,
       "rank": 97,
       "buildId": "6480e25ac4a5",
       "type": "new_best",
       "previousScore": 1.493900597199854,
-      "previousRank": 124
+      "previousRank": 124,
+      "candidateId": "64678d97466d"
     },
     {
       "characterId": "1501",
@@ -11484,99 +11576,6 @@
       "type": "new_character",
       "entryCount": 94549,
       "candidateId": "f028718743a0"
-    },
-    {
-      "characterId": "1401",
-      "configType": "dps",
-      "date": "2026-11-20T17:27:54.000Z",
-      "score": 1.5247875142076912,
-      "rank": 347,
-      "buildId": "27f7ec21ea96",
-      "type": "new_character",
-      "entryCount": 44271,
-      "candidateId": "50f2ee8dcc8c"
-    },
-    {
-      "characterId": "1513",
-      "configType": "dps",
-      "date": "2026-11-20T17:11:51.000Z",
-      "score": 1.511975637222768,
-      "rank": 351,
-      "buildId": "80845825dd2b",
-      "type": "new_character",
-      "entryCount": 13898,
-      "candidateId": "ecc1dbedb011"
-    },
-    {
-      "characterId": "1511",
-      "configType": "dps",
-      "date": "2026-11-20T17:09:03.000Z",
-      "score": 1.5570092307446184,
-      "rank": 120,
-      "buildId": "84f7801f99e9",
-      "type": "new_best",
-      "previousScore": 1.5363886416641246,
-      "previousRank": 157,
-      "candidateId": "a5f7353c22c7"
-    },
-    {
-      "characterId": "1408",
-      "configType": "dps",
-      "date": "2026-11-20T17:07:16.000Z",
-      "score": 1.6505819980270333,
-      "rank": 187,
-      "buildId": "f4d87b5eafb8",
-      "type": "new_best",
-      "previousScore": 1.50264902977437,
-      "previousRank": 1001,
-      "candidateId": "1aa61c55ba6f"
-    },
-    {
-      "characterId": "1510",
-      "configType": "dps",
-      "date": "2026-11-20T17:04:49.000Z",
-      "score": 1.5449790033624446,
-      "rank": 139,
-      "buildId": "8ca4cf682b0b",
-      "type": "new_best",
-      "previousScore": 1.5284449708970316,
-      "previousRank": 180,
-      "candidateId": "c42ce40c467e"
-    },
-    {
-      "characterId": "1401",
-      "configType": "dps",
-      "date": "2026-11-20T17:02:00.000Z",
-      "score": 1.5980987308920385,
-      "rank": 109,
-      "buildId": "d434fa6748ce",
-      "type": "new_best",
-      "previousScore": 1.4805135415085888,
-      "previousRank": 602,
-      "candidateId": "af4f349a0ed3"
-    },
-    {
-      "characterId": "1308",
-      "configType": "dps",
-      "date": "2026-11-20T17:01:32.000Z",
-      "score": 1.5089222585824837,
-      "rank": 689,
-      "buildId": "ac350e1da251",
-      "type": "new_character",
-      "entryCount": 63624,
-      "candidateId": "ebf7940c3d7a"
-    },
-    {
-      "characterId": "1401",
-      "configType": "dps",
-      "date": "2026-11-20T16:49:06.000Z",
-      "score": 1.552261687065903,
-      "rank": 225,
-      "buildId": "ce3f98ff6fb9",
-      "type": "new_best",
-      "previousScore": 1.451299008400992,
-      "previousRank": 852,
-      "candidateId": "449b07494705"
     }
   ]
 }
